@@ -8,7 +8,7 @@
 .better-dh2e .bdh-header { display:flex; align-items:center; gap:12px; padding:8px 10px; }
 .better-dh2e .bdh-header img { width:48px; height:48px; border:2px solid var(--bdh-gold); border-radius:6px; flex:0 0 auto; object-fit:cover; }
 .better-dh2e .bdh-header .name { flex:0 0 200px; }
-.better-dh2e .bdh-header .name input { font-size:18px; font-weight:bold; width:100%; background:transparent; border:none; border-bottom:1px solid var(--bdh-brown); }
+.better-dh2e .bdh-header .name input { font-size:18px; font-weight:bold; width:100%; color:var(--bdh-ink); background:transparent; border:none; border-bottom:1px solid var(--bdh-brown); }
 .better-dh2e .bdh-header .meta { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:2px 12px; font-size:11px; }
 .better-dh2e .bdh-header .meta label { color:var(--bdh-muted); text-transform:uppercase; font-size:9px; margin-right:4px; }
 .better-dh2e .bdh-header .fate { text-align:center; background:var(--bdh-panel); border:2px solid var(--bdh-gold); border-radius:6px; padding:3px 9px; }

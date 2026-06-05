@@ -24,7 +24,7 @@
 
   <nav class="tabs primary" data-group="primary">
     {{#each tabs as |t|}}
-      <a class="item {{t.cssClass}}" data-group="primary" data-tab="{{t.id}}">{{localize t.label}}</a>
+      <a class="item {{t.cssClass}}" data-action="tab" data-group="primary" data-tab="{{t.id}}">{{localize t.label}}</a>
     {{/each}}
   </nav>
 
@@ -47,7 +47,7 @@
 
     <nav class="tabs secondary" data-group="secondary">
       {{#each subtabs as |s|}}
-        <a class="item {{s.cssClass}}" data-group="secondary" data-tab="{{s.id}}">{{localize s.label}}</a>
+        <a class="item {{s.cssClass}}" data-action="tab" data-group="secondary" data-tab="{{s.id}}">{{localize s.label}}</a>
       {{/each}}
     </nav>
 
