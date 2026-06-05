@@ -207,3 +207,13 @@ Validated wireframes are committed under `docs/superpowers/specs/mockups/`:
 - `roll-dialogs.html` — characteristic / skill / attack dialogs and their chat cards (attack = to-hit only, with Roll-damage & Evade buttons).
 - `damage-evade.html` — damage popup (regex modifier) + damage card (one popup per burst, modifier on first hit, RF as a separate crit-effect index, Apply-Damage on token), and the Evade reaction card.
 - `specialist-skills.html` — specialist skill as a parent with on-the-fly specializations (add only in advancement modes, new ones start at Known); per-specialization advancement.
+
+## 13. Open Design Items (to detail during implementation)
+
+Intentionally small; each is designed when its build phase is reached, not blocking the plan:
+
+- **Item edit sheets** — the per-type editing UI and editable fields for each item: weapon, armour, force field, gear, psychic power, cybernetic, mutation / malignancy / mental disorder, critical / lasting injury, aptitude. **Talents and traits are ordinary items** and need their own simple edit sheets too. (Data fields are fixed in §4; this is the editing layout.)
+- **Fate-point spending mechanism** — the exact options the clickable Fate widget offers and how each wires up: **+10 & reroll**, **reroll**, extra **half-action**, **reduce damage** (from the damage card), recover from stun, and **burn** to survive (permanent −1 max); plus per-session refresh to max.
+- **NPC sheet specifics** — the NPC actor's simpler stat presentation, threat level / faction fields, and the limited/observer view.
+- **Craftsmanship effects** (Poor / Normal / Good / Best) — the mechanical modifiers per item category.
+- Already noted inline and excluded from this version: fast-attack save-template behavior (§9), reaction hit-negation (§8, P3).
