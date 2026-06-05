@@ -112,7 +112,7 @@
 .better-dh2e .bdh-item-row { display:flex; align-items:center; gap:8px; padding:3px 10px; border-bottom:1px dotted #cbb88c; font-size:12px; }
 .better-dh2e .bdh-item-row:last-child { border-bottom:none; }
 .better-dh2e .bdh-fav { color:#b3a070; cursor:pointer; }
-.better-dh2e .bdh-fav.on { color:var(--bdh-gold); }
+.better-dh2e .bdh-fav.on { color:var(--bdh-maroon); }
 .better-dh2e .bdh-name { font-weight:bold; color:var(--bdh-maroon); cursor:pointer; }
 .better-dh2e .bdh-name:hover { text-decoration:underline; }
 .better-dh2e .bdh-meta { color:var(--bdh-muted); font-size:11px; }

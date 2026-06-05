@@ -115,7 +115,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor"],
-    position: { width: 800, height: 720 },
+    position: { width: 1000, height: 900 },
     window: { resizable: true },
     form: { submitOnChange: true },
     actions: {
