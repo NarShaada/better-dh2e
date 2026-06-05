@@ -110,6 +110,7 @@
           <a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if w.equipped}}✓{{else}}○{{/if}}</a>
           <span class="bdh-name" data-action="editItem">{{w.name}}</span>
           <span class="bdh-desc-line">{{w.summary}}</span>
+          {{#if w.usesAmmo}}<span class="bdh-clip">Clip {{w.clip}}</span>{{/if}}
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
         </div>
       {{/each}}
@@ -133,7 +134,7 @@
         <div class="bdh-item-row" data-item-id="{{f.id}}">
           <a class="bdh-eq {{#if f.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if f.equipped}}✓{{else}}○{{/if}}</a>
           <span class="bdh-name" data-action="editItem">{{f.name}}</span>
-          <span class="bdh-desc-line">PR {{f.pr}}</span>
+          <span class="bdh-desc-line">PR {{f.pr}} · Overload {{f.overload}}</span>
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
         </div>
       {{/each}}

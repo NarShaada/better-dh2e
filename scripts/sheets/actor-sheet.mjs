@@ -2,6 +2,7 @@
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
 import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
+import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -139,16 +140,27 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       id: t.id, name: t.name, desc: firstLine(t.system.description)
     }));
     const LOC = { head: "Head", body: "Body", rightArm: "R Arm", leftArm: "L Arm", rightLeg: "R Leg", leftLeg: "L Leg" };
-    context.weapons = items.filter((i) => i.type === "weapon").map((w) => ({
-      id: w.id, name: w.name, equipped: w.system.equipped,
-      summary: `${BDH.weaponClasses[w.system.weaponClass] ?? w.system.weaponClass} · ${w.system.damage} ${BDH.damageTypes[w.system.damageType] ?? ""} · Pen ${w.system.penetration}`
-    }));
+    context.weapons = items.filter((i) => i.type === "weapon").map((w) => {
+      const s = w.system;
+      const flags = weaponClassFlags(s.weaponClass);
+      const parts = [
+        BDH.weaponClasses[s.weaponClass] ?? s.weaponClass,
+        [s.damage, BDH.damageTypes[s.damageType]].filter(Boolean).join(" "),
+        `Pen ${s.penetration}`
+      ];
+      if (flags.usesRange) parts.push(`Rng ${s.range}m`);
+      if (flags.usesAmmo) parts.push(`RoF ${s.rateOfFire.single}/${s.rateOfFire.short}/${s.rateOfFire.long}`);
+      return {
+        id: w.id, name: w.name, equipped: s.equipped, summary: parts.join(" · "),
+        usesAmmo: flags.usesAmmo, clip: `${s.clip.value}/${s.clip.max}`
+      };
+    });
     context.armour = items.filter((i) => i.type === "armour").map((a) => ({
       id: a.id, name: a.name, equipped: a.system.equipped, additive: a.system.additive,
       ap: Object.entries(a.system.locations).filter(([, v]) => v > 0).map(([k, v]) => `${LOC[k]} ${v}`).join(", ") || "—"
     }));
     context.forceFields = items.filter((i) => i.type === "forceField").map((f) => ({
-      id: f.id, name: f.name, equipped: f.system.equipped, pr: f.system.protectionRating
+      id: f.id, name: f.name, equipped: f.system.equipped, pr: f.system.protectionRating, overload: f.system.overload
     }));
     context.gear = items.filter((i) => i.type === "gear").map((g) => ({
       id: g.id, name: g.name, desc: firstLine(g.system.description),
