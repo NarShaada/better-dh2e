@@ -151,3 +151,6 @@
 .better-dh2e .bdh-injury { flex:1; min-width:0; }
 .better-dh2e .bdh-move { display:grid; grid-template-columns:1fr 1fr; gap:2px 10px; padding:6px 10px; font-size:11px; }
 .better-dh2e .bdh-init { padding:2px 10px 6px; font-size:11px; color:var(--bdh-muted); }
+
+/* Favourite star inside the Investigation skill rows */
+.better-dh2e .skill .bdh-fav { flex:0 0 auto; font-size:11px; }
