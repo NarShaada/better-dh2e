@@ -1,4 +1,8 @@
 {
+  "TYPES.Actor.acolyte": "Acolyte",
+  "TYPES.Actor.npc": "NPC",
+  "TYPES.Item.weapon": "Weapon",
+  "TYPES.Item.gear": "Gear",
   "BDH.Char.WeaponSkill": "Weapon Skill",
   "BDH.Char.BallisticSkill": "Ballistic Skill",
   "BDH.Char.Strength": "Strength",
