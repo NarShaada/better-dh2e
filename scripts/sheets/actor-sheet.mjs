@@ -23,9 +23,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await rollCharacteristic(this.document, target.dataset.characteristic);
   }
 
-  /** Action: roll the clicked skill (dialog offers a characteristic picker). */
+  /** Action: roll the clicked skill (dialog offers a characteristic picker).
+   * Reads the key via closest so it works whether data-skill is on the action element
+   * (Investigation rows) or an ancestor row (Combat favourite-skills list). */
   static async #onRollSkill(event, target) {
-    await rollSkill(this.document, target.dataset.skill);
+    await rollSkill(this.document, target.closest("[data-skill]")?.dataset.skill);
   }
 
   /** Action: create a new owned item of the given type and open its sheet. */
