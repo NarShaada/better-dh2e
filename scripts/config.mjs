@@ -45,5 +45,22 @@ BDH.skills = {
   survival:    { label: "BDH.Skill.Survival",    characteristic: "perception"   }
 };
 
+/** Item craftsmanship tiers (key -> label). */
+BDH.craftsmanship = { poor: "Poor", normal: "Normal", good: "Good", best: "Best" };
+
+/** Availability ladder (key -> label). */
+BDH.availability = {
+  ubiquitous: "Ubiquitous", abundant: "Abundant", plentiful: "Plentiful", common: "Common",
+  average: "Average", scarce: "Scarce", rare: "Rare", veryRare: "Very Rare",
+  extremelyRare: "Extremely Rare", nearUnique: "Near Unique", unique: "Unique"
+};
+
+/** Fixed aptitude list (values are also the labels). Used by talents and character advancement. */
+BDH.aptitudes = [
+  "Weapon Skill", "Ballistic Skill", "Strength", "Toughness", "Agility", "Intelligence",
+  "Perception", "Willpower", "Fellowship", "Offence", "Finesse", "Defence",
+  "Psyker", "Knowledge", "Leadership", "Social", "Tech", "Fieldcraft", "General"
+];
+
 BDH.actorTypes = ["acolyte", "npc"];
-BDH.itemTypes  = ["weapon", "gear"];
+BDH.itemTypes  = ["weapon", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"];
