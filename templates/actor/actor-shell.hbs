@@ -1,0 +1,23 @@
+{{!-- templates/actor/actor-shell.hbs --}}
+<form class="better-dh2e">
+  <header class="bdh-header">
+    <input type="text" name="name" value="{{document.name}}" placeholder="Name"/>
+  </header>
+  <nav class="bdh-tabs sheet-tabs" data-group="primary">
+    <a class="item" data-tab="stats">{{localize "BDH.Sheet.Stats"}}</a>
+    <a class="item" data-tab="abilities">{{localize "BDH.Sheet.Abilities"}}</a>
+    <a class="item" data-tab="gear">{{localize "BDH.Sheet.Gear"}}</a>
+    <a class="item" data-tab="notes">{{localize "BDH.Sheet.Notes"}}</a>
+    <a class="item" data-tab="afflictions">{{localize "BDH.Sheet.Afflictions"}}</a>
+    <a class="item" data-tab="psychic">{{localize "BDH.Sheet.Psychic"}}</a>
+    <a class="item" data-tab="advancement">{{localize "BDH.Sheet.Advancement"}}</a>
+  </nav>
+  <section class="bdh-body">
+    <p>Characteristics (derived):</p>
+    <ul>
+      {{#each system.characteristics as |c key|}}
+        <li>{{key}}: {{c.total}} (bonus {{c.bonus}})</li>
+      {{/each}}
+    </ul>
+  </section>
+</form>
