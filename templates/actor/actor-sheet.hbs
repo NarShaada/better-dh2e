@@ -80,7 +80,8 @@
         <div class="bdh-item-row" data-item-id="{{t.id}}">
           <a class="bdh-fav {{#if t.favourite}}on{{/if}}" data-action="toggleFavourite" title="Favourite">★</a>
           <span class="bdh-name" data-action="editItem">{{t.name}}</span>
-          <span class="bdh-meta">Tier {{t.tier}}{{#if t.aptitudes}} · {{t.aptitudes}}{{/if}}</span>
+          <span class="bdh-tier">Tier {{t.tier}}</span>
+          <span class="bdh-desc-line">{{t.desc}}</span>
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
         </div>
       {{/each}}
@@ -92,6 +93,7 @@
       {{#each traits as |tr|}}
         <div class="bdh-item-row" data-item-id="{{tr.id}}">
           <span class="bdh-name" data-action="editItem">{{tr.name}}</span>
+          <span class="bdh-desc-line">{{tr.desc}}</span>
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
         </div>
       {{/each}}

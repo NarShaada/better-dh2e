@@ -116,6 +116,8 @@
 .better-dh2e .bdh-name { font-weight:bold; color:var(--bdh-maroon); cursor:pointer; }
 .better-dh2e .bdh-name:hover { text-decoration:underline; }
 .better-dh2e .bdh-meta { color:var(--bdh-muted); font-size:11px; }
-.better-dh2e .bdh-del { margin-left:auto; color:#7a1f1f; cursor:pointer; }
+.better-dh2e .bdh-tier { color:var(--bdh-muted); font-size:11px; flex:0 0 auto; }
+.better-dh2e .bdh-desc-line { flex:1; min-width:0; color:var(--bdh-muted); font-size:11px; font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.better-dh2e .bdh-del { flex:0 0 auto; color:#7a1f1f; cursor:pointer; }
 .better-dh2e .bdh-empty { padding:5px 10px; color:var(--bdh-muted); font-style:italic; font-size:11px; }
 .better-dh2e .bdh-notes { display:block; width:calc(100% - 28px); margin:8px 14px; padding:8px; box-sizing:border-box; min-height:280px; resize:vertical; border:1px solid var(--bdh-brown); border-radius:4px; background:#fff8e7; color:var(--bdh-ink); font-family:Georgia, serif; }

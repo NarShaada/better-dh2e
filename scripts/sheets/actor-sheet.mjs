@@ -107,11 +107,18 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.tabs = this._prepareTabs("primary");
     context.subtabs = this._prepareTabs("secondary");
     const items = this.document.items;
+    // First line of a (plain-text) description, truncated — a glance reference in list rows.
+    const firstLine = (s) => {
+      const line = (s ?? "").split(/\r?\n/)[0].trim();
+      return line.length > 100 ? `${line.slice(0, 100)}…` : line;
+    };
     context.talents = items.filter((i) => i.type === "talent").map((t) => ({
       id: t.id, name: t.name, favourite: t.system.favourite, tier: t.system.tier,
-      aptitudes: (t.system.aptitudes ?? []).join(", ")
+      desc: firstLine(t.system.description)
     }));
-    context.traits = items.filter((i) => i.type === "trait").map((t) => ({ id: t.id, name: t.name }));
+    context.traits = items.filter((i) => i.type === "trait").map((t) => ({
+      id: t.id, name: t.name, desc: firstLine(t.system.description)
+    }));
     return context;
   }
 }
