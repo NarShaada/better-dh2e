@@ -165,3 +165,8 @@
 .better-dh2e .bdh-aff-col .bdh-section { margin:0; }
 .better-dh2e .bdh-aff-input { min-width:0; }
 .better-dh2e .bdh-aff-name { flex:0 0 32%; }
+
+/* Psychic tab */
+.better-dh2e .bdh-psy-bar { display:flex; align-items:center; gap:8px; padding:8px 14px; }
+.better-dh2e .bdh-psy-bar label { font-variant:small-caps; letter-spacing:1px; color:var(--bdh-maroon); font-weight:bold; }
+.better-dh2e .bdh-psy-bar input { width:64px; font-size:16px; font-weight:bold; }

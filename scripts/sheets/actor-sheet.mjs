@@ -285,6 +285,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.cybernetics = items.filter((i) => i.type === "cybernetic").map((c) => ({
       id: c.id, name: c.name, desc: firstLine(c.system.description), installed: c.system.installed
     }));
+    context.psychicPowers = items.filter((i) => i.type === "psychicPower").map((p) => ({
+      id: p.id, name: p.name, desc: firstLine(p.system.description)
+    }));
     return context;
   }
 
