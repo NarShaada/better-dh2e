@@ -59,6 +59,7 @@
       <div class="skills">
         {{#each skills as |s|}}
           <div class="skill {{#unless s.trained}}untrained{{/unless}}" data-action="rollSkill" data-skill="{{s.key}}">
+            <a class="bdh-fav {{#if s.favourite}}on{{/if}}" data-action="toggleSkillFavourite" title="Favourite">★</a>
             <span class="snm">{{localize s.label}}</span>
             <span class="tier">{{#each s.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
             <span class="sval">{{s.total}}</span>
@@ -99,6 +100,24 @@
               <div class="bdh-item-row" data-item-id="{{t.id}}"><span class="bdh-name" data-action="editItem">{{t.name}}</span><span class="bdh-desc-line">{{t.desc}}</span></div>
             {{/each}}
             {{#unless favTalents.length}}<div class="bdh-empty">Star talents on the Abilities tab.</div>{{/unless}}
+          </div>
+          <div class="bdh-section">
+            <div class="bdh-section-head">★ Favourite Traits</div>
+            {{#each favTraits as |t|}}
+              <div class="bdh-item-row" data-item-id="{{t.id}}"><span class="bdh-name" data-action="editItem">{{t.name}}</span><span class="bdh-desc-line">{{t.desc}}</span></div>
+            {{/each}}
+            {{#unless favTraits.length}}<div class="bdh-empty">Star traits on the Abilities tab.</div>{{/unless}}
+          </div>
+          <div class="bdh-section">
+            <div class="bdh-section-head">★ Favourite Skills</div>
+            {{#each favSkills as |s|}}
+              <div class="bdh-item-row" data-skill="{{s.key}}">
+                <span class="bdh-name" data-action="rollSkill">{{localize s.label}}</span>
+                <span class="bdh-desc-line"></span>
+                <span class="bdh-craft">{{s.total}}</span>
+              </div>
+            {{/each}}
+            {{#unless favSkills.length}}<div class="bdh-empty">Star skills on the Investigation tab.</div>{{/unless}}
           </div>
         </div>
 
@@ -154,6 +173,7 @@
       <div class="bdh-section-head">Traits <button type="button" class="bdh-add" data-action="createItem" data-type="trait">＋</button></div>
       {{#each traits as |tr|}}
         <div class="bdh-item-row" data-item-id="{{tr.id}}">
+          <a class="bdh-fav {{#if tr.favourite}}on{{/if}}" data-action="toggleFavourite" title="Favourite">★</a>
           <span class="bdh-name" data-action="editItem">{{tr.name}}</span>
           <span class="bdh-desc-line">{{tr.desc}}</span>
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
