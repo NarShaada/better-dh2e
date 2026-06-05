@@ -3,6 +3,7 @@ import { BDH } from "./config.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
+import { WeaponModModel } from "./data/item/weapon-mod-model.mjs";
 import { GearModel } from "./data/item/gear-model.mjs";
 import { TalentModel } from "./data/item/talent-model.mjs";
 import { TraitModel } from "./data/item/trait-model.mjs";
@@ -29,6 +30,7 @@ Hooks.once("init", () => {
   CONFIG.Actor.dataModels.acolyte = AcolyteModel;
   CONFIG.Actor.dataModels.npc = NpcModel;
   CONFIG.Item.dataModels.weapon = WeaponModel;
+  CONFIG.Item.dataModels.weaponMod = WeaponModModel;
   CONFIG.Item.dataModels.gear = GearModel;
   CONFIG.Item.dataModels.talent = TalentModel;
   CONFIG.Item.dataModels.trait = TraitModel;

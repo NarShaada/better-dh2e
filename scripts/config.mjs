@@ -63,4 +63,36 @@ BDH.aptitudes = [
 ];
 
 BDH.actorTypes = ["acolyte", "npc"];
-BDH.itemTypes  = ["weapon", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"];
+BDH.itemTypes  = ["weapon", "weaponMod", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"];
+
+/** Weapon class (key -> label). */
+BDH.weaponClasses = { melee: "Melee", thrown: "Thrown", pistol: "Pistol", basic: "Basic", heavy: "Heavy" };
+
+/** Weapon type / tech (key -> label). */
+BDH.weaponTypes = {
+  lowTech: "Low-Tech", chain: "Chain", shock: "Shock", power: "Power",
+  solidProjectile: "Solid Projectile", bolt: "Bolt", las: "Las", plasma: "Plasma",
+  melta: "Melta", flame: "Flame", exotic: "Exotic"
+};
+
+/** Damage types (key -> label). */
+BDH.damageTypes = { energy: "Energy", explosive: "Explosive", rending: "Rending", impact: "Impact" };
+
+/** Reload duration (key -> label). */
+BDH.reload = { free: "Free", half: "Half", full: "Full", twoFull: "2 Full", threeFull: "3 Full" };
+
+/** Weapon qualities (key -> {label, takesValue}). Behaviours are implemented in the attack pipeline later. */
+BDH.qualities = {
+  tearing:    { label: "Tearing", takesValue: false },
+  proven:     { label: "Proven", takesValue: true },
+  primitive:  { label: "Primitive", takesValue: true },
+  razorSharp: { label: "Razor Sharp", takesValue: false },
+  felling:    { label: "Felling", takesValue: true },
+  accurate:   { label: "Accurate", takesValue: false },
+  storm:      { label: "Storm", takesValue: false },
+  twinLinked: { label: "Twin-Linked", takesValue: false },
+  reliable:   { label: "Reliable", takesValue: false },
+  unreliable: { label: "Unreliable", takesValue: false },
+  unwieldy:   { label: "Unwieldy", takesValue: false },
+  flexible:   { label: "Flexible", takesValue: false }
+};

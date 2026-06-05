@@ -57,6 +57,57 @@
     </div>
   {{/if}}
 
+  {{#if isWeaponMod}}
+    <div class="bdh-fields">
+      <label>Attack Mod</label><input type="number" name="system.attackMod" value="{{system.attackMod}}"/>
+      <label>Damage Mod</label><input type="text" name="system.damageMod" value="{{system.damageMod}}" placeholder="+2 or +1d5"/>
+      <label>Pen Mod</label><input type="number" name="system.penMod" value="{{system.penMod}}"/>
+      <label>Special</label><input type="text" name="system.special" value="{{system.special}}"/>
+    </div>
+  {{/if}}
+
+  {{#if isWeapon}}
+    <div class="bdh-fields">
+      <label>Class</label><select name="system.weaponClass">{{selectOptions weaponClasses selected=system.weaponClass}}</select>
+      <label>Type</label><select name="system.weaponType">{{selectOptions weaponTypes selected=system.weaponType}}</select>
+      {{#if usesRange}}<label>Range (m)</label><input type="number" name="system.range" value="{{system.range}}"/>{{/if}}
+      <label>Damage</label><input type="text" name="system.damage" value="{{system.damage}}" placeholder="1d10+4"/>
+      <label>Damage Type</label><select name="system.damageType">{{selectOptions damageTypes selected=system.damageType}}</select>
+      <label>Penetration</label><input type="number" name="system.penetration" value="{{system.penetration}}"/>
+      {{#if usesAmmo}}
+        <label>Reload</label><select name="system.reload">{{selectOptions reloadChoices selected=system.reload}}</select>
+        <label>Clip</label><span class="bdh-inline"><input type="number" name="system.clip.value" value="{{system.clip.value}}"/> / <input type="number" name="system.clip.max" value="{{system.clip.max}}"/></span>
+        <label>RoF (S/Short/Long)</label><span class="bdh-inline"><input type="number" name="system.rateOfFire.single" value="{{system.rateOfFire.single}}"/> / <input type="number" name="system.rateOfFire.short" value="{{system.rateOfFire.short}}"/> / <input type="number" name="system.rateOfFire.long" value="{{system.rateOfFire.long}}"/></span>
+      {{/if}}
+      <label>Craftsmanship</label><select name="system.craftsmanship">{{selectOptions craftChoices selected=system.craftsmanship}}</select>
+      <label>Availability</label><select name="system.availability">{{selectOptions availChoices selected=system.availability}}</select>
+      <label>Weight</label><input type="number" step="0.1" name="system.weight" value="{{system.weight}}"/>
+      <label>Special</label><input type="text" name="system.special" value="{{system.special}}"/>
+    </div>
+
+    <div class="bdh-list-section">
+      <div class="bdh-list-head">Qualities</div>
+      {{#each qualityList as |q|}}
+        <div class="bdh-list-row"><span>{{q.display}}</span>
+          <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
+      {{/each}}
+      <div class="bdh-add-row">
+        <select class="bdh-quality-key">{{selectOptions qualityChoices}}</select>
+        <input class="bdh-quality-value" type="number" placeholder="X"/>
+        <button type="button" data-action="addQuality">＋ Add</button>
+      </div>
+    </div>
+
+    <div class="bdh-list-section">
+      <div class="bdh-list-head">Installed Mods <span class="bdh-hint">— drag a Weapon Mod item here to install</span></div>
+      {{#each modList as |m|}}
+        <div class="bdh-list-row"><span><b>{{m.name}}</b> — atk {{m.attackMod}}, dmg {{m.damageMod}}, pen {{m.penMod}}{{#if m.special}}, {{m.special}}{{/if}}</span>
+          <a data-action="removeMod" data-index="{{m.index}}" title="Remove">✖</a></div>
+      {{/each}}
+      {{#unless modList.length}}<div class="bdh-empty">No mods installed.</div>{{/unless}}
+    </div>
+  {{/if}}
+
   <label class="bdh-desc-label">Description</label>
   <textarea class="bdh-desc" name="system.description" rows="6">{{system.description}}</textarea>
 </div>
