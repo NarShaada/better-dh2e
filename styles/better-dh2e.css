@@ -134,3 +134,20 @@
 .better-dh2e .bdh-qty-wrap { flex:0 0 auto; font-size:11px; color:var(--bdh-muted); }
 .better-dh2e .bdh-qty { width:44px; }
 .better-dh2e .bdh-clip { flex:0 0 auto; font-size:11px; font-weight:bold; color:var(--bdh-maroon); background:#efe6cd; border:1px solid #b3a070; border-radius:3px; padding:0 6px; }
+
+/* Combat sub-tab */
+.better-dh2e .bdh-armour-row { display:flex; gap:5px; padding:8px 14px 4px; }
+.better-dh2e .bdh-armloc { flex:1; text-align:center; }
+.better-dh2e .bdh-armtb { width:55%; margin:0 auto; background:#3d5a2a; color:var(--bdh-parch); font-size:10px; border-radius:3px 3px 0 0; }
+.better-dh2e .bdh-armap { background:#fff6df; border:1px solid var(--bdh-brown); border-radius:0 0 3px 3px; padding:4px 0; font-size:18px; font-weight:bold; }
+.better-dh2e .bdh-armlbl { font-size:9px; color:var(--bdh-muted); text-transform:uppercase; margin-top:2px; }
+.better-dh2e .bdh-ff-line { margin:2px 14px 6px; font-size:11px; color:#2a3a5a; }
+.better-dh2e .bdh-combat-grid { display:grid; grid-template-columns:1fr 220px; gap:10px; padding:4px 14px 12px; }
+.better-dh2e .bdh-combat-col .bdh-section { margin:0 0 10px; }
+.better-dh2e .bdh-atk { flex:0 0 auto; background:var(--bdh-maroon); color:var(--bdh-parch); border:none; border-radius:3px; font-size:11px; padding:2px 8px; cursor:pointer; }
+.better-dh2e .bdh-wounds { display:grid; grid-template-columns:auto 1fr; gap:4px 8px; align-items:center; padding:6px 10px; }
+.better-dh2e .bdh-wounds label { color:var(--bdh-muted); font-size:11px; text-transform:uppercase; }
+.better-dh2e .bdh-wounds input { width:60px; }
+.better-dh2e .bdh-injury { flex:1; min-width:0; }
+.better-dh2e .bdh-move { display:grid; grid-template-columns:1fr 1fr; gap:2px 10px; padding:6px 10px; font-size:11px; }
+.better-dh2e .bdh-init { padding:2px 10px 6px; font-size:11px; color:var(--bdh-muted); }

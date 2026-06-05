@@ -78,3 +78,16 @@ export async function rollSkill(actor, key) {
   const short = CONFIG.BDH.characteristics[chosen].short;
   return performTest(actor, { label: `${label} (${short})`, base, modifier: choice.modifier });
 }
+
+/** Basic weapon attack test: WS for melee, BS otherwise. Reuses the modifier dialog + chat card.
+ * (Full hit-location / RoF / damage / evade resolution is a later plan.) */
+export async function rollWeaponAttack(actor, weaponId) {
+  const weapon = actor.items.get(weaponId);
+  if (!weapon) return null;
+  const charKey = weapon.system.weaponClass === "melee" ? "weaponSkill" : "ballisticSkill";
+  const cfg = CONFIG.BDH.characteristics[charKey];
+  const label = `${weapon.name} (${cfg.short})`;
+  const choice = await promptTest({ title: label });
+  if (!choice) return null;
+  return performTest(actor, { label, base: actor.system.characteristics[charKey].total, modifier: choice.modifier });
+}

@@ -68,7 +68,69 @@
     </section>
 
     <section class="tab {{subtabs.combat.cssClass}}" data-group="secondary" data-tab="combat">
-      <p class="placeholder">Combat view — armour, weapons, wounds — arrives in a later plan.</p>
+      <div class="bdh-armour-row">
+        {{#each armourRow as |a|}}
+          <div class="bdh-armloc">
+            <div class="bdh-armtb">+{{a.tb}}</div>
+            <div class="bdh-armap">{{a.ap}}</div>
+            <div class="bdh-armlbl">{{a.label}}</div>
+          </div>
+        {{/each}}
+      </div>
+      {{#if forceFieldPR}}<div class="bdh-ff-line">🛡 Force Field — Protection Rating {{forceFieldPR}}</div>{{/if}}
+
+      <div class="bdh-combat-grid">
+        <div class="bdh-combat-col">
+          <div class="bdh-section">
+            <div class="bdh-section-head">Equipped Weapons</div>
+            {{#each combatWeapons as |w|}}
+              <div class="bdh-item-row" data-item-id="{{w.id}}">
+                <button type="button" class="bdh-atk" data-action="rollAttack">⚔ {{w.attackChar}}</button>
+                <span class="bdh-name" data-action="editItem">{{w.name}}</span>
+                <span class="bdh-desc-line">{{w.summary}}</span>
+                {{#if w.usesAmmo}}<span class="bdh-clip">{{w.clip}}</span>{{/if}}
+              </div>
+            {{/each}}
+            {{#unless combatWeapons.length}}<div class="bdh-empty">No equipped weapons — equip them on the Gear tab.</div>{{/unless}}
+          </div>
+          <div class="bdh-section">
+            <div class="bdh-section-head">★ Favourite Talents</div>
+            {{#each favTalents as |t|}}
+              <div class="bdh-item-row" data-item-id="{{t.id}}"><span class="bdh-name" data-action="editItem">{{t.name}}</span><span class="bdh-desc-line">{{t.desc}}</span></div>
+            {{/each}}
+            {{#unless favTalents.length}}<div class="bdh-empty">Star talents on the Abilities tab.</div>{{/unless}}
+          </div>
+        </div>
+
+        <div class="bdh-combat-col">
+          <div class="bdh-section">
+            <div class="bdh-section-head">Wounds</div>
+            <div class="bdh-wounds">
+              <label>Current</label><input type="number" name="system.wounds.value" value="{{system.wounds.value}}"/>
+              <label>Max</label><input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>
+              <label>Critical</label><input type="number" name="system.wounds.critical" value="{{system.wounds.critical}}"/>
+            </div>
+          </div>
+          <div class="bdh-section">
+            <div class="bdh-section-head">Lasting Injuries <button type="button" class="bdh-add" data-action="addInjury">＋</button></div>
+            {{#each injuries as |inj|}}
+              <div class="bdh-item-row">
+                <input type="text" class="bdh-injury" data-index="{{inj.index}}" value="{{inj.description}}" placeholder="e.g. Lost left arm"/>
+                <a class="bdh-del" data-action="removeInjury" data-index="{{inj.index}}" title="Remove">✖</a>
+              </div>
+            {{/each}}
+            {{#unless injuries.length}}<div class="bdh-empty">None.</div>{{/unless}}
+          </div>
+          <div class="bdh-section">
+            <div class="bdh-section-head">Movement &amp; Initiative</div>
+            <div class="bdh-move">
+              <span>Half {{system.movement.half}} m</span><span>Full {{system.movement.full}} m</span>
+              <span>Charge {{system.movement.charge}} m</span><span>Run {{system.movement.run}} m</span>
+            </div>
+            <div class="bdh-init">Initiative: 1d10 + {{agilityBonus}} (Ag)</div>
+          </div>
+        </div>
+      </div>
     </section>
   </section>
 
