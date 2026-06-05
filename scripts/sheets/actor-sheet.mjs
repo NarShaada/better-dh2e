@@ -1,8 +1,9 @@
 // scripts/sheets/actor-sheet.mjs
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
-import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
+import { rollCharacteristic, rollSkill, rollWeaponAttack } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
+import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -71,6 +72,26 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await item.update({ "system.equipped": next });
   }
 
+  /** Action: basic attack test for an equipped weapon. */
+  static async #onRollAttack(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId;
+    if (id) await rollWeaponAttack(this.actor, id);
+  }
+
+  /** Action: add a blank lasting injury. */
+  static async #onAddInjury(event, target) {
+    const injuries = foundry.utils.deepClone(this.actor.system.injuries);
+    injuries.push({ description: "" });
+    await this.actor.update({ "system.injuries": injuries });
+  }
+
+  /** Action: remove a lasting injury by index. */
+  static async #onRemoveInjury(event, target) {
+    const injuries = foundry.utils.deepClone(this.actor.system.injuries);
+    injuries.splice(Number(target.dataset.index), 1);
+    await this.actor.update({ "system.injuries": injuries });
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor"],
     position: { width: 800, height: 720 },
@@ -84,7 +105,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       editItem: DarkHeresyActorSheet.#onEditItem,
       deleteItem: DarkHeresyActorSheet.#onDeleteItem,
       toggleFavourite: DarkHeresyActorSheet.#onToggleFavourite,
-      toggleEquipped: DarkHeresyActorSheet.#onToggleEquipped
+      toggleEquipped: DarkHeresyActorSheet.#onToggleEquipped,
+      rollAttack: DarkHeresyActorSheet.#onRollAttack,
+      addInjury: DarkHeresyActorSheet.#onAddInjury,
+      removeInjury: DarkHeresyActorSheet.#onRemoveInjury
     }
   };
 
@@ -172,6 +196,27 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       if (i.type === "weapon" || i.type === "armour" || i.type === "forceField") return sum + w;
       return sum;
     }, 0);
+    const sys = this.document.system;
+    const tb = sys.characteristics.toughness.bonus;
+    const equippedArmour = items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
+    const prot = computeArmour(equippedArmour, tb);
+    const LOCLBL = { head: "Head", body: "Body", rightArm: "R Arm", leftArm: "L Arm", rightLeg: "R Leg", leftLeg: "L Leg" };
+    context.armourRow = HIT_LOCATIONS.map((loc) => ({ key: loc, label: LOCLBL[loc], tb, ap: prot[loc] }));
+    const eff = items.find((i) => i.type === "forceField" && i.system.equipped);
+    context.forceFieldPR = eff ? eff.system.protectionRating : null;
+    context.combatWeapons = items.filter((i) => i.type === "weapon" && i.system.equipped).map((w) => {
+      const flags = weaponClassFlags(w.system.weaponClass);
+      return {
+        id: w.id, name: w.name,
+        attackChar: (w.system.weaponClass === "melee" ? BDH.characteristics.weaponSkill : BDH.characteristics.ballisticSkill).short,
+        summary: `${w.system.damage} ${BDH.damageTypes[w.system.damageType] ?? ""} · Pen ${w.system.penetration}`,
+        usesAmmo: flags.usesAmmo, clip: `${w.system.clip.value}/${w.system.clip.max}`
+      };
+    });
+    context.favTalents = items.filter((i) => i.type === "talent" && i.system.favourite)
+      .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
+    context.injuries = sys.injuries.map((inj, i) => ({ index: i, description: inj.description }));
+    context.agilityBonus = sys.characteristics.agility.bonus;
     return context;
   }
 
@@ -183,6 +228,16 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         const id = event.currentTarget.closest("[data-item-id]")?.dataset.itemId;
         const item = this.actor.items.get(id);
         if (item) item.update({ "system.quantity": Math.max(0, Math.floor(Number(event.currentTarget.value) || 0)) });
+      });
+    }
+    for (const input of this.element.querySelectorAll(".bdh-injury")) {
+      input.addEventListener("change", (event) => {
+        const idx = Number(event.currentTarget.dataset.index);
+        const injuries = foundry.utils.deepClone(this.actor.system.injuries);
+        if (injuries[idx]) {
+          injuries[idx].description = event.currentTarget.value;
+          this.actor.update({ "system.injuries": injuries });
+        }
       });
     }
   }
