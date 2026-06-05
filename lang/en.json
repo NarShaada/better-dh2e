@@ -33,5 +33,7 @@
   "BDH.Sheet.Notes": "Notes",
   "BDH.Sheet.Afflictions": "Afflictions",
   "BDH.Sheet.Psychic": "Psychic",
-  "BDH.Sheet.Advancement": "Advancement"
+  "BDH.Sheet.Advancement": "Advancement",
+  "BDH.Sheet.Investigation": "Investigation",
+  "BDH.Sheet.Combat": "Combat"
 }
