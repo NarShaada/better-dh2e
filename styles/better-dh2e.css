@@ -1,4 +1,64 @@
-/* Better DH2e — styles grow with the sheet in later plans. */
-.better-dh2e .bdh-tabs { display: flex; gap: 0; }
-.better-dh2e .bdh-tabs .item { padding: 6px 10px; cursor: pointer; }
-.better-dh2e .bdh-tabs .item.active { font-weight: bold; }
+/* Better DH2e — parchment theme (Plan 2: chrome, tabs, Stats tab). */
+.better-dh2e { --bdh-parch:#e7d8b8; --bdh-panel:#efe6cd; --bdh-ink:#2b2017;
+  --bdh-maroon:#5a2a2a; --bdh-brown:#6b4a2b; --bdh-gold:#b8902f; --bdh-muted:#7a5c30;
+  color:var(--bdh-ink); font-family:Georgia, serif; }
+.better-dh2e .window-content, .better-dh2e form { background:var(--bdh-parch); }
+
+/* Header */
+.better-dh2e .bdh-header { display:flex; align-items:center; gap:12px; padding:8px 10px; }
+.better-dh2e .bdh-header img { width:48px; height:48px; border:2px solid var(--bdh-gold); border-radius:6px; flex:0 0 auto; object-fit:cover; }
+.better-dh2e .bdh-header .name { flex:0 0 200px; }
+.better-dh2e .bdh-header .name input { font-size:18px; font-weight:bold; width:100%; background:transparent; border:none; border-bottom:1px solid var(--bdh-brown); }
+.better-dh2e .bdh-header .meta { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:2px 12px; font-size:11px; }
+.better-dh2e .bdh-header .meta label { color:var(--bdh-muted); text-transform:uppercase; font-size:9px; margin-right:4px; }
+.better-dh2e .bdh-header .fate { text-align:center; background:var(--bdh-panel); border:2px solid var(--bdh-gold); border-radius:6px; padding:3px 9px; }
+.better-dh2e .bdh-header .fate .lbl { font-size:9px; text-transform:uppercase; color:var(--bdh-muted); }
+.better-dh2e .bdh-header .fate .v { font-size:15px; font-weight:bold; color:var(--bdh-gold); }
+
+/* Tabs */
+.better-dh2e nav.tabs { display:flex; background:var(--bdh-maroon); border-radius:4px; overflow:hidden; }
+.better-dh2e nav.tabs .item { flex:1; text-align:center; padding:7px 4px; color:var(--bdh-parch);
+  font-variant:small-caps; letter-spacing:1px; font-size:13px; cursor:pointer; border-right:1px solid #3d1c1c; }
+.better-dh2e nav.tabs .item.active { background:var(--bdh-parch); color:var(--bdh-maroon); font-weight:bold; }
+.better-dh2e nav.tabs.secondary { background:transparent; border-bottom:2px solid var(--bdh-brown); border-radius:0; margin-top:8px; }
+.better-dh2e nav.tabs.secondary .item { flex:0 0 auto; color:var(--bdh-muted); border:none; }
+.better-dh2e nav.tabs.secondary .item.active { background:var(--bdh-brown); color:var(--bdh-parch); border-radius:5px 5px 0 0; }
+
+/* Tab section visibility (Foundry toggles .active) */
+.better-dh2e .tab { display:none; padding:8px 4px; }
+.better-dh2e .tab.active { display:block; }
+
+/* Characteristic row */
+.better-dh2e .char-row { display:flex; gap:5px; align-items:flex-end; padding:6px 6px 10px; }
+.better-dh2e .char { flex:1; }
+.better-dh2e .char .bonus { width:60%; margin:0 auto; background:var(--bdh-maroon); color:var(--bdh-parch);
+  text-align:center; font-size:11px; border-radius:3px 3px 0 0; }
+.better-dh2e .char .box { background:var(--bdh-panel); border:2px solid var(--bdh-brown); border-radius:0 0 4px 4px; text-align:center; padding:5px 0 3px; }
+.better-dh2e .char .box .val { font-size:20px; font-weight:bold; }
+.better-dh2e .char .box .nm { font-size:9px; color:var(--bdh-muted); text-transform:uppercase; letter-spacing:1px; }
+.better-dh2e .char.inf { margin-left:16px; border-left:2px dashed var(--bdh-gold); padding-left:8px; }
+.better-dh2e .char.inf .box { border-color:var(--bdh-gold); }
+
+/* Fatigue bar */
+.better-dh2e .fatigue { display:flex; align-items:center; gap:8px; margin:0 6px 4px; background:var(--bdh-panel);
+  border:1px solid var(--bdh-brown); border-radius:4px; padding:3px 8px; }
+.better-dh2e .fatigue .lbl { font-size:9px; text-transform:uppercase; color:var(--bdh-muted); letter-spacing:1px; flex:0 0 60px; }
+.better-dh2e .fatigue .bar { flex:1; height:8px; background:#d6c39a; border-radius:4px; overflow:hidden; }
+.better-dh2e .fatigue .bar i { display:block; height:100%; background:#7a6a2a; }
+.better-dh2e .fatigue .v { font-size:11px; font-weight:bold; }
+
+/* Investigation skills */
+.better-dh2e .inv-toolbar { display:flex; justify-content:flex-end; padding:6px 6px 2px; }
+.better-dh2e .inv-toolbar button { font-size:10px; background:var(--bdh-panel); border:1px solid var(--bdh-brown);
+  border-radius:4px; padding:3px 10px; cursor:pointer; color:var(--bdh-maroon); }
+.better-dh2e .skills { columns:2; gap:24px; padding:2px 6px 12px; }
+.better-dh2e .skill { display:flex; align-items:center; gap:8px; padding:2px 0; break-inside:avoid; font-size:12px; }
+.better-dh2e .skill .tier { display:flex; gap:2px; margin-left:auto; }
+.better-dh2e .skill .tier i { width:9px; height:9px; border:1px solid var(--bdh-brown); border-radius:2px; display:inline-block; }
+.better-dh2e .skill .tier i.on { background:var(--bdh-maroon); }
+.better-dh2e .skill .sval { font-weight:bold; min-width:24px; text-align:right; }
+.better-dh2e .skill.untrained { opacity:.45; }
+.better-dh2e form.hide-untrained .skill.untrained { display:none; }
+
+/* Placeholders for not-yet-built tabs */
+.better-dh2e .placeholder { color:var(--bdh-muted); font-style:italic; padding:12px; }
