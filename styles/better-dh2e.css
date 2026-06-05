@@ -58,7 +58,7 @@
 .better-dh2e .skill .tier i.on { background:var(--bdh-maroon); }
 .better-dh2e .skill .sval { font-weight:bold; min-width:24px; text-align:right; }
 .better-dh2e .skill.untrained { opacity:.45; }
-.better-dh2e form.hide-untrained .skill.untrained { display:none; }
+.better-dh2e .hide-untrained .skill.untrained { display:none; }
 
 /* Placeholders for not-yet-built tabs */
 .better-dh2e .placeholder { color:var(--bdh-muted); font-style:italic; padding:12px; }
@@ -87,4 +87,6 @@
 .better-dh2e.item .bdh-armour-locs { display:grid; grid-template-columns:repeat(6, auto 1fr); gap:4px 6px; align-items:center; padding:4px 8px; }
 .better-dh2e.item .bdh-armour-locs label { color:var(--bdh-muted); font-size:10px; text-transform:uppercase; }
 .better-dh2e.item .bdh-desc-label { display:block; color:var(--bdh-muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:6px 8px 2px; }
-.better-dh2e.item prose-mirror { display:block; min-height:140px; margin:0 8px 8px; border:1px solid var(--bdh-brown); border-radius:4px; background:#fff8e7; }
+.better-dh2e.item textarea.bdh-desc { display:block; width:calc(100% - 16px); min-height:120px; margin:0 8px 8px; padding:6px; box-sizing:border-box; resize:vertical; border:1px solid var(--bdh-brown); border-radius:4px; background:#fff8e7; color:var(--bdh-ink); font-family:Georgia, serif; }
+.better-dh2e.item select.bdh-aptitudes { min-height:200px; font-size:13px; line-height:1.5; padding:4px 6px; }
+.better-dh2e.item select[multiple] option { padding:2px 4px; }

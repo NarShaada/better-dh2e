@@ -1,5 +1,6 @@
 {{!-- templates/item/item-sheet.hbs --}}
-<form class="better-dh2e item">
+{{!-- Root is a <div>: DocumentSheetV2 already makes the application a <form> (tag:"form"); a nested form would orphan our inputs. --}}
+<div class="better-dh2e item">
   <header class="bdh-item-header">
     <img src="{{document.img}}" data-edit="img" alt="icon"/>
     <input type="text" name="name" value="{{document.name}}" placeholder="Name"/>
@@ -9,7 +10,7 @@
     <div class="bdh-fields">
       <label>Tier</label><select name="system.tier">{{selectOptions tierChoices selected=system.tier}}</select>
       <label>Prerequisites</label><input type="text" name="system.prerequisites" value="{{system.prerequisites}}"/>
-      <label>Aptitudes</label><select name="system.aptitudes" multiple size="6">{{selectOptions aptitudeChoices selected=system.aptitudes}}</select>
+      <label>Aptitudes</label><select class="bdh-aptitudes" name="system.aptitudes" multiple size="12">{{selectOptions aptitudeChoices selected=system.aptitudes}}</select>
     </div>
   {{/if}}
 
@@ -57,5 +58,5 @@
   {{/if}}
 
   <label class="bdh-desc-label">Description</label>
-  <prose-mirror name="system.description" value="{{document.system.description}}"></prose-mirror>
-</form>
+  <textarea class="bdh-desc" name="system.description" rows="6">{{system.description}}</textarea>
+</div>
