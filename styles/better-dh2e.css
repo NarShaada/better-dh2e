@@ -154,3 +154,14 @@
 
 /* Favourite star inside the Investigation skill rows */
 .better-dh2e .skill .bdh-fav { flex:0 0 auto; font-size:11px; }
+
+/* Afflictions tab */
+.better-dh2e .bdh-aff-cols { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 14px 0; }
+.better-dh2e .bdh-aff-col { display:flex; flex-direction:column; gap:8px; }
+.better-dh2e .bdh-track { background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:5px; padding:6px 10px; }
+.better-dh2e .bdh-track-head { display:flex; align-items:center; justify-content:space-between; font-variant:small-caps; letter-spacing:1px; font-weight:bold; color:var(--bdh-maroon); }
+.better-dh2e .bdh-track-head input { width:64px; font-size:16px; font-weight:bold; }
+.better-dh2e .bdh-track-tier { font-size:11px; color:var(--bdh-muted); margin:3px 0 6px; }
+.better-dh2e .bdh-aff-col .bdh-section { margin:0; }
+.better-dh2e .bdh-aff-input { min-width:0; }
+.better-dh2e .bdh-aff-name { flex:0 0 32%; }

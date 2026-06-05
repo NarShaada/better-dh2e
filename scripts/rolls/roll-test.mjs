@@ -12,7 +12,7 @@ const CARD = "systems/better-dh2e/templates/chat/test-card.hbs";
  * Show the modifier dialog (plus an optional characteristic picker).
  * @returns {Promise<{modifier:string, characteristicKey:(string|null)}|null>} null if cancelled.
  */
-async function promptTest({ title, characteristics = null }) {
+async function promptTest({ title, characteristics = null, defaultModifier = "+0" }) {
   let picker = "";
   if (characteristics) {
     const opts = characteristics.map((c) =>
@@ -22,7 +22,7 @@ async function promptTest({ title, characteristics = null }) {
       <select name="characteristic">${opts}</select></div>`;
   }
   const content = `${picker}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
-    <input type="text" name="modifier" value="+0" autofocus/></div>`;
+    <input type="text" name="modifier" value="${defaultModifier}" autofocus/></div>`;
 
   return DialogV2.prompt({
     window: { title },
@@ -90,4 +90,12 @@ export async function rollWeaponAttack(actor, weaponId) {
   const choice = await promptTest({ title: label });
   if (!choice) return null;
   return performTest(actor, { label, base: actor.system.characteristics[charKey].total, modifier: choice.modifier });
+}
+
+/** Malignancy / Trauma test: a Willpower test with the track penalty pre-filled in the dialog. */
+export async function rollAfflictionTest(actor, { label, penalty }) {
+  const defaultModifier = `${penalty >= 0 ? "+" : ""}${penalty}`;
+  const choice = await promptTest({ title: label, defaultModifier });
+  if (!choice) return null;
+  return performTest(actor, { label, base: actor.system.characteristics.willpower.total, modifier: choice.modifier });
 }

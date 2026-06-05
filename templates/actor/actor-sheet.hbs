@@ -240,7 +240,71 @@
   <section class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">
     <textarea class="bdh-notes" name="system.notes" rows="16" placeholder="Freeform notes…">{{system.notes}}</textarea>
   </section>
-  <section class="tab {{tabs.afflictions.cssClass}}" data-group="primary" data-tab="afflictions"><p class="placeholder">Afflictions — later plan.</p></section>
+  <section class="tab {{tabs.afflictions.cssClass}}" data-group="primary" data-tab="afflictions">
+    <div class="bdh-aff-cols">
+      <div class="bdh-aff-col">
+        <div class="bdh-track">
+          <div class="bdh-track-head"><span>Corruption</span><input type="number" name="system.corruption" value="{{corruption.value}}" min="0"/></div>
+          <div class="bdh-track-tier">{{corruption.tier}} · test {{#if corruption.penalty}}{{corruption.penalty}}{{else}}+0{{/if}} · next test at {{corruption.nextAt}}</div>
+          <button type="button" class="bdh-atk" data-action="rollAffliction" data-type="malignancy">⚅ Malignancy Test</button>
+        </div>
+        <div class="bdh-section">
+          <div class="bdh-section-head">Mutations <button type="button" class="bdh-add" data-action="addAffliction" data-array="mutations">＋</button></div>
+          {{#each mutations as |m|}}
+            <div class="bdh-item-row" data-array="mutations" data-index="{{m.index}}">
+              <input type="text" class="bdh-aff-input bdh-aff-name" data-field="name" value="{{m.name}}" placeholder="Name"/>
+              <input type="text" class="bdh-aff-input" data-field="description" value="{{m.description}}" placeholder="Effect"/>
+              <a class="bdh-del" data-action="removeAffliction" data-array="mutations" data-index="{{m.index}}" title="Remove">✖</a>
+            </div>
+          {{/each}}
+          {{#unless mutations.length}}<div class="bdh-empty">None.</div>{{/unless}}
+        </div>
+        <div class="bdh-section">
+          <div class="bdh-section-head">Malignancies <button type="button" class="bdh-add" data-action="addAffliction" data-array="malignancies">＋</button></div>
+          {{#each malignancies as |m|}}
+            <div class="bdh-item-row" data-array="malignancies" data-index="{{m.index}}">
+              <input type="text" class="bdh-aff-input bdh-aff-name" data-field="name" value="{{m.name}}" placeholder="Name"/>
+              <input type="text" class="bdh-aff-input" data-field="description" value="{{m.description}}" placeholder="Effect"/>
+              <a class="bdh-del" data-action="removeAffliction" data-array="malignancies" data-index="{{m.index}}" title="Remove">✖</a>
+            </div>
+          {{/each}}
+          {{#unless malignancies.length}}<div class="bdh-empty">None.</div>{{/unless}}
+        </div>
+      </div>
+
+      <div class="bdh-aff-col">
+        <div class="bdh-track">
+          <div class="bdh-track-head"><span>Insanity</span><input type="number" name="system.insanity" value="{{insanity.value}}" min="0"/></div>
+          <div class="bdh-track-tier">{{insanity.tier}} · trauma {{#if insanity.penalty}}{{insanity.penalty}}{{else}}+0{{/if}} · next test at {{insanity.nextAt}}</div>
+          <button type="button" class="bdh-atk" data-action="rollAffliction" data-type="trauma">⚅ Trauma Test</button>
+        </div>
+        <div class="bdh-section">
+          <div class="bdh-section-head">Mental Disorders <button type="button" class="bdh-add" data-action="addAffliction" data-array="mentalDisorders">＋</button></div>
+          {{#each mentalDisorders as |m|}}
+            <div class="bdh-item-row" data-array="mentalDisorders" data-index="{{m.index}}">
+              <input type="text" class="bdh-aff-input bdh-aff-name" data-field="name" value="{{m.name}}" placeholder="Name"/>
+              <input type="text" class="bdh-aff-input" data-field="description" value="{{m.description}}" placeholder="Effect"/>
+              <a class="bdh-del" data-action="removeAffliction" data-array="mentalDisorders" data-index="{{m.index}}" title="Remove">✖</a>
+            </div>
+          {{/each}}
+          {{#unless mentalDisorders.length}}<div class="bdh-empty">None.</div>{{/unless}}
+        </div>
+      </div>
+    </div>
+
+    <div class="bdh-section">
+      <div class="bdh-section-head">Cybernetics <button type="button" class="bdh-add" data-action="createItem" data-type="cybernetic">＋</button></div>
+      {{#each cybernetics as |c|}}
+        <div class="bdh-item-row" data-item-id="{{c.id}}">
+          <span class="bdh-name" data-action="editItem">{{c.name}}</span>
+          <span class="bdh-desc-line">{{c.desc}}</span>
+          {{#if c.installed}}<span class="bdh-tag">installed</span>{{/if}}
+          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+        </div>
+      {{/each}}
+      {{#unless cybernetics.length}}<div class="bdh-empty">None.</div>{{/unless}}
+    </div>
+  </section>
   <section class="tab {{tabs.psychic.cssClass}}" data-group="primary" data-tab="psychic"><p class="placeholder">Psychic — later plan.</p></section>
   <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement"><p class="placeholder">Advancement — later plan.</p></section>
 
