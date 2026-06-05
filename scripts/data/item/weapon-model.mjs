@@ -14,7 +14,7 @@ export class WeaponModel extends BaseItemModel {
       }),
       range: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       rateOfFire: new fields.SchemaField({
-        single: new fields.BooleanField({ initial: true }),
+        single: new fields.BooleanField({ required: true, initial: true }),
         burst:  new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         full:   new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
       }),
