@@ -32,4 +32,13 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
     return context;
   }
+
+  /** Select-all on focus for short text/number fields (not name or description) — speeds bulk entry. */
+  _onRender(context, options) {
+    super._onRender(context, options);
+    const fields = this.element.querySelectorAll('input[type="text"]:not([name="name"]), input[type="number"]');
+    for (const el of fields) {
+      el.addEventListener("focus", (event) => event.currentTarget.select());
+    }
+  }
 }
