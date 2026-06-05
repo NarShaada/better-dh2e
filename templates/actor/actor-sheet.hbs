@@ -1,5 +1,6 @@
 {{!-- templates/actor/actor-sheet.hbs --}}
-<form class="better-dh2e {{#if hideUntrained}}hide-untrained{{/if}}">
+{{!-- Root is a <div>: DocumentSheetV2 already makes the application a <form> (tag:"form"); a nested form would orphan our inputs and block saving. --}}
+<div class="better-dh2e {{#if hideUntrained}}hide-untrained{{/if}}">
 
   <header class="bdh-header">
     <img src="{{document.img}}" data-edit="img" alt="portrait"/>
@@ -79,4 +80,4 @@
   <section class="tab {{tabs.psychic.cssClass}}" data-group="primary" data-tab="psychic"><p class="placeholder">Psychic — later plan.</p></section>
   <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement"><p class="placeholder">Advancement — later plan.</p></section>
 
-</form>
+</div>

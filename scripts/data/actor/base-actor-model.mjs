@@ -32,6 +32,14 @@ function skillsSchema() {
   return new fields.SchemaField(schema);
 }
 
+/** An array of {name, description} entries (mutations, malignancies, mental disorders). */
+function namedListField() {
+  return new fields.ArrayField(new fields.SchemaField({
+    name:        new fields.StringField({ required: true, initial: "" }),
+    description: new fields.StringField({ required: true, initial: "" })
+  }));
+}
+
 export class BaseActorModel extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
@@ -49,7 +57,15 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
         value: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         max:   new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
       }),
-      size: new fields.NumberField({ required: true, integer: true, initial: 4, min: 0 })
+      size: new fields.NumberField({ required: true, integer: true, initial: 4, min: 0 }),
+      afflictions: new fields.SchemaField({
+        mutations:       namedListField(),
+        malignancies:    namedListField(),
+        mentalDisorders: namedListField()
+      }),
+      injuries: new fields.ArrayField(new fields.SchemaField({
+        description: new fields.StringField({ required: true, initial: "" })
+      }))
     };
   }
 
