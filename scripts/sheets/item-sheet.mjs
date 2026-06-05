@@ -88,10 +88,16 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
   _onRender(context, options) {
     super._onRender(context, options);
     // Select-all on focus for short text/number fields (not name/description) — faster bulk entry.
+    // (Re-attached each render: these inputs are content that is replaced on every render.)
     for (const el of this.element.querySelectorAll('input[type="text"]:not([name="name"]), input[type="number"]')) {
       el.addEventListener("focus", (event) => event.currentTarget.select());
     }
-    // Weapons accept a dropped weaponMod item to install.
+  }
+
+  /** One-time wiring: weapons accept a dropped weaponMod item to install. The frame element persists
+   * across renders, so this must NOT be in _onRender (it would stack drop listeners and double-install). */
+  _onFirstRender(context, options) {
+    super._onFirstRender(context, options);
     if (this.document.type === "weapon") {
       this.element.addEventListener("dragover", (event) => event.preventDefault());
       this.element.addEventListener("drop", this.#onDropMod.bind(this));
