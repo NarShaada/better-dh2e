@@ -26,7 +26,8 @@ function skillsSchema() {
         required: true,
         choices: Object.keys(BDH.skillRanks),
         initial: "untrained"
-      })
+      }),
+      favourite: new fields.BooleanField({ required: true, initial: false })
     });
   }
   return new fields.SchemaField(schema);
