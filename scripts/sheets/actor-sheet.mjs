@@ -1,5 +1,6 @@
 // scripts/sheets/actor-sheet.mjs
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
+import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -14,13 +15,25 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     this.render();
   }
 
+  /** Action: roll the clicked characteristic. */
+  static async #onRollCharacteristic(event, target) {
+    await rollCharacteristic(this.document, target.dataset.characteristic);
+  }
+
+  /** Action: roll the clicked skill (dialog offers a characteristic picker). */
+  static async #onRollSkill(event, target) {
+    await rollSkill(this.document, target.dataset.skill);
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor"],
     position: { width: 800, height: 720 },
     window: { resizable: true },
     form: { submitOnChange: true },
     actions: {
-      toggleUntrained: DarkHeresyActorSheet.#onToggleUntrained
+      toggleUntrained: DarkHeresyActorSheet.#onToggleUntrained,
+      rollCharacteristic: DarkHeresyActorSheet.#onRollCharacteristic,
+      rollSkill: DarkHeresyActorSheet.#onRollSkill
     }
   };
 

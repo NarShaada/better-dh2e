@@ -1,0 +1,15 @@
+{{!-- templates/chat/test-card.hbs --}}
+<div class="bdh-card {{#if success}}ok{{else}}fail{{/if}}">
+  <header class="bdh-card-head">{{label}}</header>
+  <div class="bdh-card-grid">
+    <span class="k">{{localize "BDH.Roll.Target"}}</span><span class="v">{{target}}</span>
+    <span class="k">{{localize "BDH.Roll.Modifier"}}</span><span class="v">{{modifierLabel}}</span>
+    <span class="k">{{localize "BDH.Roll.Result"}}</span><span class="v">{{roll}}</span>
+  </div>
+  <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
+    {{#if success}}{{localize "BDH.Roll.Success"}}{{else}}{{localize "BDH.Roll.Failure"}}{{/if}}
+  </div>
+  <div class="bdh-card-degrees">
+    {{degrees}} {{#if success}}{{localize "BDH.Roll.DoS"}}{{else}}{{localize "BDH.Roll.DoF"}}{{/if}}
+  </div>
+</div>

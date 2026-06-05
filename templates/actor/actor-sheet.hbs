@@ -34,7 +34,7 @@
       {{#each characteristics as |c|}}
         <div class="char {{#if c.isInfluence}}inf{{/if}}" data-characteristic="{{c.key}}">
           <div class="bonus">{{c.bonus}}</div>
-          <div class="box"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
+          <div class="box rollable" data-action="rollCharacteristic" data-characteristic="{{c.key}}"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
         </div>
       {{/each}}
     </div>
@@ -57,7 +57,7 @@
       </div>
       <div class="skills">
         {{#each skills as |s|}}
-          <div class="skill {{#unless s.trained}}untrained{{/unless}}" data-skill="{{s.key}}">
+          <div class="skill {{#unless s.trained}}untrained{{/unless}}" data-action="rollSkill" data-skill="{{s.key}}">
             <span class="snm">{{localize s.label}}</span>
             <span class="tier">{{#each s.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
             <span class="sval">{{s.total}}</span>
