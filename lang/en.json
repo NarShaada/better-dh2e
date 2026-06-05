@@ -35,5 +35,14 @@
   "BDH.Sheet.Psychic": "Psychic",
   "BDH.Sheet.Advancement": "Advancement",
   "BDH.Sheet.Investigation": "Investigation",
-  "BDH.Sheet.Combat": "Combat"
+  "BDH.Sheet.Combat": "Combat",
+  "BDH.Roll.Modifier": "Modifier",
+  "BDH.Roll.Roll": "Roll",
+  "BDH.Roll.Characteristic": "Characteristic",
+  "BDH.Roll.Target": "Target",
+  "BDH.Roll.Result": "Rolled",
+  "BDH.Roll.Success": "Success",
+  "BDH.Roll.Failure": "Failure",
+  "BDH.Roll.DoS": "Degrees of Success",
+  "BDH.Roll.DoF": "Degrees of Failure"
 }
