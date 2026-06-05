@@ -35,7 +35,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
 
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "item"],
-    position: { width: 480, height: 560 },
+    position: { width: 640, height: 560 },
     window: { resizable: true },
     form: { submitOnChange: true },
     actions: {
