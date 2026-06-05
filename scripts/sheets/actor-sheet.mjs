@@ -25,6 +25,33 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await rollSkill(this.document, target.dataset.skill);
   }
 
+  /** Action: create a new owned item of the given type and open its sheet. */
+  static async #onCreateItem(event, target) {
+    const type = target.dataset.type;
+    const name = `New ${game.i18n.localize(`TYPES.Item.${type}`)}`;
+    const [created] = await this.actor.createEmbeddedDocuments("Item", [{ name, type }]);
+    created?.sheet.render(true);
+  }
+
+  /** Action: open an owned item's sheet for editing. */
+  static #onEditItem(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId;
+    this.actor.items.get(id)?.sheet.render(true);
+  }
+
+  /** Action: delete an owned item. */
+  static async #onDeleteItem(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId;
+    await this.actor.items.get(id)?.delete();
+  }
+
+  /** Action: toggle a talent's favourite flag. */
+  static async #onToggleFavourite(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId;
+    const item = this.actor.items.get(id);
+    if (item) await item.update({ "system.favourite": !item.system.favourite });
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor"],
     position: { width: 800, height: 720 },
@@ -33,7 +60,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     actions: {
       toggleUntrained: DarkHeresyActorSheet.#onToggleUntrained,
       rollCharacteristic: DarkHeresyActorSheet.#onRollCharacteristic,
-      rollSkill: DarkHeresyActorSheet.#onRollSkill
+      rollSkill: DarkHeresyActorSheet.#onRollSkill,
+      createItem: DarkHeresyActorSheet.#onCreateItem,
+      editItem: DarkHeresyActorSheet.#onEditItem,
+      deleteItem: DarkHeresyActorSheet.#onDeleteItem,
+      toggleFavourite: DarkHeresyActorSheet.#onToggleFavourite
     }
   };
 
@@ -75,6 +106,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     // >1 tab group => context.tabs is not auto-injected; prepare both groups explicitly.
     context.tabs = this._prepareTabs("primary");
     context.subtabs = this._prepareTabs("secondary");
+    const items = this.document.items;
+    context.talents = items.filter((i) => i.type === "talent").map((t) => ({
+      id: t.id, name: t.name, favourite: t.system.favourite, tier: t.system.tier,
+      aptitudes: (t.system.aptitudes ?? []).join(", ")
+    }));
+    context.traits = items.filter((i) => i.type === "trait").map((t) => ({ id: t.id, name: t.name }));
     return context;
   }
 }
