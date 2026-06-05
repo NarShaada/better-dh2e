@@ -1,0 +1,46 @@
+// scripts/helpers/sheet-data.mjs
+// PURE view-model builders — import only ../config.mjs, nothing from Foundry.
+import { BDH } from "../config.mjs";
+
+const TIER_BY_RANK = { untrained: 0, known: 1, trained: 2, experienced: 3, veteran: 4 };
+
+/** Ordered characteristic view-models for the Stats row. */
+export function buildCharacteristics(characteristics) {
+  return Object.keys(BDH.characteristics).map((key) => {
+    const c = characteristics[key] ?? {};
+    return {
+      key,
+      short: BDH.characteristics[key].short,
+      label: BDH.characteristics[key].label,
+      value: c.total ?? 0,
+      bonus: c.bonus ?? 0,
+      isInfluence: key === "influence"
+    };
+  });
+}
+
+/** Skill view-models, sorted by label, with a 0..4 tier, a 4-dot array, and a trained flag. */
+export function buildSkills(skills) {
+  return Object.keys(BDH.skills)
+    .map((key) => {
+      const s = skills[key] ?? {};
+      const rank = s.rank ?? "untrained";
+      const tier = TIER_BY_RANK[rank] ?? 0;
+      return {
+        key,
+        label: BDH.skills[key].label,
+        rank,
+        tier,
+        dots: [0, 1, 2, 3].map((i) => i < tier),
+        trained: rank !== "untrained",
+        total: s.total ?? 0
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** Fatigue fill percentage (0..100). */
+export function fatiguePercent(value, max) {
+  if (!max || max <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / max) * 100)));
+}
