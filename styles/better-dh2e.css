@@ -121,3 +121,16 @@
 .better-dh2e .bdh-del { flex:0 0 auto; color:#7a1f1f; cursor:pointer; }
 .better-dh2e .bdh-empty { padding:5px 10px; color:var(--bdh-muted); font-style:italic; font-size:11px; }
 .better-dh2e .bdh-notes { display:block; width:calc(100% - 28px); margin:8px 14px; padding:8px; box-sizing:border-box; min-height:280px; resize:vertical; border:1px solid var(--bdh-brown); border-radius:4px; background:#fff8e7; color:var(--bdh-ink); font-family:Georgia, serif; }
+
+/* Gear tab */
+.better-dh2e .bdh-gear-bar { margin:8px 14px 0; font-size:12px; color:var(--bdh-muted); }
+.better-dh2e .bdh-gear-bar b { color:var(--bdh-ink); font-size:14px; }
+.better-dh2e .bdh-subhead { display:flex; align-items:center; gap:8px; padding:3px 10px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--bdh-muted); background:#e2d2ac; }
+.better-dh2e .bdh-subhead .bdh-hint2 { text-transform:none; letter-spacing:0; font-style:italic; opacity:.8; }
+.better-dh2e .bdh-eq { flex:0 0 auto; width:18px; text-align:center; color:var(--bdh-muted); cursor:pointer; font-weight:bold; }
+.better-dh2e .bdh-eq.on { color:#3d6a4a; }
+.better-dh2e .bdh-tag { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--bdh-muted); border:1px solid #b3a070; border-radius:8px; padding:0 5px; }
+.better-dh2e .bdh-craft { flex:0 0 auto; font-size:11px; color:var(--bdh-muted); }
+.better-dh2e .bdh-qty-wrap { flex:0 0 auto; font-size:11px; color:var(--bdh-muted); }
+.better-dh2e .bdh-qty { width:44px; }
+.better-dh2e .bdh-clip { flex:0 0 auto; font-size:11px; font-weight:bold; color:var(--bdh-maroon); background:#efe6cd; border:1px solid #b3a070; border-radius:3px; padding:0 6px; }

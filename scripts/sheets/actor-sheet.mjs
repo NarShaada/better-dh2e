@@ -1,6 +1,8 @@
 // scripts/sheets/actor-sheet.mjs
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
 import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
+import { BDH } from "../config.mjs";
+import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -52,6 +54,23 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (item) await item.update({ "system.favourite": !item.system.favourite });
   }
 
+  /** Action: toggle an item's equipped flag. Armour: only one non-additive piece equipped at a time. */
+  static async #onToggleEquipped(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId;
+    const item = this.actor.items.get(id);
+    if (!item) return;
+    const next = !item.system.equipped;
+    if (item.type === "armour" && next && !item.system.additive) {
+      const others = this.actor.items.filter(
+        (i) => i.type === "armour" && i.id !== id && i.system.equipped && !i.system.additive
+      );
+      if (others.length) {
+        await this.actor.updateEmbeddedDocuments("Item", others.map((o) => ({ _id: o.id, "system.equipped": false })));
+      }
+    }
+    await item.update({ "system.equipped": next });
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor"],
     position: { width: 800, height: 720 },
@@ -64,7 +83,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       createItem: DarkHeresyActorSheet.#onCreateItem,
       editItem: DarkHeresyActorSheet.#onEditItem,
       deleteItem: DarkHeresyActorSheet.#onDeleteItem,
-      toggleFavourite: DarkHeresyActorSheet.#onToggleFavourite
+      toggleFavourite: DarkHeresyActorSheet.#onToggleFavourite,
+      toggleEquipped: DarkHeresyActorSheet.#onToggleEquipped
     }
   };
 
@@ -119,6 +139,51 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.traits = items.filter((i) => i.type === "trait").map((t) => ({
       id: t.id, name: t.name, desc: firstLine(t.system.description)
     }));
+    const LOC = { head: "Head", body: "Body", rightArm: "R Arm", leftArm: "L Arm", rightLeg: "R Leg", leftLeg: "L Leg" };
+    context.weapons = items.filter((i) => i.type === "weapon").map((w) => {
+      const s = w.system;
+      const flags = weaponClassFlags(s.weaponClass);
+      const parts = [
+        BDH.weaponClasses[s.weaponClass] ?? s.weaponClass,
+        [s.damage, BDH.damageTypes[s.damageType]].filter(Boolean).join(" "),
+        `Pen ${s.penetration}`
+      ];
+      if (flags.usesRange) parts.push(`Rng ${s.range}m`);
+      if (flags.usesAmmo) parts.push(`RoF ${s.rateOfFire.single}/${s.rateOfFire.short}/${s.rateOfFire.long}`);
+      return {
+        id: w.id, name: w.name, equipped: s.equipped, summary: parts.join(" · "),
+        usesAmmo: flags.usesAmmo, clip: `${s.clip.value}/${s.clip.max}`
+      };
+    });
+    context.armour = items.filter((i) => i.type === "armour").map((a) => ({
+      id: a.id, name: a.name, equipped: a.system.equipped, additive: a.system.additive,
+      ap: Object.entries(a.system.locations).filter(([, v]) => v > 0).map(([k, v]) => `${LOC[k]} ${v}`).join(", ") || "—"
+    }));
+    context.forceFields = items.filter((i) => i.type === "forceField").map((f) => ({
+      id: f.id, name: f.name, equipped: f.system.equipped, pr: f.system.protectionRating, overload: f.system.overload
+    }));
+    context.gear = items.filter((i) => i.type === "gear").map((g) => ({
+      id: g.id, name: g.name, desc: firstLine(g.system.description),
+      craft: BDH.craftsmanship[g.system.craftsmanship] ?? g.system.craftsmanship, quantity: g.system.quantity
+    }));
+    context.carriedWeight = items.reduce((sum, i) => {
+      const w = i.system.weight ?? 0;
+      if (i.type === "gear") return sum + w * (i.system.quantity ?? 1);
+      if (i.type === "weapon" || i.type === "armour" || i.type === "forceField") return sum + w;
+      return sum;
+    }, 0);
     return context;
+  }
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    // Gear quantity: a no-name input that updates the embedded item directly (so it isn't part of the actor form submit).
+    for (const input of this.element.querySelectorAll(".bdh-qty")) {
+      input.addEventListener("change", (event) => {
+        const id = event.currentTarget.closest("[data-item-id]")?.dataset.itemId;
+        const item = this.actor.items.get(id);
+        if (item) item.update({ "system.quantity": Math.max(0, Math.floor(Number(event.currentTarget.value) || 0)) });
+      });
+    }
   }
 }
