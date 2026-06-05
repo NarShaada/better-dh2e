@@ -15,9 +15,7 @@ export class AcolyteModel extends BaseActorModel {
       }),
       experience: new fields.SchemaField({
         total: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
-      }),
-      corruption: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
-      insanity:   new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      })
     };
   }
 }

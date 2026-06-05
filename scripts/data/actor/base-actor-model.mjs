@@ -67,7 +67,9 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       injuries: new fields.ArrayField(new fields.SchemaField({
         description: new fields.StringField({ required: true, initial: "" })
       })),
-      notes: new fields.StringField({ required: true, initial: "" })
+      notes: new fields.StringField({ required: true, initial: "" }),
+      corruption: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      insanity: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
     };
   }
 
