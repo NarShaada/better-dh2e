@@ -70,28 +70,37 @@ Automation lands in the hottest part of the code — the roll/damage formulas �
 - **Skills:** rank/tier, governing characteristic(s); derive total = characteristic.total + rank bonus. **Specialist skills** carry no rank of their own — instead a **dynamic list of specializations**, each an independent entry `{ name, rank, characteristic (defaults from parent) }`, advanceable like its own skill (replaces the old fixed `specialities{}` map so arbitrary names can be added on the fly).
 - **Resources:** Wounds (threshold: `value`/`max` + `critical`), Fatigue (`value`/`max` derived TB+WB), Fate (`value`/`max`), Corruption, Insanity. (**Psy Rating is not a resource** — it is a `trait` item; see the item table.)
 
-**Item types**
+**Item types** — standalone Foundry Items. All carry a built-in **Name** and a **rich-text Description**; **no `source` field**. Each item is "1 of".
 
-| Type | Key fields | Notes |
-|---|---|---|
-| `weapon` | class, range, RoF (single/semi/full), damage, damageType, penetration, clip, structured `traits`, **embedded mods**, `equipped` | Owns its modifications; clip tracking lives here. |
-| `armour` | per-location AP (head/arms/body/legs), `additive` flag, maxAgility, craftsmanship, `equipped` | One non-additive piece equippable at a time; additive layers stack. |
-| `forceField` | protectionRating, overload, craftsmanship, `equipped` | Distinct mechanics; equip surfaces PR on Combat. |
-| `talent` | tier, aptitudes, prerequisites, benefit, **favourite** flag | Favourites surface on the Combat sub-tab. |
-| `psychicPower` | name, discipline, action, range, description, cost | **Simple descriptive item** (no Focus-Power/Phenomena automation this version); `cost` lets Simple advancement charge it. |
-| `trait`, `mutation`, `malignancy`, `mentalDisorder`, `cybernetic` | description, source, effect | Body/mind items → Afflictions tab. |
-| `criticalInjury` / `lastingInjury` | type, location, description | Persistent injuries surface on Combat. |
-| `gear` | name, description (holds effect text), craftsmanship (P/N/G/B), quantity | **Generic** catch-all. |
-| `aptitude` | name | Drives XP cost. |
+| Type | Fields (beyond Name + Description) |
+|---|---|
+| `talent` | tier (1–3), prerequisites (text), aptitudes (multi-select from `CONFIG.BDH.aptitudes`), **favourite** flag |
+| `trait` | *(Name + Description only)* — also used to represent **Psy Rating** this version |
+| `gear` | craftsmanship, availability, weight, **quantity** (default 1; the quantity *control* appears only on the actor's Gear tab, not the item edit sheet) |
+| `forceField` | protectionRating (int), overload (int), craftsmanship, availability, weight, `equipped` |
+| `cybernetic` | craftsmanship, availability, installed (bool) |
+| `psychicPower` | *(Name + Description only this version)* |
+| `armour` | AP per location (head/body/rArm/lArm/rLeg/lLeg, each int), additive (bool), craftsmanship, availability, weight, `equipped` |
+| `weapon` | class, type, range, reload, clip (value/max), rateOfFire (single/short/long ammo-use ints), damage (regex), damageType, penetration (int), special (text), craftsmanship, availability, weight, **qualities** `[{key,value}]`, **mods** `[{name,attackMod,damageMod,penMod,special}]`, `equipped` — *see Weapon note below* |
+| `weaponMod` | attackMod (int), damageMod (regex), penMod (int), special (text) — a reusable blueprint; **installing copies its fields into a weapon's `mods[]`** |
 
-*Psy Rating* uses the existing `trait` item — no dedicated psyker fields this version (relocating it to a structured control is part of the future psychic phase, §9).
+**Embedded on the actor** (NOT item types — inline lists owned by a sheet section, no sidebar item):
+- **Mutations / Malignancies / Mental Disorders** → arrays of `{ name, description }` (Afflictions tab).
+- **Critical / Lasting Injuries** → array of `{ description }` (Combat tab).
+
+**Config lists** (hardcoded in `CONFIG.BDH`, not items): `aptitudes` (standard DH2e set), `availability` (Ubiquitous→Unique ladder), `craftsmanship` (Poor/Normal/Good/Best), weapon `class`, weapon `type`, `damageTypes`, `reload` options, and `qualities` (each `{label, takesValue}`; per-quality behaviour is implemented in the attack pipeline §3).
+
+**Weapon — qualities vs. mods (the smart split).** A weapon's two kinds of modifier are deliberately different machinery:
+- **Mods are generic & data-driven** — `attackMod`/`damageMod`/`penMod`/`special`; **one** code path applies all of them (sum the ints, append the damage regex). Authored as `weaponMod` items, installed by copying their data into `weapon.system.mods[]`.
+- **Qualities are bespoke & registry-driven** — `{key, value}` where each key maps to a module in the resolution pipeline (§3); "each one is a task by itself."
+- This phase only **stores and lists** mods/qualities; the **combined effective stats are computed at attack/damage time** (the pipeline), never duplicated on the weapon sheet. Melee/Thrown weapons hide RoF/Clip/Reload (and Melee hides Range) via class-derived flags.
 
 **Removed vs. the old system** (deliberate simplifications):
-
-- `ammunition` → **generic `gear`** ("pure squash": qty + description; clip tracking stays on the weapon; special-ammo effects are applied manually — accepted tradeoff).
-- `weaponModification` → **embedded inside `weapon`** (installed = part of the weapon; uninstalled mods are not tracked as standalone items).
+- `ammunition` → **generic `gear`** ("pure squash": special-ammo effects applied manually; clip tracking stays on the weapon).
+- `weaponModification` → a `weaponMod` item whose data is **copied into the weapon on install** (uninstalled mods are just blueprints).
 - `drug`, `tool` → **generic `gear`**.
-- `cybernetic` stays a type but moves presentation from Gear → **Afflictions**.
+- `mutation` / `malignancy` / `mentalDisorder` / `criticalInjury` → **embedded actor arrays** (above), not item types.
+- `aptitude` → a **`CONFIG.BDH` list**, not an item type.
 
 ## 5. Equipped Model
 
