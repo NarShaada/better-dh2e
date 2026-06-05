@@ -5,8 +5,9 @@
     "npc": {}
   },
   "Item": {
-    "types": ["weapon", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"],
+    "types": ["weapon", "weaponMod", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"],
     "weapon": {},
+    "weaponMod": {},
     "gear": {},
     "talent": {},
     "trait": {},
