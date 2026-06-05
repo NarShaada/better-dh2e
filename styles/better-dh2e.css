@@ -62,3 +62,18 @@
 
 /* Placeholders for not-yet-built tabs */
 .better-dh2e .placeholder { color:var(--bdh-muted); font-style:italic; padding:12px; }
+
+/* Rollable affordance on the sheet */
+.better-dh2e .char .box.rollable, .better-dh2e .skill[data-action] { cursor:pointer; }
+.better-dh2e .char .box.rollable:hover { box-shadow:0 0 6px var(--bdh-gold) inset; }
+.better-dh2e .skill[data-action]:hover .snm { text-decoration:underline; }
+
+/* Chat card (rendered inside Foundry's chat log, so not scoped to .better-dh2e) */
+.bdh-card { font-family:Georgia, serif; color:#2b2017; background:#efe6cd; border:1px solid #8a6d3b; border-left:4px solid #5a2a2a; border-radius:5px; padding:6px 8px; }
+.bdh-card.fail { border-left-color:#7a1f1f; }
+.bdh-card-head { font-weight:bold; color:#5a2a2a; border-bottom:1px solid #c9b285; padding-bottom:3px; margin-bottom:4px; }
+.bdh-card-grid { display:grid; grid-template-columns:auto auto; gap:1px 14px; font-size:12px; }
+.bdh-card-grid .k { color:#7a5c30; } .bdh-card-grid .v { text-align:right; font-weight:bold; }
+.bdh-card-result { text-align:center; font-size:15px; font-weight:bold; margin:5px 0 2px; }
+.bdh-card-result.ok { color:#3d6a4a; } .bdh-card-result.fail { color:#7a2a2a; }
+.bdh-card-degrees { text-align:center; font-size:12px; color:#5a2a2a; }
