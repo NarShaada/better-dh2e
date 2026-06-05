@@ -65,7 +65,8 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       }),
       injuries: new fields.ArrayField(new fields.SchemaField({
         description: new fields.StringField({ required: true, initial: "" })
-      }))
+      })),
+      notes: new fields.StringField({ required: true, initial: "" })
     };
   }
 

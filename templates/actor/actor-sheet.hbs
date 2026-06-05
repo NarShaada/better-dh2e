@@ -73,9 +73,37 @@
   </section>
 
   {{!-- Other primary tabs: placeholders for later plans --}}
-  <section class="tab {{tabs.abilities.cssClass}}" data-group="primary" data-tab="abilities"><p class="placeholder">Abilities — later plan.</p></section>
+  <section class="tab {{tabs.abilities.cssClass}}" data-group="primary" data-tab="abilities">
+    <div class="bdh-section">
+      <div class="bdh-section-head">Talents <button type="button" class="bdh-add" data-action="createItem" data-type="talent">＋</button></div>
+      {{#each talents as |t|}}
+        <div class="bdh-item-row" data-item-id="{{t.id}}">
+          <a class="bdh-fav {{#if t.favourite}}on{{/if}}" data-action="toggleFavourite" title="Favourite">★</a>
+          <span class="bdh-name" data-action="editItem">{{t.name}}</span>
+          <span class="bdh-tier">Tier {{t.tier}}</span>
+          <span class="bdh-desc-line">{{t.desc}}</span>
+          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+        </div>
+      {{/each}}
+      {{#unless talents.length}}<div class="bdh-empty">No talents — drag one in or press ＋.</div>{{/unless}}
+    </div>
+
+    <div class="bdh-section">
+      <div class="bdh-section-head">Traits <button type="button" class="bdh-add" data-action="createItem" data-type="trait">＋</button></div>
+      {{#each traits as |tr|}}
+        <div class="bdh-item-row" data-item-id="{{tr.id}}">
+          <span class="bdh-name" data-action="editItem">{{tr.name}}</span>
+          <span class="bdh-desc-line">{{tr.desc}}</span>
+          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+        </div>
+      {{/each}}
+      {{#unless traits.length}}<div class="bdh-empty">No traits.</div>{{/unless}}
+    </div>
+  </section>
   <section class="tab {{tabs.gear.cssClass}}" data-group="primary" data-tab="gear"><p class="placeholder">Gear — later plan.</p></section>
-  <section class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes"><p class="placeholder">Notes — later plan.</p></section>
+  <section class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">
+    <textarea class="bdh-notes" name="system.notes" rows="16" placeholder="Freeform notes…">{{system.notes}}</textarea>
+  </section>
   <section class="tab {{tabs.afflictions.cssClass}}" data-group="primary" data-tab="afflictions"><p class="placeholder">Afflictions — later plan.</p></section>
   <section class="tab {{tabs.psychic.cssClass}}" data-group="primary" data-tab="psychic"><p class="placeholder">Psychic — later plan.</p></section>
   <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement"><p class="placeholder">Advancement — later plan.</p></section>
