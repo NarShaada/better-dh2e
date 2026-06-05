@@ -33,7 +33,8 @@ export function buildSkills(skills) {
         tier,
         dots: [0, 1, 2, 3].map((i) => i < tier),
         trained: rank !== "untrained",
-        total: s.total ?? 0
+        total: s.total ?? 0,
+        favourite: s.favourite ?? false
       };
     })
     .sort((a, b) => a.label.localeCompare(b.label));

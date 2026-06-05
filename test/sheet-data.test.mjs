@@ -16,6 +16,7 @@ function skillStub() {
   for (const k of Object.keys(BDH.skills)) o[k] = { rank: "untrained", total: 5 };
   o.dodge = { rank: "trained", total: 45 };
   o.awareness = { rank: "known", total: 28 };
+  o.parry = { rank: "trained", total: 60, favourite: true };
   return o;
 }
 
@@ -51,6 +52,11 @@ describe("buildSkills", () => {
   it("sorts entries by label", () => {
     const labels = buildSkills(skillStub()).map((s) => s.label);
     expect(labels).toEqual([...labels].sort((a, b) => a.localeCompare(b)));
+  });
+  it("carries the favourite flag", () => {
+    const list = buildSkills(skillStub());
+    expect(list.find((s) => s.key === "parry").favourite).toBe(true);
+    expect(list.find((s) => s.key === "dodge").favourite).toBe(false);
   });
 });
 

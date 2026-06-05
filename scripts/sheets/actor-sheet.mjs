@@ -23,9 +23,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await rollCharacteristic(this.document, target.dataset.characteristic);
   }
 
-  /** Action: roll the clicked skill (dialog offers a characteristic picker). */
+  /** Action: roll the clicked skill (dialog offers a characteristic picker).
+   * Reads the key via closest so it works whether data-skill is on the action element
+   * (Investigation rows) or an ancestor row (Combat favourite-skills list). */
   static async #onRollSkill(event, target) {
-    await rollSkill(this.document, target.dataset.skill);
+    await rollSkill(this.document, target.closest("[data-skill]")?.dataset.skill);
   }
 
   /** Action: create a new owned item of the given type and open its sheet. */
@@ -48,11 +50,30 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.items.get(id)?.delete();
   }
 
-  /** Action: toggle a talent's favourite flag. */
+  /** Action: toggle a talent/trait favourite (max 3 of each type). */
   static async #onToggleFavourite(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
     const item = this.actor.items.get(id);
-    if (item) await item.update({ "system.favourite": !item.system.favourite });
+    if (!item) return;
+    const next = !item.system.favourite;
+    if (next && this.actor.items.filter((i) => i.type === item.type && i.system.favourite).length >= 3) {
+      ui.notifications.warn(`You can favourite at most 3 ${item.type}s.`);
+      return;
+    }
+    await item.update({ "system.favourite": next });
+  }
+
+  /** Action: toggle a skill favourite (max 3). */
+  static async #onToggleSkillFavourite(event, target) {
+    const key = target.closest("[data-skill]")?.dataset.skill;
+    if (!key) return;
+    const skills = this.actor.system.skills;
+    const next = !skills[key].favourite;
+    if (next && Object.values(skills).filter((s) => s.favourite).length >= 3) {
+      ui.notifications.warn("You can favourite at most 3 skills.");
+      return;
+    }
+    await this.actor.update({ [`system.skills.${key}.favourite`]: next });
   }
 
   /** Action: toggle an item's equipped flag. Armour: only one non-additive piece equipped at a time. */
@@ -94,7 +115,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor"],
-    position: { width: 800, height: 720 },
+    position: { width: 1000, height: 900 },
     window: { resizable: true },
     form: { submitOnChange: true },
     actions: {
@@ -105,6 +126,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       editItem: DarkHeresyActorSheet.#onEditItem,
       deleteItem: DarkHeresyActorSheet.#onDeleteItem,
       toggleFavourite: DarkHeresyActorSheet.#onToggleFavourite,
+      toggleSkillFavourite: DarkHeresyActorSheet.#onToggleSkillFavourite,
       toggleEquipped: DarkHeresyActorSheet.#onToggleEquipped,
       rollAttack: DarkHeresyActorSheet.#onRollAttack,
       addInjury: DarkHeresyActorSheet.#onAddInjury,
@@ -161,7 +183,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       desc: firstLine(t.system.description)
     }));
     context.traits = items.filter((i) => i.type === "trait").map((t) => ({
-      id: t.id, name: t.name, desc: firstLine(t.system.description)
+      id: t.id, name: t.name, desc: firstLine(t.system.description), favourite: t.system.favourite
     }));
     const LOC = { head: "Head", body: "Body", rightArm: "R Arm", leftArm: "L Arm", rightLeg: "R Leg", leftLeg: "L Leg" };
     context.weapons = items.filter((i) => i.type === "weapon").map((w) => {
@@ -215,6 +237,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     });
     context.favTalents = items.filter((i) => i.type === "talent" && i.system.favourite)
       .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
+    context.favTraits = items.filter((i) => i.type === "trait" && i.system.favourite)
+      .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
+    context.favSkills = Object.entries(sys.skills).filter(([, s]) => s.favourite)
+      .map(([key, s]) => ({ key, label: BDH.skills[key].label, total: s.total }));
     context.injuries = sys.injuries.map((inj, i) => ({ index: i, description: inj.description }));
     context.agilityBonus = sys.characteristics.agility.bonus;
     return context;
