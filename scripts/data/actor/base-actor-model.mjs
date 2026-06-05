@@ -69,7 +69,8 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       })),
       notes: new fields.StringField({ required: true, initial: "" }),
       corruption: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
-      insanity: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      insanity: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      psyRating: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
     };
   }
 
