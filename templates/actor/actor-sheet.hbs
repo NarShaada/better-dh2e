@@ -1,0 +1,82 @@
+{{!-- templates/actor/actor-sheet.hbs --}}
+<form class="better-dh2e {{#if hideUntrained}}hide-untrained{{/if}}">
+
+  <header class="bdh-header">
+    <img src="{{document.img}}" data-edit="img" alt="portrait"/>
+    <div class="name"><input type="text" name="name" value="{{document.name}}" placeholder="Name"/></div>
+    <div class="meta">
+      {{#if system.bio}}
+        <div><label>Home World</label><input type="text" name="system.bio.homeWorld" value="{{system.bio.homeWorld}}"/></div>
+        <div><label>Background</label><input type="text" name="system.bio.background" value="{{system.bio.background}}"/></div>
+        <div><label>Role</label><input type="text" name="system.bio.role" value="{{system.bio.role}}"/></div>
+        <div><label>Elite</label><input type="text" name="system.bio.elite" value="{{system.bio.elite}}"/></div>
+      {{/if}}
+      {{#if system.faction}}
+        <div><label>Faction</label><input type="text" name="system.faction" value="{{system.faction}}"/></div>
+        <div><label>Threat</label><input type="number" name="system.threatLevel" value="{{system.threatLevel}}"/></div>
+      {{/if}}
+    </div>
+    <div class="fate">
+      <div class="lbl">Fate</div>
+      <div class="v">{{system.fate.value}} / {{system.fate.max}}</div>
+    </div>
+  </header>
+
+  <nav class="tabs primary" data-group="primary">
+    {{#each tabs as |t|}}
+      <a class="item {{t.cssClass}}" data-group="primary" data-tab="{{t.id}}">{{localize t.label}}</a>
+    {{/each}}
+  </nav>
+
+  {{!-- STATS --}}
+  <section class="tab {{tabs.stats.cssClass}}" data-group="primary" data-tab="stats">
+    <div class="char-row">
+      {{#each characteristics as |c|}}
+        <div class="char {{#if c.isInfluence}}inf{{/if}}" data-characteristic="{{c.key}}">
+          <div class="bonus">{{c.bonus}}</div>
+          <div class="box"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
+        </div>
+      {{/each}}
+    </div>
+
+    <div class="fatigue">
+      <span class="lbl">Fatigue</span>
+      <span class="bar"><i style="width:{{fatiguePct}}%"></i></span>
+      <span class="v">{{system.fatigue.value}} / {{system.fatigue.max}}</span>
+    </div>
+
+    <nav class="tabs secondary" data-group="secondary">
+      {{#each subtabs as |s|}}
+        <a class="item {{s.cssClass}}" data-group="secondary" data-tab="{{s.id}}">{{localize s.label}}</a>
+      {{/each}}
+    </nav>
+
+    <section class="tab {{subtabs.investigation.cssClass}}" data-group="secondary" data-tab="investigation">
+      <div class="inv-toolbar">
+        <button type="button" data-action="toggleUntrained">{{#if hideUntrained}}Show all{{else}}Hide untrained{{/if}}</button>
+      </div>
+      <div class="skills">
+        {{#each skills as |s|}}
+          <div class="skill {{#unless s.trained}}untrained{{/unless}}" data-skill="{{s.key}}">
+            <span class="snm">{{localize s.label}}</span>
+            <span class="tier">{{#each s.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
+            <span class="sval">{{s.total}}</span>
+          </div>
+        {{/each}}
+      </div>
+    </section>
+
+    <section class="tab {{subtabs.combat.cssClass}}" data-group="secondary" data-tab="combat">
+      <p class="placeholder">Combat view — armour, weapons, wounds — arrives in a later plan.</p>
+    </section>
+  </section>
+
+  {{!-- Other primary tabs: placeholders for later plans --}}
+  <section class="tab {{tabs.abilities.cssClass}}" data-group="primary" data-tab="abilities"><p class="placeholder">Abilities — later plan.</p></section>
+  <section class="tab {{tabs.gear.cssClass}}" data-group="primary" data-tab="gear"><p class="placeholder">Gear — later plan.</p></section>
+  <section class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes"><p class="placeholder">Notes — later plan.</p></section>
+  <section class="tab {{tabs.afflictions.cssClass}}" data-group="primary" data-tab="afflictions"><p class="placeholder">Afflictions — later plan.</p></section>
+  <section class="tab {{tabs.psychic.cssClass}}" data-group="primary" data-tab="psychic"><p class="placeholder">Psychic — later plan.</p></section>
+  <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement"><p class="placeholder">Advancement — later plan.</p></section>
+
+</form>
