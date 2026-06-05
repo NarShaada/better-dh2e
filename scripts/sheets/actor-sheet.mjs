@@ -1,6 +1,8 @@
 // scripts/sheets/actor-sheet.mjs
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
 import { rollCharacteristic, rollSkill, rollWeaponAttack } from "../rolls/roll-test.mjs";
+import { corruptionTrack, insanityTrack, nextTestAt } from "../helpers/affliction-data.mjs";
+import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
@@ -113,6 +115,32 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update({ "system.injuries": injuries });
   }
 
+  /** Action: roll a Malignancy (corruption) or Trauma (insanity) test. */
+  static async #onRollAffliction(event, target) {
+    const type = target.dataset.type;
+    const track = type === "malignancy"
+      ? corruptionTrack(this.actor.system.corruption)
+      : insanityTrack(this.actor.system.insanity);
+    const label = type === "malignancy" ? "Malignancy Test" : "Trauma Test";
+    await rollAfflictionTest(this.actor, { label: `${label} (${track.tier})`, penalty: track.penalty });
+  }
+
+  /** Action: add a blank {name, description} entry to an affliction array. */
+  static async #onAddAffliction(event, target) {
+    const arr = target.dataset.array;
+    const list = foundry.utils.deepClone(this.actor.system.afflictions[arr]);
+    list.push({ name: "", description: "" });
+    await this.actor.update({ [`system.afflictions.${arr}`]: list });
+  }
+
+  /** Action: remove an affliction-array entry. */
+  static async #onRemoveAffliction(event, target) {
+    const arr = target.dataset.array;
+    const list = foundry.utils.deepClone(this.actor.system.afflictions[arr]);
+    list.splice(Number(target.dataset.index), 1);
+    await this.actor.update({ [`system.afflictions.${arr}`]: list });
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor"],
     position: { width: 1000, height: 900 },
@@ -130,7 +158,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       toggleEquipped: DarkHeresyActorSheet.#onToggleEquipped,
       rollAttack: DarkHeresyActorSheet.#onRollAttack,
       addInjury: DarkHeresyActorSheet.#onAddInjury,
-      removeInjury: DarkHeresyActorSheet.#onRemoveInjury
+      removeInjury: DarkHeresyActorSheet.#onRemoveInjury,
+      rollAffliction: DarkHeresyActorSheet.#onRollAffliction,
+      addAffliction: DarkHeresyActorSheet.#onAddAffliction,
+      removeAffliction: DarkHeresyActorSheet.#onRemoveAffliction
     }
   };
 
@@ -243,6 +274,17 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       .map(([key, s]) => ({ key, label: BDH.skills[key].label, total: s.total }));
     context.injuries = sys.injuries.map((inj, i) => ({ index: i, description: inj.description }));
     context.agilityBonus = sys.characteristics.agility.bonus;
+    const cor = corruptionTrack(sys.corruption);
+    const ins = insanityTrack(sys.insanity);
+    context.corruption = { value: sys.corruption, tier: cor.tier, penalty: cor.penalty, nextAt: nextTestAt(sys.corruption) };
+    context.insanity = { value: sys.insanity, tier: ins.tier, penalty: ins.penalty, nextAt: nextTestAt(sys.insanity) };
+    const mapNamed = (a) => a.map((e, i) => ({ index: i, name: e.name, description: e.description }));
+    context.mutations = mapNamed(sys.afflictions.mutations);
+    context.malignancies = mapNamed(sys.afflictions.malignancies);
+    context.mentalDisorders = mapNamed(sys.afflictions.mentalDisorders);
+    context.cybernetics = items.filter((i) => i.type === "cybernetic").map((c) => ({
+      id: c.id, name: c.name, desc: firstLine(c.system.description), installed: c.system.installed
+    }));
     return context;
   }
 
@@ -263,6 +305,19 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         if (injuries[idx]) {
           injuries[idx].description = event.currentTarget.value;
           this.actor.update({ "system.injuries": injuries });
+        }
+      });
+    }
+    for (const input of this.element.querySelectorAll(".bdh-aff-input")) {
+      input.addEventListener("change", (event) => {
+        const row = event.currentTarget.closest("[data-array]");
+        const arr = row?.dataset.array;
+        const idx = Number(row?.dataset.index);
+        const field = event.currentTarget.dataset.field;
+        const list = foundry.utils.deepClone(this.actor.system.afflictions[arr]);
+        if (list[idx]) {
+          list[idx][field] = event.currentTarget.value;
+          this.actor.update({ [`system.afflictions.${arr}`]: list });
         }
       });
     }
