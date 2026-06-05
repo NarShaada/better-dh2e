@@ -1,0 +1,61 @@
+<style>
+  .wrap { max-width:880px; margin:0 auto; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  .panel { background:#efe6cd; border:1px solid #8a6d3b; border-radius:6px; overflow:hidden; }
+  .panel .ph { background:#6b4a2b; color:#e7d8b8; font-variant:small-caps; letter-spacing:1px; font-size:12px; padding:5px 10px; }
+  .panel .bd { padding:6px 10px; font-family:Georgia,serif; color:#2b2017; }
+  .skill { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:12px; border-bottom:1px dotted #cbb88c; }
+  .skill .nm { cursor:pointer; } .skill .nm:hover { text-decoration:underline; }
+  .skill .tier { display:flex; gap:2px; margin-left:auto; } .skill .tier i { width:9px;height:9px;border:1px solid #8a6d3b;border-radius:2px;display:inline-block; } .skill .tier i.on { background:#5a2a2a; }
+  .skill .sval { font-weight:bold; min-width:24px; text-align:right; }
+  .parent { font-weight:bold; color:#5a2a2a; margin-top:4px; }
+  .parent .tag { font-size:9px; font-weight:normal; color:#7a5c30; text-transform:uppercase; letter-spacing:1px; border:1px solid #b3a070; border-radius:8px; padding:0 6px; margin-left:6px; }
+  .child { padding-left:18px; font-size:11px; }
+  .child .cnm { color:#5a3a1a; }
+  .addspec { margin:5px 0 2px 18px; font-size:10px; color:#7a5c30; cursor:pointer; }
+  .plusbtn { background:#3d6a4a; color:#fff; border:none; border-radius:4px; width:18px; height:18px; cursor:pointer; font-weight:bold; font-size:11px; }
+  .ddl { border:1px solid #7a2a2a; border-radius:4px; font-size:10px; padding:0 3px; background:#fff; }
+  .cost { font-size:9px; color:#3d6a4a; margin-left:4px; }
+  .modeflag { font-size:10px; color:#7a5c30; font-style:italic; }
+  .prompt { margin:8px 0 2px 18px; background:#fff6df; border:1px dashed #b8902f; border-radius:4px; padding:5px 8px; font-size:11px; display:inline-block; }
+  .prompt input { border:1px solid #8a6d3b; border-radius:3px; padding:1px 5px; font-family:Georgia,serif; font-size:11px; width:120px; }
+  h3.sec { color:#5a2a2a; font-variant:small-caps; letter-spacing:1px; margin:0 0 6px; }
+</style>
+
+<div class="wrap">
+<h2>Specialist skills — parent + on-the-fly specializations</h2>
+<p class="subtitle">Linguistics carries no rank itself; each language is its own advanceable entry. Add new ones by name, anytime.</p>
+
+<div class="row2">
+  <div>
+    <h3 class="sec">Play mode (Investigation list)</h3>
+    <div class="panel"><div class="bd">
+      <div class="skill"><span class="nm">Awareness</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">38</span></div>
+      <div class="skill parent"><span>Linguistics</span><span class="tag">Int · specialist</span></div>
+      <div class="skill child"><span class="nm cnm">Low Gothic</span><span class="tier"><i class="on"></i><i class="on"></i><i></i></span><span class="sval">51</span></div>
+      <div class="skill child"><span class="nm cnm">High Gothic</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">31</span></div>
+      <div class="skill child"><span class="nm cnm">Hive Dialect</span><span class="tier"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="sval">61</span></div>
+      <div class="skill" style="margin-top:6px"><span class="nm">Logic</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">41</span></div>
+    </div></div>
+    <p class="subtitle" style="font-size:11px">Each language is click-to-roll; the roll dialog defaults to the parent's characteristic (Int) but the picker still lets you change it. No "add" control here — adding a specialization is an advancement action (see right).</p>
+  </div>
+
+  <div>
+    <h3 class="sec">Simple advancement mode</h3>
+    <div class="panel"><div class="bd">
+      <div class="skill parent"><span>Linguistics</span><span class="tag">Int · specialist</span></div>
+      <div class="skill child"><span class="cnm">Low Gothic</span><span class="sval" style="margin-left:auto">51</span><button class="plusbtn">+</button><span class="cost">→ Veteran 300xp</span></div>
+      <div class="skill child"><span class="cnm">High Gothic</span><span class="sval" style="margin-left:auto">31</span><button class="plusbtn">+</button><span class="cost">→ Trained 200xp</span></div>
+      <div class="addspec">＋ add specialization (starts at Known — like buying a new skill)</div>
+      <div class="prompt">New: <input value="Eldar (Xenos)"> &nbsp;<button class="plusbtn" style="width:auto;padding:0 8px">add</button></div>
+    </div></div>
+    <div class="panel" style="margin-top:10px"><div class="bd">
+      <div class="modeflag">Custom mode equivalent:</div>
+      <div class="skill child"><span class="cnm">Low Gothic</span>
+        <select class="ddl" style="margin-left:auto"><option>Untrained −20</option><option>Known +0</option><option>Trained +10</option><option selected>Experienced +20</option><option>Veteran +30</option></select>
+      </div>
+    </div></div>
+    <p class="subtitle" style="font-size:11px">Every specialization advances independently — its own "+" (Simple) or dropdown (Custom); the XP ledger counts each.</p>
+  </div>
+</div>
+</div>

@@ -1,0 +1,82 @@
+<style>
+  .wrap { max-width:880px; margin:0 auto; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  .dlg { background:#e7d8b8; border:2px solid #6b4a2b; border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,.3); font-family:Georgia,serif; color:#2b2017; overflow:hidden; margin-bottom:10px; }
+  .dlg .tt { background:#5a2a2a; color:#e7d8b8; font-variant:small-caps; letter-spacing:1px; font-size:12px; padding:5px 10px; }
+  .dlg .bd { padding:9px 11px; }
+  .base { background:#f3ead0; border:1px dashed #b8902f; border-radius:4px; padding:4px 8px; font-size:11px; margin-bottom:8px; color:#5a2a2a; }
+  .fld { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .fld label { font-size:10px; text-transform:uppercase; color:#7a5c30; letter-spacing:1px; flex:0 0 78px; }
+  .fld input, .fld select { flex:1; border:1px solid #8a6d3b; border-radius:4px; background:#fff6df; padding:3px 6px; font-size:12px; font-family:Georgia,serif; }
+  .hintp { font-size:9px; color:#9a8050; margin:-2px 0 7px 86px; font-style:italic; }
+  .btns { display:flex; gap:8px; justify-content:flex-end; }
+  .btns .b { border:none; border-radius:4px; font-size:12px; padding:4px 14px; cursor:pointer; font-family:Georgia,serif; }
+  .b.roll { background:#5a2a2a; color:#e7d8b8; } .b.cancel { background:#d6c39a; color:#5a2a2a; }
+
+  .card { background:#efe6cd; border:1px solid #8a6d3b; border-left:4px solid #7a1f1f; border-radius:5px; font-family:Georgia,serif; color:#2b2017; padding:8px 10px; font-size:12px; margin-bottom:10px; }
+  .card.test { border-left-color:#2a3a5a; }
+  .card .ch { display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid #c9b285; padding-bottom:3px; margin-bottom:5px; }
+  .card .ch .who { font-weight:bold; color:#5a2a2a; } .card .ch .what { font-size:10px; color:#7a5c30; text-transform:uppercase; letter-spacing:1px; }
+  .dmgline { display:flex; justify-content:space-between; align-items:center; padding:3px 2px; border-bottom:1px dotted #cbb88c; font-size:11px; }
+  .dmgline .loc { color:#7a5c30; flex:0 0 70px; } .dmgline .calc { flex:1; } .dmgline .tot { font-weight:bold; font-size:13px; }
+  .rf { background:#7a1f1f; color:#ffe; border-radius:3px; padding:0 5px; font-size:10px; margin-left:4px; }
+  .sum { display:flex; justify-content:space-between; font-size:11px; margin-top:5px; color:#5a2a2a; }
+  .cardbtns { display:flex; gap:8px; margin-top:7px; }
+  .cardbtns .cb { flex:1; border:none; border-radius:4px; font-size:11px; padding:5px; cursor:pointer; font-family:Georgia,serif; }
+  .cb.apply { background:#7a1f1f; color:#e7d8b8; }
+  .nobtn { font-size:10px; color:#9a8050; font-style:italic; text-align:center; margin-top:6px; }
+  .grid { display:grid; grid-template-columns:auto auto; gap:1px 14px; font-size:11px; }
+  .grid .k { color:#7a5c30; } .grid .v { text-align:right; font-weight:bold; }
+  .res { text-align:center; margin:6px 0 2px; font-size:15px; font-weight:bold; color:#3d6a4a; } .dos { text-align:center; font-size:12px; }
+  h3.sec { margin:16px 0 6px; color:#5a2a2a; font-variant:small-caps; letter-spacing:1px; }
+</style>
+
+<div class="wrap">
+<h2>Damage &amp; Evade — launched from the attack card</h2>
+<p class="subtitle">Damage modifier is a regex (flat + dice). Righteous Fury rolls inline. Apply button only when a token was targeted.</p>
+
+<div class="row2">
+  <div>
+    <h3 class="sec">Roll Damage</h3>
+    <div class="dlg"><div class="tt">Damage — Hellpistol</div><div class="bd">
+      <div class="base">Base: <b>1d10+4</b> Energy · Pen <b>7</b> · 3 hits to resolve</div>
+      <div class="fld"><label>Modifier</label><input value="1d10+3"></div>
+      <div class="hintp">flat &amp; dice: "+2", "-1", "1d5", "1d10+3"…</div>
+      <div class="btns"><button class="b roll">⚅ Roll damage</button><button class="b cancel">Cancel</button></div>
+    </div></div>
+
+    <div class="card">
+      <div class="ch"><span class="who">Daren → Cultist</span><span class="what">Hellpistol · Energy · Pen 7</span></div>
+      <div class="dmgline"><span class="loc">Body</span><span class="calc">[6]+4 + (1d10+3=[5]+3)</span><span class="tot">18</span></div>
+      <div class="dmgline"><span class="loc">R Arm</span><span class="calc">[<b>10</b>]+4 + (1d10+3=[2]+3) <span class="rf">RF +1d5 = 4</span></span><span class="tot">23</span></div>
+      <div class="dmgline"><span class="loc">Head</span><span class="calc">[3]+4 + (1d10+3=[8]+3)</span><span class="tot">18</span></div>
+      <div class="sum"><span>3 hits · 1 Righteous Fury</span><span>Pen 7 each</span></div>
+      <div class="cardbtns"><button class="cb apply">🩸 Apply damage to Cultist</button></div>
+    </div>
+
+    <div class="card" style="border-left-color:#8a6d3b">
+      <div class="ch"><span class="who">Daren</span><span class="what">Chainsword · no target</span></div>
+      <div class="dmgline"><span class="loc">—</span><span class="calc">1d10+3 Rending = [7]+3, Pen 2</span><span class="tot">10</span></div>
+      <div class="nobtn">No token targeted — adjust wounds manually</div>
+    </div>
+  </div>
+
+  <div>
+    <h3 class="sec">Evade</h3>
+    <div class="dlg"><div class="tt">Evade — incoming Hellpistol burst</div><div class="bd">
+      <div class="fld"><label>Reaction</label><select><option>Parry (WS 85)</option><option selected>Dodge (58)</option></select></div>
+      <div class="fld"><label>Modifier</label><input value="+0"></div>
+      <div class="btns"><button class="b roll">⚅ Roll</button><button class="b cancel">Cancel</button></div>
+    </div></div>
+
+    <div class="card test">
+      <div class="ch"><span class="who">Cultist</span><span class="what">Dodge</span></div>
+      <div class="grid"><span class="k">Reaction</span><span class="v">Dodge 58</span><span class="k">Modifier</span><span class="v">+0</span><span class="k">Target</span><span class="v">58</span><span class="k">Rolled</span><span class="v">31</span></div>
+      <div class="res">SUCCESS</div><div class="dos">3 Degrees of Success</div>
+    </div>
+    <p class="subtitle" style="font-size:11px">Evade is just a standard test card. Using its DoS to actually negate extra hits is later automation (reaction tracking, P3); for now the GM reads the result.</p>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:14px">Multi-hit assumption: one damage card, a line per hit, each with its own location &amp; RF check. Right?</p>
+</div>

@@ -1,0 +1,81 @@
+<style>
+  .sheet { background:#e7d8b8; border:2px solid #6b4a2b; border-radius:6px; color:#2b2017; font-family:'Georgia',serif; box-shadow:0 4px 16px rgba(0,0,0,.3); overflow:hidden; max-width:880px; margin:0 auto; }
+  .sheet .topbar { display:flex; background:#5a2a2a; }
+  .sheet .topbar .t { flex:1; text-align:center; padding:9px 4px; color:#e7d8b8; font-variant:small-caps; letter-spacing:1px; font-size:13px; border-right:1px solid #3d1c1c; cursor:pointer; }
+  .sheet .topbar .t.active { background:#e7d8b8; color:#5a2a2a; font-weight:bold; }
+  .sheet .topbar .t.dim { color:#caa; font-size:11px; flex:0 0 80px; opacity:.7; }
+  .sheet .topbar .t.ghost { color:#7a5; flex:0 0 110px; font-size:11px; opacity:.5; font-style:italic; }
+
+  .tracks { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px 14px 6px; }
+  .track { background:#efe6cd; border:1px solid #8a6d3b; border-radius:5px; padding:8px 10px; }
+  .track .th { display:flex; justify-content:space-between; align-items:baseline; }
+  .track .th .nm { font-variant:small-caps; letter-spacing:1px; font-weight:bold; font-size:14px; }
+  .track .th .val { font-size:22px; font-weight:bold; }
+  .track .tier { font-size:11px; margin:2px 0 6px; }
+  .track.corr .tier { color:#5a3a6a; } .track.ins .tier { color:#7a2a2a; }
+  .ladder { display:flex; height:10px; border-radius:5px; overflow:hidden; border:1px solid #b3a070; }
+  .ladder i { flex:1; }
+  .corr .ladder .c1{background:#cdbfd6}.corr .ladder .c2{background:#a98ec0}.corr .ladder .c3{background:#7d5e9c}.corr .ladder .c4{background:#4a2a5a}
+  .ins .ladder .c1{background:#e0c4b4}.ins .ladder .c2{background:#cf9a86}.ins .ladder .c3{background:#b05a4a}.ins .ladder .c4{background:#7a2a2a}
+  .ladder .cap { flex:0 0 2px; background:#2b2017; }
+  .track .foot { display:flex; justify-content:space-between; align-items:center; margin-top:7px; font-size:11px; }
+  .track .foot .next { color:#7a5c30; }
+  .track .roll { background:#5a2a2a; color:#e7d8b8; border:none; border-radius:4px; font-size:11px; padding:3px 10px; cursor:pointer; }
+
+  .lists { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:6px 14px 14px; }
+  .lp { background:#efe6cd; border:1px solid #8a6d3b; border-radius:5px; overflow:hidden; }
+  .lp .lh { display:flex; justify-content:space-between; align-items:center; background:#6b4a2b; color:#e7d8b8; padding:3px 9px; font-variant:small-caps; letter-spacing:1px; font-size:12px; }
+  .lp .lh .add { background:#e7d8b8; color:#5a2a2a; border:none; border-radius:3px; font-size:11px; padding:0 7px; cursor:pointer; font-weight:bold; }
+  .lp .row { padding:4px 9px; border-bottom:1px dotted #cbb88c; font-size:11px; cursor:pointer; }
+  .lp .row:last-child { border-bottom:none; }
+  .lp .row b { color:#5a2a2a; } .lp .row span { color:#6b4a2b; display:block; font-size:10px; }
+  .lp .empty { padding:8px 9px; color:#9a8050; font-style:italic; font-size:11px; }
+  .note { font-size:11px; color:#6b4a2b; font-style:italic; text-align:center; padding:0 14px 12px; }
+</style>
+
+<h2>Afflictions tab</h2>
+<p class="subtitle">Everything rarely-referenced about body &amp; mind, in one place — and the threshold automation lives here.</p>
+
+<div class="sheet">
+  <div class="topbar">
+    <div class="t">Stats</div><div class="t">Abilities</div><div class="t">Gear</div>
+    <div class="t">Notes</div><div class="t active">Afflictions</div><div class="t dim">Psychic ▸</div><div class="t ghost">⚙ Advancement</div>
+  </div>
+
+  <div class="tracks">
+    <div class="track corr">
+      <div class="th"><span class="nm">Corruption</span><span class="val">12</span></div>
+      <div class="tier">Track: <b>Tainted</b> (01–30) · test penalty +0</div>
+      <div class="ladder"><i class="c1"></i><span class="cap"></span><i class="c2"></i><span class="cap"></span><i class="c3"></i><span class="cap"></span><i class="c4"></i></div>
+      <div class="foot"><span class="next">Next Malignancy test at <b>20</b> CP</span><button class="roll">⚅ Malignancy test</button></div>
+    </div>
+    <div class="track ins">
+      <div class="th"><span class="nm">Insanity</span><span class="val">29</span></div>
+      <div class="tier">Track: <b>Unsettled</b> (10–39) · trauma mod +10 · Minor disorder @40</div>
+      <div class="ladder"><i class="c1"></i><span class="cap"></span><i class="c2"></i><span class="cap"></span><i class="c3"></i><span class="cap"></span><i class="c4"></i></div>
+      <div class="foot"><span class="next">Next Trauma test at <b>30</b> IsP</span><button class="roll">⚅ Trauma test</button></div>
+    </div>
+  </div>
+
+  <div class="lists">
+    <div class="lp">
+      <div class="lh"><span>Mutations &amp; Malignancies</span><button class="add">+</button></div>
+      <div class="row"><b>The Beast Within</b><span>−1d10 Fel, +1d10 S when enraged</span></div>
+      <div class="row"><b>Ill-Fortuned</b><span>GM may force a reroll once/session</span></div>
+    </div>
+    <div class="lp">
+      <div class="lh"><span>Mental Disorders</span><button class="add">+</button></div>
+      <div class="row"><b>Phobia — Xenos</b><span>Fear (1) vs alien creatures</span></div>
+      <div class="empty">No acute disorders</div>
+    </div>
+    <div class="lp">
+      <div class="lh"><span>Cybernetics</span><button class="add">+</button></div>
+      <div class="row"><b>Cybernetic Eye</b><span>Good craft · +10 vs darkness</span></div>
+      <div class="row"><b>Mechadendrite</b><span>Utility limb, Tech-Use bonus</span></div>
+    </div>
+  </div>
+
+  <div class="note">⚅ When Corruption / Insanity crosses each multiple of 10, the system can auto-prompt the matching test (track penalty applied) and drop the result into the list above.</div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">That completes the sheet tour. Good to lock Afflictions, then I'll consolidate everything into the design spec?</p>

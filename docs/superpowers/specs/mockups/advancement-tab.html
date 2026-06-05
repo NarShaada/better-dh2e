@@ -1,0 +1,127 @@
+<style>
+  .sheet { background:#e7d8b8; border:2px solid #6b4a2b; border-radius:6px; color:#2b2017; font-family:'Georgia',serif; box-shadow:0 4px 16px rgba(0,0,0,.3); overflow:hidden; max-width:880px; margin:0 auto; }
+  .sheet .topbar { display:flex; background:#5a2a2a; }
+  .sheet .topbar .t { flex:1; text-align:center; padding:9px 4px; color:#e7d8b8; font-variant:small-caps; letter-spacing:1px; font-size:13px; border-right:1px solid #3d1c1c; }
+  .sheet .topbar .t.active { background:#e7d8b8; color:#5a2a2a; font-weight:bold; }
+  .sheet .topbar .t.dim { color:#caa; font-size:11px; flex:0 0 80px; opacity:.7; }
+
+  .ctl { display:grid; grid-template-columns:1fr 230px; gap:10px; padding:12px 14px 8px; }
+  .panel { background:#efe6cd; border:1px solid #8a6d3b; border-radius:5px; padding:8px 10px; }
+  .panel .ph { font-variant:small-caps; letter-spacing:1px; color:#5a2a2a; font-weight:bold; font-size:12px; border-bottom:1px solid #c9b285; margin-bottom:6px; }
+  .apts { display:flex; flex-wrap:wrap; gap:5px; }
+  .apt { font-size:11px; border:1px solid #b3a070; border-radius:12px; padding:2px 9px; color:#7a5c30; background:#f3ead0; cursor:pointer; }
+  .apt.on { background:#5a2a2a; color:#e7d8b8; border-color:#5a2a2a; }
+  .xp { display:flex; flex-direction:column; gap:4px; }
+  .xp .r { display:flex; justify-content:space-between; font-size:12px; border-bottom:1px dotted #cbb88c; padding:2px 0; }
+  .xp .r b { color:#7a5c30; font-size:10px; text-transform:uppercase; align-self:center; }
+  .xp .r.free span { font-weight:bold; font-size:16px; color:#3d6a4a; }
+  .modes { display:flex; gap:8px; margin-top:8px; }
+  .mode { flex:1; text-align:center; border:2px solid #6b4a2b; border-radius:6px; padding:7px 4px; cursor:pointer; font-variant:small-caps; letter-spacing:1px; font-size:13px; background:#f3ead0; color:#5a2a2a; }
+  .mode.active { background:#5a2a2a; color:#e7d8b8; box-shadow:0 0 8px #c9a24b; }
+  .mode small { display:block; font-size:9px; opacity:.85; font-variant:normal; letter-spacing:0; }
+
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:4px 14px 14px; }
+  .col h4 { margin:0 0 4px; font-variant:small-caps; letter-spacing:1px; font-size:13px; }
+  .col.simple h4 { color:#3d6a4a; } .col.custom h4 { color:#7a2a2a; }
+  .ex { background:#efe6cd; border:1px solid #8a6d3b; border-radius:5px; padding:7px 9px; margin-bottom:8px; }
+  .ex .lbl { font-size:9px; text-transform:uppercase; color:#7a5c30; letter-spacing:1px; margin-bottom:4px; }
+  /* characteristic widget */
+  .cw { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; }
+  .cw .bonus { width:60%; background:#5a2a2a; color:#e7d8b8; text-align:center; font-size:9px; border-radius:3px 3px 0 0; }
+  .cw .box { background:#fff6df; border:1px solid #6b4a2b; border-radius:0 0 4px 4px; text-align:center; padding:2px 10px 1px; }
+  .cw .box .val { font-size:17px; font-weight:bold; } .cw .box .nm { font-size:8px; color:#7a5c30; }
+  .plus5 { background:#3d6a4a; color:#fff; border:none; border-radius:4px; font-size:11px; padding:4px 8px; cursor:pointer; }
+  .tier { font-size:9px; color:#7a5c30; }
+  .editbox { width:42px; font-size:15px; text-align:center; border:1px solid #7a2a2a; border-radius:4px; background:#fff; padding:2px; }
+  .skrow { display:flex; align-items:center; gap:8px; font-size:12px; }
+  .skrow .sval { font-weight:bold; min-width:26px; text-align:right; }
+  .plusbtn { background:#3d6a4a; color:#fff; border:none; border-radius:4px; width:20px; height:20px; cursor:pointer; font-weight:bold; }
+  .ddl { border:1px solid #7a2a2a; border-radius:4px; font-size:11px; padding:1px 4px; background:#fff; }
+  .cost { font-size:10px; color:#3d6a4a; }
+  .note { font-size:11px; color:#6b4a2b; font-style:italic; text-align:center; padding:0 14px 12px; }
+  .banner { margin:0 14px; background:#f3ead0; border:1px dashed #b8902f; border-radius:5px; padding:6px 10px; font-size:11px; color:#5a2a2a; }
+</style>
+
+<h2>Advancement tab — combined Simple / Custom modes</h2>
+<p class="subtitle">The tab is the control center; the chosen mode changes the affordances in place across the whole sheet.</p>
+
+<div class="sheet">
+  <div class="topbar">
+    <div class="t">Stats</div><div class="t">Abilities</div><div class="t">Gear</div>
+    <div class="t">Notes</div><div class="t">Afflictions</div><div class="t dim">Psychic ▸</div><div class="t active">⚙ Advancement</div>
+  </div>
+
+  <div class="ctl">
+    <div class="panel">
+      <div class="ph">Aptitudes — pick the character's nine from the fixed list</div>
+      <div class="apts">
+        <span class="apt on">Weapon Skill</span><span class="apt on">Offence</span><span class="apt on">Finesse</span>
+        <span class="apt on">Defence</span><span class="apt on">Toughness</span><span class="apt on">Willpower</span>
+        <span class="apt on">Fieldcraft</span><span class="apt on">Agility</span><span class="apt on">General</span>
+        <span class="apt">Ballistic Skill</span><span class="apt">Knowledge</span><span class="apt">Social</span>
+        <span class="apt">Strength</span><span class="apt">Perception</span><span class="apt">Intelligence</span>
+        <span class="apt">Fellowship</span><span class="apt">Psyker</span><span class="apt">Tech</span><span class="apt">Leadership</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph">Experience</div>
+      <div class="xp">
+        <div class="r"><b>Total</b><span>5 000</span></div>
+        <div class="r"><b>Spent</b><span>3 850</span></div>
+        <div class="r free"><b>Free</b><span>1 150</span></div>
+      </div>
+      <div class="modes">
+        <div class="mode active">Simple<small>auto-cost</small></div>
+        <div class="mode">Custom<small>free edit</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="banner"><b>Mode is active:</b> while Simple or Custom is on, every other tab shows its advancement controls too. Press the mode again to exit (locks the sheet back to play mode).</div>
+
+  <div class="compare">
+    <div class="col simple">
+      <h4>▶ Simple mode (auto-cost, buy-only)</h4>
+      <div class="ex">
+        <div class="lbl">Characteristic — +5 button, up to 5 advances</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="cw"><div class="bonus">3</div><div class="box"><div class="val">34</div><div class="nm">S</div></div></div>
+          <div><button class="plus5">+5 ▲</button><div class="tier">advanced 2 / 5 · next: <b>Trained</b> 500 xp</div></div>
+        </div>
+      </div>
+      <div class="ex">
+        <div class="lbl">Skill — "+" advances to next rank</div>
+        <div class="skrow"><span>Dodge</span><span class="sval">58</span><button class="plusbtn">+</button><span class="cost">→ Veteran, 300 xp</span></div>
+      </div>
+      <div class="ex">
+        <div class="lbl">Talent / Power — drop the item, cost auto-charged</div>
+        <div style="font-size:11px">⤵ drop <b>Counter Attack</b> → charges <span class="cost">300 xp</span> (Tier 2, 1 aptitude)</div>
+      </div>
+    </div>
+
+    <div class="col custom">
+      <h4>◆ Custom mode (free edit, no auto-cost)</h4>
+      <div class="ex">
+        <div class="lbl">Characteristic — type any value</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="cw"><div class="bonus">3</div><div class="box"><input class="editbox" value="34"><div class="nm">S</div></div></div>
+          <span style="font-size:10px;color:#7a5c30">set directly</span>
+        </div>
+      </div>
+      <div class="ex">
+        <div class="lbl">Skill — pick the rank from a dropdown</div>
+        <div class="skrow"><span>Dodge</span>
+          <select class="ddl"><option>Untrained −20</option><option>Known +0</option><option>Trained +10</option><option selected>Experienced +20</option><option>Veteran +30</option></select>
+        </div>
+      </div>
+      <div class="ex">
+        <div class="lbl">Talent / Power + Spent XP — edit freely</div>
+        <div style="font-size:11px">⤵ drop items, no charge · <b>Spent</b> field becomes editable to reconcile by hand</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">Both modes reach the same data; Simple keeps the XP ledger for you, Custom hands you the pen. Corrections to a Simple purchase are made in Custom.</div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Does this match your intent? If so I'll add an Advancement section to the spec.</p>

@@ -1,0 +1,156 @@
+<style>
+  .sheet { background:#e7d8b8; border:2px solid #6b4a2b; border-radius:6px; padding:0; color:#2b2017; font-family:'Georgia',serif; box-shadow:0 4px 16px rgba(0,0,0,.3); overflow:hidden; max-width:880px; margin:0 auto; }
+  .sheet .topbar { display:flex; gap:0; background:#5a2a2a; }
+  .sheet .topbar .t { flex:1; text-align:center; padding:9px 4px; color:#e7d8b8; font-variant:small-caps; letter-spacing:1px; font-size:13px; border-right:1px solid #3d1c1c; cursor:pointer; }
+  .sheet .topbar .t.active { background:#e7d8b8; color:#5a2a2a; font-weight:bold; }
+  .sheet .topbar .t.dim { color:#a98; font-size:11px; flex:0 0 90px; opacity:.7; }
+  .sheet .topbar .t.ghost { color:#7a5; flex:0 0 110px; font-size:11px; opacity:.5; font-style:italic; }
+  .hdr { display:flex; align-items:center; gap:12px; padding:10px 14px 6px; }
+  .hdr .crest { width:46px; height:46px; background:#7a1f1f; border:2px solid #c9a24b; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center; color:#c9a24b; font-size:10px; }
+  .hdr .namewrap { flex:0 0 200px; }
+  .hdr .namewrap .label { font-size:9px; text-transform:uppercase; color:#7a5c30; letter-spacing:1px; }
+  .hdr .namewrap .name { font-size:18px; font-weight:bold; border-bottom:1px solid #8a6d3b; }
+  .hdr .meta { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:2px 16px; font-size:11px; }
+  .hdr .meta .f { display:flex; gap:6px; }
+  .hdr .meta .f b { color:#7a5c30; text-transform:uppercase; font-size:9px; align-self:center; flex:0 0 70px; }
+  .hdr .meta .f span { border-bottom:1px dotted #8a6d3b; flex:1; }
+  .hdr .fate { flex:0 0 auto; text-align:center; background:#efe6cd; border:2px solid #c9a24b; border-radius:6px; padding:4px 10px; cursor:pointer; }
+  .hdr .fate:hover { background:#fff6df; box-shadow:0 0 8px #c9a24b; }
+  .hdr .fate .label { font-size:9px; text-transform:uppercase; color:#7a5c30; }
+  .hdr .fate .pips { font-size:16px; color:#b8902f; letter-spacing:2px; }
+  .hdr .fate .hint { font-size:8px; color:#9a7; font-style:italic; }
+
+  .statusrail { display:flex; gap:8px; padding:4px 14px 10px; }
+  .statusrail .meter { flex:1; background:#efe6cd; border:1px solid #8a6d3b; border-radius:4px; padding:4px 8px; display:flex; align-items:center; gap:8px; }
+  .statusrail .meter .ml { font-size:9px; text-transform:uppercase; color:#7a5c30; letter-spacing:1px; flex:0 0 70px; }
+  .statusrail .meter .bar { flex:1; height:8px; background:#d6c39a; border-radius:4px; overflow:hidden; }
+  .statusrail .meter .bar i { display:block; height:100%; }
+  .statusrail .meter .v { font-size:11px; font-weight:bold; }
+
+  .chars { display:flex; gap:5px; padding:8px 14px 12px; align-items:flex-end; }
+  .char { flex:1; }
+  .char .bonus { width:60%; margin:0 auto; background:#5a2a2a; color:#e7d8b8; text-align:center; font-size:11px; border-radius:3px 3px 0 0; padding:1px 0; }
+  .char .box { background:#efe6cd; border:2px solid #6b4a2b; border-radius:0 0 4px 4px; text-align:center; padding:6px 0 4px; cursor:pointer; }
+  .char .box:hover { background:#fff6df; box-shadow:0 0 6px #c9a24b inset; }
+  .char .box .val { font-size:20px; font-weight:bold; }
+  .char .box .nm { font-size:9px; color:#7a5c30; text-transform:uppercase; letter-spacing:1px; }
+  .char.inf { margin-left:18px; border-left:2px dashed #b8902f; padding-left:10px; }
+  .char.inf .box { border-color:#b8902f; background:#f3ead0; }
+
+  .subtabs { display:flex; gap:0; margin:0 14px; border-bottom:2px solid #6b4a2b; }
+  .subtabs .s { padding:6px 22px; font-variant:small-caps; letter-spacing:1px; cursor:pointer; color:#7a5c30; font-size:13px; }
+  .subtabs .s.active { background:#6b4a2b; color:#e7d8b8; border-radius:5px 5px 0 0; font-weight:bold; }
+  .invbar { display:flex; justify-content:flex-end; padding:6px 14px 2px; }
+  .invbar button { font-size:10px; background:#efe6cd; border:1px solid #8a6d3b; border-radius:4px; padding:3px 10px; cursor:pointer; color:#5a2a2a; }
+  .skills { columns:2; gap:24px; padding:2px 14px 14px; }
+  .skill { display:flex; align-items:center; gap:8px; padding:2px 0; break-inside:avoid; font-size:12px; }
+  .skill .tier { display:flex; gap:2px; }
+  .skill .tier i { width:9px; height:9px; border:1px solid #8a6d3b; border-radius:2px; display:inline-block; }
+  .skill .tier i.on { background:#5a2a2a; }
+  .skill .sval { margin-left:auto; font-weight:bold; font-size:12px; min-width:24px; text-align:right; }
+  .skill .snm { cursor:pointer; }
+  .skill.untr { opacity:.45; }
+  .note { font-size:11px; color:#6b4a2b; font-style:italic; text-align:center; padding:6px; }
+</style>
+
+<h2>Redesigned Stats tab — "Investigation" view</h2>
+<p class="subtitle">Your vision, wireframed. React to it, then pick where the displaced meters go (options at the bottom).</p>
+
+<div class="sheet">
+  <div class="topbar">
+    <div class="t active">Stats</div>
+    <div class="t">Abilities</div>
+    <div class="t">Gear</div>
+    <div class="t">Notes</div>
+    <div class="t dim">Psychic ▸</div>
+    <div class="t ghost">⚙ Advancement (later)</div>
+  </div>
+
+  <div class="hdr">
+    <div class="crest">⚜</div>
+    <div class="namewrap">
+      <div class="label">Acolyte</div>
+      <div class="name">Daren Vholk</div>
+    </div>
+    <div class="meta">
+      <div class="f"><b>Home World</b><span>Hive World</span></div>
+      <div class="f"><b>Background</b><span>Adeptus Arbites</span></div>
+      <div class="f"><b>Role</b><span>Warrior</span></div>
+      <div class="f"><b>Elite</b><span>—</span></div>
+    </div>
+    <div class="fate">
+      <div class="label">Fate</div>
+      <div class="pips">● ● ● ○</div>
+      <div class="hint">click to spend</div>
+    </div>
+  </div>
+
+  <!-- OPTION A shown in context: slim status rail under header -->
+  <div class="statusrail">
+    <div class="meter"><span class="ml">Fatigue</span><div class="bar"><i style="width:20%;background:#7a6a2a"></i></div><span class="v">1 / 8</span></div>
+    <div class="meter"><span class="ml">Corruption</span><div class="bar"><i style="width:12%;background:#4a2a5a"></i></div><span class="v">12</span></div>
+    <div class="meter"><span class="ml">Insanity</span><div class="bar"><i style="width:29%;background:#5a2a2a"></i></div><span class="v">29</span></div>
+  </div>
+
+  <div class="chars">
+    <div class="char"><div class="bonus">8</div><div class="box"><div class="val">85</div><div class="nm">WS</div></div></div>
+    <div class="char"><div class="bonus">8</div><div class="box"><div class="val">85</div><div class="nm">BS</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">34</div><div class="nm">S</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">32</div><div class="nm">T</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">38</div><div class="nm">Ag</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">31</div><div class="nm">Int</div></div></div>
+    <div class="char"><div class="bonus">2</div><div class="box"><div class="val">28</div><div class="nm">Per</div></div></div>
+    <div class="char"><div class="bonus">2</div><div class="box"><div class="val">29</div><div class="nm">WP</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">36</div><div class="nm">Fel</div></div></div>
+    <div class="char inf"><div class="bonus">3</div><div class="box"><div class="val">37</div><div class="nm">Inf</div></div></div>
+  </div>
+
+  <div class="subtabs">
+    <div class="s active">Investigation</div>
+    <div class="s">Combat</div>
+  </div>
+  <div class="invbar"><button>◑ Hide untrained</button></div>
+  <div class="skills">
+    <div class="skill"><span class="snm">Acrobatics</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">48</span></div>
+    <div class="skill"><span class="snm">Athletics</span><span class="tier"><i class="on"></i><i class="on"></i><i></i></span><span class="sval">54</span></div>
+    <div class="skill"><span class="snm">Awareness</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">38</span></div>
+    <div class="skill"><span class="snm">Charm</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">46</span></div>
+    <div class="skill"><span class="snm">Command</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">46</span></div>
+    <div class="skill untr"><span class="snm">Commerce</span><span class="tier"><i></i><i></i><i></i></span><span class="sval">14</span></div>
+    <div class="skill"><span class="snm">Deceive</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">46</span></div>
+    <div class="skill"><span class="snm">Dodge</span><span class="tier"><i class="on"></i><i class="on"></i><i></i></span><span class="sval">58</span></div>
+    <div class="skill untr"><span class="snm">Inquiry</span><span class="tier"><i></i><i></i><i></i></span><span class="sval">14</span></div>
+    <div class="skill"><span class="snm">Logic</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">41</span></div>
+    <div class="skill untr"><span class="snm">Medicae</span><span class="tier"><i></i><i></i><i></i></span><span class="sval">15</span></div>
+    <div class="skill"><span class="snm">Parry</span><span class="tier"><i class="on"></i><i class="on"></i><i></i></span><span class="sval">85</span></div>
+    <div class="skill"><span class="snm">Stealth</span><span class="tier"><i class="on"></i><i></i><i></i></span><span class="sval">38</span></div>
+    <div class="skill untr"><span class="snm">Survival</span><span class="tier"><i></i><i></i><i></i></span><span class="sval">15</span></div>
+  </div>
+  <div class="note">⌖ Click a characteristic square or a skill name to open its roll dialog. "Hide untrained" collapses the greyed rows.</div>
+</div>
+
+<h3 style="margin-top:26px">Where should Fatigue, Corruption &amp; Insanity live?</h3>
+<p class="subtitle">You said "move them elsewhere" — here are three homes. (Shown above: Option A.)</p>
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Persistent status rail under the header</h3>
+      <p>Always visible on every tab as slim bars. Best for at-a-glance tracking; costs a sliver of vertical space.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Compact chips in the header (next to Fate)</h3>
+      <p>Three small clickable counters beside Fate. Saves space, keeps all "character resources" together; less room for bars.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>On the Combat sub-tab with Wounds</h3>
+      <p>Group all the "damage/condition" tracks (Wounds, Fatigue, Corruption, Insanity) together on Combat. Cleaner header, but not visible from other tabs.</p>
+    </div>
+  </div>
+</div>

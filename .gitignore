@@ -1,0 +1,11 @@
+# Secrets — never commit
+creds.txt
+
+# Visual-companion scratch (mockups regenerated per session)
+.superpowers/
+
+# Large reference clones / extracted systems (study material, not source)
+reference/
+
+# OS noise
+.DS_Store

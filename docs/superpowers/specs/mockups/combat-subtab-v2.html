@@ -1,0 +1,182 @@
+<style>
+  .sheet { background:#e7d8b8; border:2px solid #6b4a2b; border-radius:6px; color:#2b2017; font-family:'Georgia',serif; box-shadow:0 4px 16px rgba(0,0,0,.3); overflow:hidden; max-width:880px; margin:0 auto; }
+  .sheet .topbar { display:flex; background:#5a2a2a; }
+  .sheet .topbar .t { flex:1; text-align:center; padding:9px 4px; color:#e7d8b8; font-variant:small-caps; letter-spacing:1px; font-size:13px; border-right:1px solid #3d1c1c; cursor:pointer; }
+  .sheet .topbar .t.active { background:#e7d8b8; color:#5a2a2a; font-weight:bold; }
+  .sheet .topbar .t.dim { color:#caa; font-size:11px; flex:0 0 80px; opacity:.7; }
+  .sheet .topbar .t.ghost { color:#7a5; flex:0 0 110px; font-size:11px; opacity:.5; font-style:italic; }
+  .hdr { display:flex; align-items:center; gap:12px; padding:8px 14px 4px; }
+  .hdr .crest { width:40px; height:40px; background:#7a1f1f; border:2px solid #c9a24b; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#c9a24b; font-size:10px; }
+  .hdr .namewrap { flex:0 0 180px; }
+  .hdr .namewrap .label { font-size:9px; text-transform:uppercase; color:#7a5c30; letter-spacing:1px; }
+  .hdr .namewrap .name { font-size:17px; font-weight:bold; border-bottom:1px solid #8a6d3b; }
+  .hdr .meta { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:1px 16px; font-size:10px; }
+  .hdr .meta .f b { color:#7a5c30; text-transform:uppercase; font-size:9px; margin-right:5px; }
+  .hdr .fate { text-align:center; background:#efe6cd; border:2px solid #c9a24b; border-radius:6px; padding:3px 9px; cursor:pointer; }
+  .hdr .fate .label { font-size:9px; text-transform:uppercase; color:#7a5c30; }
+  .hdr .fate .pips { font-size:15px; color:#b8902f; letter-spacing:2px; }
+  .railone { padding:2px 14px 8px; }
+  .railone .meter { background:#efe6cd; border:1px solid #8a6d3b; border-radius:4px; padding:3px 8px; display:flex; align-items:center; gap:8px; }
+  .railone .meter .ml { font-size:9px; text-transform:uppercase; color:#7a5c30; letter-spacing:1px; flex:0 0 60px; }
+  .railone .meter .bar { flex:1; height:8px; background:#d6c39a; border-radius:4px; overflow:hidden; }
+  .railone .meter .bar i { display:block; height:100%; width:20%; background:#7a6a2a; }
+  .railone .meter .v { font-size:11px; font-weight:bold; }
+  .chars { display:flex; gap:4px; padding:4px 14px 8px; align-items:flex-end; }
+  .char { flex:1; }
+  .char .bonus { width:60%; margin:0 auto; background:#5a2a2a; color:#e7d8b8; text-align:center; font-size:10px; border-radius:3px 3px 0 0; }
+  .char .box { background:#efe6cd; border:1px solid #6b4a2b; border-radius:0 0 4px 4px; text-align:center; padding:3px 0 2px; cursor:pointer; }
+  .char .box .val { font-size:16px; font-weight:bold; }
+  .char .box .nm { font-size:8px; color:#7a5c30; text-transform:uppercase; }
+  .char.inf { margin-left:14px; border-left:2px dashed #b8902f; padding-left:8px; }
+  .subtabs { display:flex; margin:0 14px; border-bottom:2px solid #6b4a2b; }
+  .subtabs .s { padding:6px 22px; font-variant:small-caps; letter-spacing:1px; cursor:pointer; color:#7a5c30; font-size:13px; }
+  .subtabs .s.active { background:#6b4a2b; color:#e7d8b8; border-radius:5px 5px 0 0; font-weight:bold; }
+
+  .cgrid { display:grid; grid-template-columns:1fr 200px; gap:10px; padding:10px 14px; }
+  .panel { background:#efe6cd; border:1px solid #8a6d3b; border-radius:5px; padding:6px 8px; }
+  .panel > .ph { font-variant:small-caps; letter-spacing:1px; color:#5a2a2a; font-weight:bold; font-size:12px; border-bottom:1px solid #c9b285; margin-bottom:5px; }
+
+  .armrow { display:flex; gap:4px; }
+  .armloc { flex:1; text-align:center; }
+  .armloc .tb { width:55%; margin:0 auto; background:#3d5a2a; color:#e7d8b8; font-size:9px; border-radius:3px 3px 0 0; }
+  .armloc .ap { background:#fff6df; border:1px solid #6b4a2b; border-radius:0 0 3px 3px; padding:3px 0; font-size:16px; font-weight:bold; }
+  .armloc .ln { font-size:8px; color:#7a5c30; text-transform:uppercase; margin-top:2px; }
+
+  .wounds { display:flex; align-items:center; gap:8px; }
+  .wounds .big { font-size:26px; font-weight:bold; }
+  .wounds .sub { font-size:10px; color:#7a5c30; }
+  .wounds .crit { margin-left:auto; text-align:center; background:#7a1f1f; color:#e7d8b8; border-radius:4px; padding:2px 8px; }
+  .wounds .crit b { font-size:16px; display:block; }
+  .wounds .crit span { font-size:8px; text-transform:uppercase; }
+
+  .injuries .inj { display:flex; align-items:center; gap:6px; font-size:11px; padding:2px 0; border-bottom:1px dotted #cbb88c; }
+  .injuries .inj .ic { color:#7a1f1f; }
+  .injuries .add { font-size:10px; color:#7a5c30; cursor:pointer; margin-top:3px; display:inline-block; }
+
+  table.weap { width:100%; border-collapse:collapse; font-size:11px; }
+  table.weap th { text-align:left; color:#7a5c30; font-size:9px; text-transform:uppercase; border-bottom:1px solid #c9b285; padding:2px 4px; }
+  table.weap td { padding:3px 4px; border-bottom:1px dotted #cbb88c; }
+  table.weap .wn { font-weight:bold; color:#5a2a2a; text-decoration:underline dotted; cursor:pointer; }
+  table.weap .wn small { font-weight:normal; color:#9a8050; text-decoration:none; }
+  .atkwrap { display:flex; align-items:center; gap:4px; justify-content:flex-end; }
+  .atk { background:#5a2a2a; color:#e7d8b8; border:none; border-radius:3px; font-size:10px; padding:3px 8px; cursor:pointer; }
+  .atk .mode { font-size:8px; opacity:.85; display:block; }
+  .cfg { background:none; border:1px solid #8a6d3b; color:#5a2a2a; border-radius:3px; font-size:11px; padding:2px 6px; cursor:pointer; }
+
+  .talents .tal { display:flex; align-items:center; gap:6px; font-size:11px; padding:2px 0; border-bottom:1px dotted #cbb88c; }
+  .talents .tal .star { color:#b8902f; }
+  .talents .tal .tn { font-weight:bold; }
+  .talents .tal .td { color:#6b4a2b; font-size:10px; }
+
+  .move { display:grid; grid-template-columns:1fr 1fr; gap:3px 8px; font-size:11px; }
+  .move .m { display:flex; justify-content:space-between; border-bottom:1px dotted #cbb88c; }
+  .move .m b { color:#7a5c30; font-size:9px; text-transform:uppercase; align-self:center; }
+  .initrow { margin-top:5px; display:flex; justify-content:space-between; font-size:11px; background:#e2d2ac; border-radius:3px; padding:3px 6px; }
+  .legend { font-size:11px; color:#5a2a2a; background:#f3ead0; border:1px dashed #b8902f; border-radius:5px; padding:6px 10px; margin:0 14px 12px; }
+  .legend b { color:#7a1f1f; }
+</style>
+
+<h2>Stats → "Combat" — with lasting injuries + two-tier attacks</h2>
+<p class="subtitle">Two additions: a persistent injuries box under Wounds, and the fast-attack / save-template model.</p>
+
+<div class="sheet">
+  <div class="topbar">
+    <div class="t active">Stats</div><div class="t">Abilities</div><div class="t">Gear</div>
+    <div class="t">Notes</div><div class="t">Afflictions</div><div class="t dim">Psychic ▸</div><div class="t ghost">⚙ Advancement</div>
+  </div>
+  <div class="hdr">
+    <div class="crest">⚜</div>
+    <div class="namewrap"><div class="label">Acolyte</div><div class="name">Daren Vholk</div></div>
+    <div class="meta">
+      <div class="f"><b>Home World</b>Hive World</div><div class="f"><b>Background</b>Adeptus Arbites</div>
+      <div class="f"><b>Role</b>Warrior</div><div class="f"><b>Elite</b>—</div>
+    </div>
+    <div class="fate"><div class="label">Fate</div><div class="pips">● ● ● ○</div></div>
+  </div>
+  <div class="railone"><div class="meter"><span class="ml">Fatigue</span><div class="bar"><i></i></div><span class="v">1 / 8</span></div></div>
+  <div class="chars">
+    <div class="char"><div class="bonus">8</div><div class="box"><div class="val">85</div><div class="nm">WS</div></div></div>
+    <div class="char"><div class="bonus">8</div><div class="box"><div class="val">85</div><div class="nm">BS</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">34</div><div class="nm">S</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">32</div><div class="nm">T</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">38</div><div class="nm">Ag</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">31</div><div class="nm">Int</div></div></div>
+    <div class="char"><div class="bonus">2</div><div class="box"><div class="val">28</div><div class="nm">Per</div></div></div>
+    <div class="char"><div class="bonus">2</div><div class="box"><div class="val">29</div><div class="nm">WP</div></div></div>
+    <div class="char"><div class="bonus">3</div><div class="box"><div class="val">36</div><div class="nm">Fel</div></div></div>
+    <div class="char inf"><div class="bonus">3</div><div class="box"><div class="val">37</div><div class="nm">Inf</div></div></div>
+  </div>
+  <div class="subtabs"><div class="s">Investigation</div><div class="s active">Combat</div></div>
+
+  <div class="cgrid">
+    <div>
+      <div class="panel" style="margin-bottom:10px">
+        <div class="ph">Armour — protection by location (TB in the small box)</div>
+        <div class="armrow">
+          <div class="armloc"><div class="tb">+3</div><div class="ap">6</div><div class="ln">Head</div></div>
+          <div class="armloc"><div class="tb">+3</div><div class="ap">6</div><div class="ln">R Arm</div></div>
+          <div class="armloc"><div class="tb">+3</div><div class="ap">6</div><div class="ln">L Arm</div></div>
+          <div class="armloc"><div class="tb">+3</div><div class="ap">8</div><div class="ln">Body</div></div>
+          <div class="armloc"><div class="tb">+3</div><div class="ap">6</div><div class="ln">R Leg</div></div>
+          <div class="armloc"><div class="tb">+3</div><div class="ap">6</div><div class="ln">L Leg</div></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-bottom:10px">
+        <div class="ph">Combat gear — name = configure &amp; save · ⚔ = fast attack</div>
+        <table class="weap">
+          <tr><th>Weapon</th><th>Class</th><th>Dmg</th><th>Pen</th><th>Clip</th><th style="text-align:right">Attack</th></tr>
+          <tr>
+            <td><span class="wn">Chainsword <small>⚙</small></span></td><td>Melee</td><td>1d10+3 R</td><td>2</td><td>—</td>
+            <td><div class="atkwrap"><button class="atk">⚔ Attack<span class="mode">Standard +10</span></button></div></td>
+          </tr>
+          <tr>
+            <td><span class="wn">Hellpistol <small>⚙</small></span></td><td>Pistol</td><td>1d10+4 E</td><td>7</td><td>40/40</td>
+            <td><div class="atkwrap"><button class="atk">⚔ Attack<span class="mode">Semi-Auto · Short</span></button></div></td>
+          </tr>
+          <tr>
+            <td><span class="wn">Frag Grenade <small>⚙</small></span></td><td>Thrown</td><td>2d10+2 X</td><td>0</td><td>3</td>
+            <td><div class="atkwrap"><button class="atk">⚔ Attack<span class="mode">Standard</span></button></div></td>
+          </tr>
+        </table>
+      </div>
+      <div class="panel talents">
+        <div class="ph">★ Favourite talents <span style="font-weight:normal;font-size:10px;color:#7a5c30">— starred on the Abilities tab</span></div>
+        <div class="tal"><span class="star">★</span><span class="tn">Quick Draw</span><span class="td">— draw as a Free Action</span></div>
+        <div class="tal"><span class="star">★</span><span class="tn">Counter Attack</span><span class="td">— after a successful Parry, free melee attack</span></div>
+        <div class="tal"><span class="star">★</span><span class="tn">Step Aside</span><span class="td">— one extra Dodge/Parry per round</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel" style="margin-bottom:10px">
+        <div class="ph">Wounds</div>
+        <div class="wounds">
+          <div><span class="big">9</span><span class="sub"> / 12</span><div class="sub">current / max</div></div>
+          <div class="crit"><b>0</b><span>critical</span></div>
+        </div>
+      </div>
+      <div class="panel injuries" style="margin-bottom:10px">
+        <div class="ph">Lasting injuries &amp; conditions</div>
+        <div class="inj"><span class="ic">✖</span> Lost Left Arm</div>
+        <div class="inj"><span class="ic">◐</span> Blinded — right eye</div>
+        <div class="inj"><span class="ic">⚑</span> Bleeding (1/round)</div>
+        <span class="add">+ add injury / condition</span>
+      </div>
+      <div class="panel">
+        <div class="ph">Movement &amp; Initiative</div>
+        <div class="move">
+          <div class="m"><b>Half</b><span>3 m</span></div><div class="m"><b>Full</b><span>6 m</span></div>
+          <div class="m"><b>Charge</b><span>9 m</span></div><div class="m"><b>Run</b><span>18 m</span></div>
+        </div>
+        <div class="initrow"><b style="color:#7a5c30;font-size:9px">INITIATIVE</b><span>1d10 + 3 (Ag)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <b>Two-tier attacks:</b> The <span class="wn" style="cursor:default">weapon name ⚙</span> opens the full dialog (attack type, aim, range, ammo…) to roll <i>and</i> <b>Save as template</b>.
+    The <span style="background:#5a2a2a;color:#e7d8b8;padding:1px 5px;border-radius:3px">⚔ Attack</span> button then fast-rolls that saved configuration in one click (its current mode shown beneath it).
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Injuries box + two-tier attack shown. Good to lock the Combat sub-tab? Then we can pick a visual/theme direction or start consolidating the spec.</p>

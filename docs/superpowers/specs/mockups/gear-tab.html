@@ -1,0 +1,93 @@
+<style>
+  .sheet { background:#e7d8b8; border:2px solid #6b4a2b; border-radius:6px; color:#2b2017; font-family:'Georgia',serif; box-shadow:0 4px 16px rgba(0,0,0,.3); overflow:hidden; max-width:880px; margin:0 auto; }
+  .sheet .topbar { display:flex; background:#5a2a2a; }
+  .sheet .topbar .t { flex:1; text-align:center; padding:9px 4px; color:#e7d8b8; font-variant:small-caps; letter-spacing:1px; font-size:13px; border-right:1px solid #3d1c1c; cursor:pointer; }
+  .sheet .topbar .t.active { background:#e7d8b8; color:#5a2a2a; font-weight:bold; }
+  .sheet .topbar .t.dim { color:#caa; font-size:11px; flex:0 0 80px; opacity:.7; }
+  .sheet .topbar .t.ghost { color:#7a5; flex:0 0 110px; font-size:11px; opacity:.5; font-style:italic; }
+
+  .gbar { display:flex; align-items:center; justify-content:space-between; padding:8px 14px 2px; }
+  .gbar .enc { font-size:11px; color:#5a2a2a; }
+  .gbar .enc b { font-size:15px; }
+  .gbar .encbar { width:160px; height:8px; background:#d6c39a; border-radius:4px; display:inline-block; vertical-align:middle; margin-left:6px; overflow:hidden; }
+  .gbar .encbar i { display:block; height:100%; width:40%; background:#7a6a2a; }
+
+  .sect { margin:8px 14px; background:#efe6cd; border:1px solid #8a6d3b; border-radius:5px; overflow:hidden; }
+  .sect .sh { display:flex; align-items:center; justify-content:space-between; background:#6b4a2b; color:#e7d8b8; padding:4px 10px; font-variant:small-caps; letter-spacing:1px; font-size:13px; }
+  .sect .sh .add { background:#e7d8b8; color:#5a2a2a; border:none; border-radius:3px; font-size:11px; padding:1px 8px; cursor:pointer; font-weight:bold; }
+  table.it { width:100%; border-collapse:collapse; font-size:11px; }
+  table.it th { text-align:left; color:#7a5c30; font-size:9px; text-transform:uppercase; border-bottom:1px solid #c9b285; padding:3px 8px; }
+  table.it td { padding:4px 8px; border-bottom:1px dotted #cbb88c; }
+  table.it tr:last-child td { border-bottom:none; }
+  .eq { width:16px; height:16px; border:2px solid #6b4a2b; border-radius:4px; display:inline-block; vertical-align:middle; cursor:pointer; }
+  .eq.on { background:#3d5a2a; border-color:#3d5a2a; position:relative; }
+  .eq.on::after { content:"✓"; color:#e7d8b8; font-size:11px; position:absolute; left:2px; top:-3px; }
+  .eq.radio { border-radius:50%; }
+  .nm { font-weight:bold; color:#5a2a2a; text-decoration:underline dotted; cursor:pointer; }
+  .nm small { color:#9a8050; text-decoration:none; font-weight:normal; }
+  .sub { background:#e2d2ac; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#7a5c30; padding:2px 10px; }
+  .craft { display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:3px; font-size:10px; font-weight:bold; color:#fff; }
+  .craft.P { background:#7a5a3a; } .craft.N { background:#8a8270; } .craft.G { background:#3d6a4a; } .craft.B { background:#b8902f; }
+  .pr { background:#2a3a5a; color:#cfe0ff; border-radius:3px; padding:1px 6px; font-size:11px; font-weight:bold; }
+  .note { font-size:11px; color:#6b4a2b; font-style:italic; padding:4px 14px 12px; }
+</style>
+
+<h2>Gear tab — consolidated</h2>
+<p class="subtitle">From ~9 categories down to three: Weapons · Protection (Armour + Force Field) · Gear. Equipped boxes feed the Combat tab.</p>
+
+<div class="sheet">
+  <div class="topbar">
+    <div class="t">Stats</div><div class="t">Abilities</div><div class="t active">Gear</div>
+    <div class="t">Notes</div><div class="t">Afflictions</div><div class="t dim">Psychic ▸</div><div class="t ghost">⚙ Advancement</div>
+  </div>
+
+  <div class="gbar">
+    <div class="enc">Encumbrance <b>34</b> / 45 <span class="encbar"><i></i></span></div>
+    <div class="enc" style="color:#7a5c30">✓ = equipped (worn / wielded) · shown on Combat</div>
+  </div>
+
+  <!-- WEAPONS -->
+  <div class="sect">
+    <div class="sh"><span>⚔ Weapons</span><button class="add">+ add</button></div>
+    <table class="it">
+      <tr><th style="width:32px">Eq.</th><th>Name</th><th>Class</th><th>Damage</th><th>Pen</th><th>Special</th><th>Wt</th></tr>
+      <tr><td><span class="eq on"></span></td><td><span class="nm">Chainsword <small>⚙ 1 mod</small></span></td><td>Melee</td><td>1d10+3 R</td><td>2</td><td>Tearing, Balanced</td><td>5</td></tr>
+      <tr><td><span class="eq on"></span></td><td><span class="nm">Hellpistol <small>⚙ 2 mods</small></span></td><td>Pistol</td><td>1d10+4 E</td><td>7</td><td>Reliable, Red-Dot</td><td>4</td></tr>
+      <tr><td><span class="eq"></span></td><td><span class="nm">Long-las <small>⚙</small></span></td><td>Basic</td><td>1d10+3 E</td><td>1</td><td>Accurate, Felling(2)</td><td>9</td></tr>
+    </table>
+  </div>
+
+  <!-- PROTECTION -->
+  <div class="sect">
+    <div class="sh"><span>🛡 Protection</span><button class="add">+ add</button></div>
+    <div class="sub">Armour — only one non-stacking piece equipped (◯), additive layers stack (✓)</div>
+    <table class="it">
+      <tr><th style="width:32px">Eq.</th><th>Name</th><th>Coverage / AP</th><th>Max Ag</th><th>Craft</th><th>Wt</th></tr>
+      <tr><td><span class="eq radio on"></span></td><td><span class="nm">Carapace Chestplate</span></td><td>Body 6, Arms 6</td><td>—</td><td><span class="craft G">G</span></td><td>14</td></tr>
+      <tr><td><span class="eq on"></span></td><td><span class="nm">Flak Cloak <small>(additive)</small></span></td><td>All 1</td><td>—</td><td><span class="craft N">N</span></td><td>6</td></tr>
+      <tr><td><span class="eq radio"></span></td><td><span class="nm">Guard Flak Armour</span></td><td>Body 4, Arms/Legs 3</td><td>—</td><td><span class="craft N">N</span></td><td>10</td></tr>
+    </table>
+    <div class="sub">Force Field — equip toggles its Protection Rating onto the Combat tab</div>
+    <table class="it">
+      <tr><th style="width:32px">Eq.</th><th>Name</th><th>Protection Rating</th><th>Overload</th><th>Craft</th><th>Wt</th></tr>
+      <tr><td><span class="eq on"></span></td><td><span class="nm">Refractor Field</span></td><td><span class="pr">PR 30</span></td><td>01–05</td><td><span class="craft G">G</span></td><td>2</td></tr>
+    </table>
+  </div>
+
+  <!-- GEAR (squashed) -->
+  <div class="sect">
+    <div class="sh"><span>🎒 Gear <span style="font-size:10px;opacity:.8">— tools, drugs, ammo, sundries</span></span><button class="add">+ add</button></div>
+    <table class="it">
+      <tr><th>Name</th><th>Short description</th><th style="width:44px">Craft</th><th style="width:36px">Qty</th></tr>
+      <tr><td><span class="nm">Lascell pack</span></td><td>Reloads a hellpistol clip</td><td><span class="craft N">N</span></td><td>4</td></tr>
+      <tr><td><span class="nm">Stimm</span></td><td>Remove 1d5 fatigue, then +1 fatigue/min</td><td><span class="craft N">N</span></td><td>2</td></tr>
+      <tr><td><span class="nm">Manstopper rounds</span></td><td>+2 Pen, lose Tearing (1 clip)</td><td><span class="craft G">G</span></td><td>1</td></tr>
+      <tr><td><span class="nm">Auspex</span></td><td>Scanner, +20 Awareness vs hidden</td><td><span class="craft G">G</span></td><td>1</td></tr>
+      <tr><td><span class="nm">Photo-visor</span></td><td>Ignore darkness penalties</td><td><span class="craft B">B</span></td><td>1</td></tr>
+    </table>
+  </div>
+
+  <div class="note">⚙ on a weapon opens it (incl. its installed mods) · Craft: <span class="craft P">P</span>oor <span class="craft N">N</span>ormal <span class="craft G">G</span>ood <span class="craft B">B</span>est</div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">One real tradeoff to decide — see the question in the terminal about Ammunition.</p>

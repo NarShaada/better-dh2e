@@ -1,0 +1,102 @@
+<style>
+  .wrap { max-width:880px; margin:0 auto; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .stack { display:flex; flex-direction:column; gap:10px; }
+  .dlg { background:#e7d8b8; border:2px solid #6b4a2b; border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,.3); font-family:Georgia,serif; color:#2b2017; overflow:hidden; }
+  .dlg .tt { background:#5a2a2a; color:#e7d8b8; font-variant:small-caps; letter-spacing:1px; font-size:12px; padding:5px 10px; }
+  .dlg .bd { padding:9px 11px; }
+  .fld { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  .fld label { font-size:10px; text-transform:uppercase; color:#7a5c30; letter-spacing:1px; flex:0 0 80px; }
+  .fld input, .fld select { flex:1; border:1px solid #8a6d3b; border-radius:4px; background:#fff6df; padding:3px 6px; font-size:12px; font-family:Georgia,serif; }
+  .hintp { font-size:9px; color:#9a8050; margin:-4px 0 7px 88px; font-style:italic; }
+  .btns { display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+  .btns .b { border:none; border-radius:4px; font-size:12px; padding:4px 14px; cursor:pointer; font-family:Georgia,serif; }
+  .b.roll { background:#5a2a2a; color:#e7d8b8; } .b.cancel { background:#d6c39a; color:#5a2a2a; }
+
+  .card { background:#efe6cd; border:1px solid #8a6d3b; border-left:4px solid #5a2a2a; border-radius:5px; font-family:Georgia,serif; color:#2b2017; padding:8px 10px; font-size:12px; }
+  .card .ch { display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid #c9b285; padding-bottom:3px; margin-bottom:5px; }
+  .card .ch .who { font-weight:bold; color:#5a2a2a; }
+  .card .ch .what { font-size:10px; color:#7a5c30; text-transform:uppercase; letter-spacing:1px; }
+  .card .grid { display:grid; grid-template-columns:auto auto; gap:1px 14px; font-size:11px; }
+  .card .grid .k { color:#7a5c30; } .card .grid .v { text-align:right; font-weight:bold; }
+  .card .res { text-align:center; margin:6px 0 2px; font-size:15px; font-weight:bold; }
+  .card .res.ok { color:#3d6a4a; } .card .res.no { color:#7a2a2a; }
+  .card .dos { text-align:center; font-size:12px; }
+  .hits { margin:6px 0 4px; }
+  .hit { display:flex; justify-content:space-between; font-size:11px; border-bottom:1px dotted #cbb88c; padding:2px 2px; }
+  .hit b { color:#5a2a2a; }
+  .cardbtns { display:flex; gap:8px; margin-top:7px; }
+  .cardbtns .cb { flex:1; border:none; border-radius:4px; font-size:11px; padding:5px; cursor:pointer; font-family:Georgia,serif; }
+  .cb.dmg { background:#5a2a2a; color:#e7d8b8; } .cb.eva { background:#2a3a5a; color:#cfe0ff; }
+  h3.sec { margin:18px 0 6px; color:#5a2a2a; font-variant:small-caps; letter-spacing:1px; }
+</style>
+
+<div class="wrap">
+<h2>Roll dialogs &amp; chat cards</h2>
+<p class="subtitle">Modifier parses a signed number and adjusts the <i>target</i>; cards report outcome + DoS/DoF. Attack card is to-hit only, with Evade / Roll Damage buttons.</p>
+
+<div class="row2">
+  <div class="stack">
+    <h3 class="sec">① Characteristic</h3>
+    <div class="dlg"><div class="tt">Test — Weapon Skill (85)</div><div class="bd">
+      <div class="fld"><label>Modifier</label><input value="+10"></div>
+      <div class="hintp">"+10", "10" → +10 · "-20" → −20</div>
+      <div class="btns"><button class="b roll">⚅ Roll</button><button class="b cancel">Cancel</button></div>
+    </div></div>
+    <div class="card">
+      <div class="ch"><span class="who">Daren</span><span class="what">WS Test</span></div>
+      <div class="grid"><span class="k">Characteristic</span><span class="v">WS 85</span><span class="k">Modifier</span><span class="v">+10</span><span class="k">Target</span><span class="v">95</span><span class="k">Rolled</span><span class="v">23</span></div>
+      <div class="res ok">SUCCESS</div><div class="dos">7 Degrees of Success</div>
+    </div>
+  </div>
+
+  <div class="stack">
+    <h3 class="sec">② Skill (+ characteristic picker)</h3>
+    <div class="dlg"><div class="tt">Test — Awareness</div><div class="bd">
+      <div class="fld"><label>Characteristic</label><select><option selected>Perception (28)</option><option>Intelligence (31)</option></select></div>
+      <div class="fld"><label>Modifier</label><input value="-10"></div>
+      <div class="btns"><button class="b roll">⚅ Roll</button><button class="b cancel">Cancel</button></div>
+    </div></div>
+    <div class="card">
+      <div class="ch"><span class="who">Daren</span><span class="what">Awareness (Per)</span></div>
+      <div class="grid"><span class="k">Skill / Char</span><span class="v">Awareness · Per 28</span><span class="k">Rank</span><span class="v">Known +0</span><span class="k">Modifier</span><span class="v">−10</span><span class="k">Target</span><span class="v">18</span><span class="k">Rolled</span><span class="v">41</span></div>
+      <div class="res no">FAILURE</div><div class="dos">2 Degrees of Failure</div>
+    </div>
+  </div>
+</div>
+
+<h3 class="sec">③ Attack</h3>
+<div class="row2">
+  <div class="dlg"><div class="tt">Attack — Hellpistol (BS 85)</div><div class="bd">
+    <div class="fld"><label>Modifier</label><input value="+0"></div>
+    <div class="fld"><label>Aiming</label><select><option selected>None</option><option>Half Aim +10</option><option>Full Aim +20</option></select></div>
+    <div class="fld"><label>Attack Type</label><select>
+      <option>Standard +10 — 1 hit</option>
+      <option selected>Full-Auto Burst −10 — +1 hit / DoS</option>
+      <option>Semi-Auto Burst +0 — +1 hit / 2 DoS</option>
+      <option>Called Shot −20 — pick location</option>
+    </select></div>
+    <div class="fld"><label>Range</label><select><option>Point-Blank +30</option><option selected>Short +10</option><option>Normal +0</option><option>Long −10</option><option>Extreme −30</option></select></div>
+    <div class="hintp" style="margin-left:0">Ranged only shows Range · type internals (hit-scaling) are hardcoded</div>
+    <div class="btns"><button class="b roll">⚔ Roll attack</button><button class="b cancel">Cancel</button></div>
+  </div></div>
+
+  <div class="card">
+    <div class="ch"><span class="who">Daren → Cultist</span><span class="what">Full-Auto Burst</span></div>
+    <div class="grid">
+      <span class="k">Weapon / Char</span><span class="v">Hellpistol · BS 85</span>
+      <span class="k">Mods</span><span class="v">−10 type, +10 range = 85</span>
+      <span class="k">Rolled</span><span class="v">22</span>
+    </div>
+    <div class="res ok">HIT</div><div class="dos">7 DoS → 3 hits (capped at RoF 3)</div>
+    <div class="hits">
+      <div class="hit"><span>Hit 1</span><b>Body</b></div>
+      <div class="hit"><span>Hit 2</span><b>Right Arm</b></div>
+      <div class="hit"><span>Hit 3</span><b>Head</b></div>
+    </div>
+    <div class="cardbtns"><button class="cb dmg">⚅ Roll damage</button><button class="cb eva">🛡 Evade</button></div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Damage &amp; Evasion are launched from those two buttons (their own dialogs/cards, spec'd later). Look right? Then I'll write the Rolls &amp; Dialogs section.</p>
+</div>
