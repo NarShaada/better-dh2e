@@ -1,0 +1,4 @@
+/* Better DH2e — styles grow with the sheet in later plans. */
+.better-dh2e .bdh-tabs { display: flex; gap: 0; }
+.better-dh2e .bdh-tabs .item { padding: 6px 10px; cursor: pointer; }
+.better-dh2e .bdh-tabs .item.active { font-weight: bold; }

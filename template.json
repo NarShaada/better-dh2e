@@ -1,0 +1,12 @@
+{
+  "Actor": {
+    "types": ["acolyte", "npc"],
+    "acolyte": {},
+    "npc": {}
+  },
+  "Item": {
+    "types": ["weapon", "gear"],
+    "weapon": {},
+    "gear": {}
+  }
+}
