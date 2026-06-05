@@ -100,7 +100,60 @@
       {{#unless traits.length}}<div class="bdh-empty">No traits.</div>{{/unless}}
     </div>
   </section>
-  <section class="tab {{tabs.gear.cssClass}}" data-group="primary" data-tab="gear"><p class="placeholder">Gear — later plan.</p></section>
+  <section class="tab {{tabs.gear.cssClass}}" data-group="primary" data-tab="gear">
+    <div class="bdh-gear-bar">Weight carried: <b>{{carriedWeight}}</b></div>
+
+    <div class="bdh-section">
+      <div class="bdh-section-head">⚔ Weapons <button type="button" class="bdh-add" data-action="createItem" data-type="weapon">＋</button></div>
+      {{#each weapons as |w|}}
+        <div class="bdh-item-row" data-item-id="{{w.id}}">
+          <a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if w.equipped}}✓{{else}}○{{/if}}</a>
+          <span class="bdh-name" data-action="editItem">{{w.name}}</span>
+          <span class="bdh-desc-line">{{w.summary}}</span>
+          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+        </div>
+      {{/each}}
+      {{#unless weapons.length}}<div class="bdh-empty">No weapons.</div>{{/unless}}
+    </div>
+
+    <div class="bdh-section">
+      <div class="bdh-section-head">🛡 Protection</div>
+      <div class="bdh-subhead">Armour <span class="bdh-hint2">one non-additive worn at a time</span> <button type="button" class="bdh-add" data-action="createItem" data-type="armour">＋</button></div>
+      {{#each armour as |a|}}
+        <div class="bdh-item-row" data-item-id="{{a.id}}">
+          <a class="bdh-eq {{#if a.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if a.equipped}}✓{{else}}○{{/if}}</a>
+          <span class="bdh-name" data-action="editItem">{{a.name}}{{#if a.additive}} <span class="bdh-tag">additive</span>{{/if}}</span>
+          <span class="bdh-desc-line">{{a.ap}}</span>
+          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+        </div>
+      {{/each}}
+      {{#unless armour.length}}<div class="bdh-empty">No armour.</div>{{/unless}}
+      <div class="bdh-subhead">Force Fields <button type="button" class="bdh-add" data-action="createItem" data-type="forceField">＋</button></div>
+      {{#each forceFields as |f|}}
+        <div class="bdh-item-row" data-item-id="{{f.id}}">
+          <a class="bdh-eq {{#if f.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if f.equipped}}✓{{else}}○{{/if}}</a>
+          <span class="bdh-name" data-action="editItem">{{f.name}}</span>
+          <span class="bdh-desc-line">PR {{f.pr}}</span>
+          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+        </div>
+      {{/each}}
+      {{#unless forceFields.length}}<div class="bdh-empty">No force fields.</div>{{/unless}}
+    </div>
+
+    <div class="bdh-section">
+      <div class="bdh-section-head">🎒 Gear <button type="button" class="bdh-add" data-action="createItem" data-type="gear">＋</button></div>
+      {{#each gear as |g|}}
+        <div class="bdh-item-row" data-item-id="{{g.id}}">
+          <span class="bdh-name" data-action="editItem">{{g.name}}</span>
+          <span class="bdh-desc-line">{{g.desc}}</span>
+          <span class="bdh-craft">{{g.craft}}</span>
+          <span class="bdh-qty-wrap">×<input type="number" class="bdh-qty" value="{{g.quantity}}" min="0"/></span>
+          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+        </div>
+      {{/each}}
+      {{#unless gear.length}}<div class="bdh-empty">No gear.</div>{{/unless}}
+    </div>
+  </section>
   <section class="tab {{tabs.notes.cssClass}}" data-group="primary" data-tab="notes">
     <textarea class="bdh-notes" name="system.notes" rows="16" placeholder="Freeform notes…">{{system.notes}}</textarea>
   </section>
