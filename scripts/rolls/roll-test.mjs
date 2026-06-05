@@ -1,6 +1,7 @@
 // scripts/rolls/roll-test.mjs
 // Foundry-coupled roll service: dialog -> d100 -> chat card. Validated by loading in Foundry.
 import { parseModifier, evaluateTest } from "./test-logic.mjs";
+import { skillTotal } from "../helpers/derived.mjs";
 
 const { DialogV2 } = foundry.applications.api;
 const { renderTemplate } = foundry.applications.handlebars;
@@ -41,7 +42,8 @@ async function promptTest({ title, characteristics = null }) {
 export async function performTest(actor, { label, base, modifier }) {
   const roll = await new Roll("1d100").evaluate();
   const result = evaluateTest({ base, modifier: parseModifier(modifier), roll: roll.total });
-  const content = await renderTemplate(CARD, { label, ...result });
+  const modifierLabel = `${result.modifier >= 0 ? "+" : ""}${result.modifier}`;
+  const content = await renderTemplate(CARD, { label, ...result, modifierLabel });
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content, rolls: [roll] });
   return result;
 }
@@ -59,7 +61,6 @@ export async function rollCharacteristic(actor, key) {
 export async function rollSkill(actor, key) {
   const skillCfg = CONFIG.BDH.skills[key];
   const skill = actor.system.skills[key];
-  const rankBonus = CONFIG.BDH.skillRanks[skill.rank] ?? CONFIG.BDH.skillRanks.untrained;
   const characteristics = Object.keys(CONFIG.BDH.characteristics).map((ck) => ({
     key: ck,
     label: CONFIG.BDH.characteristics[ck].label,
@@ -70,7 +71,7 @@ export async function rollSkill(actor, key) {
   const choice = await promptTest({ title: label, characteristics });
   if (!choice) return null;
   const chosen = choice.characteristicKey ?? skillCfg.characteristic;
-  const base = actor.system.characteristics[chosen].total + rankBonus;
+  const base = skillTotal(actor.system.characteristics[chosen].total, skill.rank);
   const short = CONFIG.BDH.characteristics[chosen].short;
   return performTest(actor, { label: `${label} (${short})`, base, modifier: choice.modifier });
 }
