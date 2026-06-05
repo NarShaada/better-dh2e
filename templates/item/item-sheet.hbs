@@ -1,0 +1,61 @@
+{{!-- templates/item/item-sheet.hbs --}}
+<form class="better-dh2e item">
+  <header class="bdh-item-header">
+    <img src="{{document.img}}" data-edit="img" alt="icon"/>
+    <input type="text" name="name" value="{{document.name}}" placeholder="Name"/>
+  </header>
+
+  {{#if isTalent}}
+    <div class="bdh-fields">
+      <label>Tier</label><select name="system.tier">{{selectOptions tierChoices selected=system.tier}}</select>
+      <label>Prerequisites</label><input type="text" name="system.prerequisites" value="{{system.prerequisites}}"/>
+      <label>Aptitudes</label><select name="system.aptitudes" multiple size="6">{{selectOptions aptitudeChoices selected=system.aptitudes}}</select>
+    </div>
+  {{/if}}
+
+  {{#if isGear}}
+    <div class="bdh-fields">
+      <label>Craftsmanship</label><select name="system.craftsmanship">{{selectOptions craftChoices selected=system.craftsmanship}}</select>
+      <label>Availability</label><select name="system.availability">{{selectOptions availChoices selected=system.availability}}</select>
+      <label>Weight</label><input type="number" step="0.1" name="system.weight" value="{{system.weight}}"/>
+    </div>
+  {{/if}}
+
+  {{#if isForceField}}
+    <div class="bdh-fields">
+      <label>Protection Rating</label><input type="number" name="system.protectionRating" value="{{system.protectionRating}}"/>
+      <label>Overload</label><input type="number" name="system.overload" value="{{system.overload}}"/>
+      <label>Craftsmanship</label><select name="system.craftsmanship">{{selectOptions craftChoices selected=system.craftsmanship}}</select>
+      <label>Availability</label><select name="system.availability">{{selectOptions availChoices selected=system.availability}}</select>
+      <label>Weight</label><input type="number" step="0.1" name="system.weight" value="{{system.weight}}"/>
+    </div>
+  {{/if}}
+
+  {{#if isCybernetic}}
+    <div class="bdh-fields">
+      <label>Craftsmanship</label><select name="system.craftsmanship">{{selectOptions craftChoices selected=system.craftsmanship}}</select>
+      <label>Availability</label><select name="system.availability">{{selectOptions availChoices selected=system.availability}}</select>
+      <label>Installed</label><input type="checkbox" name="system.installed" {{checked system.installed}}/>
+    </div>
+  {{/if}}
+
+  {{#if isArmour}}
+    <div class="bdh-fields">
+      <label>Craftsmanship</label><select name="system.craftsmanship">{{selectOptions craftChoices selected=system.craftsmanship}}</select>
+      <label>Availability</label><select name="system.availability">{{selectOptions availChoices selected=system.availability}}</select>
+      <label>Weight</label><input type="number" step="0.1" name="system.weight" value="{{system.weight}}"/>
+      <label>Additive to other armour</label><input type="checkbox" name="system.additive" {{checked system.additive}}/>
+    </div>
+    <div class="bdh-armour-locs">
+      <label>Head</label><input type="number" name="system.locations.head" value="{{system.locations.head}}"/>
+      <label>Body</label><input type="number" name="system.locations.body" value="{{system.locations.body}}"/>
+      <label>R Arm</label><input type="number" name="system.locations.rightArm" value="{{system.locations.rightArm}}"/>
+      <label>L Arm</label><input type="number" name="system.locations.leftArm" value="{{system.locations.leftArm}}"/>
+      <label>R Leg</label><input type="number" name="system.locations.rightLeg" value="{{system.locations.rightLeg}}"/>
+      <label>L Leg</label><input type="number" name="system.locations.leftLeg" value="{{system.locations.leftLeg}}"/>
+    </div>
+  {{/if}}
+
+  <label class="bdh-desc-label">Description</label>
+  <prose-mirror name="system.description" value="{{document.system.description}}"></prose-mirror>
+</form>
