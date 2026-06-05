@@ -68,14 +68,14 @@ Automation lands in the hottest part of the code — the roll/damage formulas �
 
 - **Characteristics** (10: WS, BS, S, T, Ag, Int, Per, WP, Fel, Inf): store `base`, `advance`, `unnatural`; derive `total = base + advance` and `bonus = floor(total/10) + unnatural`. **Influence** is modeled as a characteristic but flagged special (it behaves differently and is presented apart on the sheet).
 - **Skills:** rank/tier, governing characteristic(s); derive total = characteristic.total + rank bonus. **Specialist skills** carry no rank of their own — instead a **dynamic list of specializations**, each an independent entry `{ name, rank, characteristic (defaults from parent) }`, advanceable like its own skill (replaces the old fixed `specialities{}` map so arbitrary names can be added on the fly).
-- **Resources:** Wounds (threshold: `value`/`max` + `critical`), Fatigue (`value`/`max` derived TB+WB), Fate (`value`/`max`), Corruption, Insanity. (**Psy Rating is not a resource** — it is a `trait` item; see the item table.)
+- **Resources:** Wounds (threshold: `value`/`max` + `critical`), Fatigue (`value`/`max` derived TB+WB), Fate (`value`/`max`), Corruption, Insanity, and **Psy Rating** (a simple integer shown at the top of the Psychic tab; minimal this version, the structured psyker control is the future psychic phase §9).
 
 **Item types** — standalone Foundry Items. All carry a built-in **Name** and a **rich-text Description**; **no `source` field**. Each item is "1 of".
 
 | Type | Fields (beyond Name + Description) |
 |---|---|
 | `talent` | tier (1–3), prerequisites (text), aptitudes (multi-select from `CONFIG.BDH.aptitudes`), **favourite** flag |
-| `trait` | *(Name + Description only)* — also used to represent **Psy Rating** this version |
+| `trait` | *(Name + Description only)* |
 | `gear` | craftsmanship, availability, weight, **quantity** (default 1; the quantity *control* appears only on the actor's Gear tab, not the item edit sheet) |
 | `forceField` | protectionRating (int), overload (int), craftsmanship, availability, weight, `equipped` |
 | `cybernetic` | craftsmanship, availability, installed (bool) |
