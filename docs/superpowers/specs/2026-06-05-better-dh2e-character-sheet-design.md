@@ -47,7 +47,7 @@ Core resolution and the DH2e-specific details that automation must get right:
 - **Psychic — kept simple, automation out of scope for this version.** Psy Rating is represented as an ordinary **trait** item; psychic powers are **simple descriptive items** in the Psychic tab. Full psychic resolution (Focus Power test, Fettered/Unfettered/Push, Psychic Phenomena → Perils of the Warp, PR-capped attack powers) is a **future phase** (§9).
 - **Fate:** spend (+10 & reroll, reroll, extra action, reduce damage) vs **burn** (permanent −1 max). Refresh to max each session.
 - **Corruption / Insanity:** each +10 crosses a threshold → Malignancy / Trauma test with the track penalty; disorders at 40/60/80 IsP; track penalties (−10/−20/−30) applied to relevant tests.
-- **Fatigue:** any characteristic whose bonus < current Fatigue is halved (structured time); threshold **TB + WB**; over → Unconscious, 2× → death.
+- **Fatigue:** any characteristic whose bonus < current Fatigue is halved (structured time); over the max → Unconscious. **This system's design decision:** the Fatigue bar's **default max = Toughness Bonus**, editable in Custom advancement (traits/talents may raise/lower it — rare). *Heads-up: DH2e RAW and the current Plan-1 `fatigueMax` use **TB + WB** (the unconscious threshold) — reconcile the max formula when fatigue is wired (§13).*
 - **Encumbrance:** carry capacity from SB+TB table; over → Agility/movement penalties.
 - **Advancement:** two aptitudes per advance; XP cost by 2/1/0 aptitude matches (cost tables **configurable**).
 
@@ -216,4 +216,5 @@ Intentionally small; each is designed when its build phase is reached, not block
 - **Fate-point spending mechanism** — the exact options the clickable Fate widget offers and how each wires up: **+10 & reroll**, **reroll**, extra **half-action**, **reduce damage** (from the damage card), recover from stun, and **burn** to survive (permanent −1 max); plus per-session refresh to max.
 - **NPC sheet specifics** — the NPC actor's simpler stat presentation, threat level / faction fields, and the limited/observer view.
 - **Craftsmanship effects** (Poor / Normal / Good / Best) — the mechanical modifiers per item category.
+- **Fatigue wiring** — (a) quick **+ / −** buttons beside the Fatigue bar that nudge *current* fatigue by 1 (happens often in play; must NOT require advancement mode); (b) **default max = Toughness Bonus**, overridable in Custom advancement (traits/talents may change it — rare) — *resolve here whether the bar max is TB (design intent) or TB+WB (RAW / current Plan-1 code)*; (c) the **fatigue-affects-characteristics** mechanism (a characteristic whose bonus < current fatigue is halved) — mechanism exists, to be detailed when wired.
 - Already noted inline and excluded from this version: fast-attack save-template behavior (§9), reaction hit-negation (§8, P3).
