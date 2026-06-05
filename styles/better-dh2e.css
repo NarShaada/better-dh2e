@@ -104,3 +104,18 @@
 .better-dh2e.item .bdh-add-row .bdh-quality-value { width:48px; }
 .better-dh2e.item .bdh-add-row button { background:var(--bdh-maroon); color:var(--bdh-parch); border:none; border-radius:3px; padding:2px 8px; cursor:pointer; }
 .better-dh2e.item .bdh-empty { padding:4px 8px; color:var(--bdh-muted); font-style:italic; font-size:11px; }
+
+/* Item-list sections on actor tabs (Abilities, later Gear/Afflictions/Psychic) */
+.better-dh2e .bdh-section { margin:8px 14px; background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:5px; overflow:hidden; }
+.better-dh2e .bdh-section-head { display:flex; align-items:center; gap:8px; background:var(--bdh-brown); color:var(--bdh-parch); font-variant:small-caps; letter-spacing:1px; padding:3px 10px; font-size:13px; }
+.better-dh2e .bdh-add { margin-left:auto; background:var(--bdh-parch); color:var(--bdh-maroon); border:none; border-radius:3px; font-weight:bold; cursor:pointer; padding:0 8px; }
+.better-dh2e .bdh-item-row { display:flex; align-items:center; gap:8px; padding:3px 10px; border-bottom:1px dotted #cbb88c; font-size:12px; }
+.better-dh2e .bdh-item-row:last-child { border-bottom:none; }
+.better-dh2e .bdh-fav { color:#b3a070; cursor:pointer; }
+.better-dh2e .bdh-fav.on { color:var(--bdh-gold); }
+.better-dh2e .bdh-name { font-weight:bold; color:var(--bdh-maroon); cursor:pointer; }
+.better-dh2e .bdh-name:hover { text-decoration:underline; }
+.better-dh2e .bdh-meta { color:var(--bdh-muted); font-size:11px; }
+.better-dh2e .bdh-del { margin-left:auto; color:#7a1f1f; cursor:pointer; }
+.better-dh2e .bdh-empty { padding:5px 10px; color:var(--bdh-muted); font-style:italic; font-size:11px; }
+.better-dh2e .bdh-notes { display:block; width:calc(100% - 28px); margin:8px 14px; padding:8px; box-sizing:border-box; min-height:280px; resize:vertical; border:1px solid var(--bdh-brown); border-radius:4px; background:#fff8e7; color:var(--bdh-ink); font-family:Georgia, serif; }
