@@ -173,6 +173,13 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (id) await rollAttack(this.actor, id);
   }
 
+  /** Action: reload a weapon — refill its clip to max. */
+  static async #onReloadWeapon(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId;
+    const item = this.actor.items.get(id);
+    if (item) await item.update({ "system.clip.value": item.system.clip.max });
+  }
+
   /** Action: add a blank lasting injury. */
   static async #onAddInjury(event, target) {
     const injuries = foundry.utils.deepClone(this.actor.system.injuries);
@@ -338,6 +345,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       toggleSkillFavourite: DarkHeresyActorSheet.#onToggleSkillFavourite,
       toggleEquipped: DarkHeresyActorSheet.#onToggleEquipped,
       rollAttack: DarkHeresyActorSheet.#onRollAttack,
+      reloadWeapon: DarkHeresyActorSheet.#onReloadWeapon,
       addInjury: DarkHeresyActorSheet.#onAddInjury,
       removeInjury: DarkHeresyActorSheet.#onRemoveInjury,
       rollAffliction: DarkHeresyActorSheet.#onRollAffliction,

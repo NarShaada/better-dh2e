@@ -137,7 +137,7 @@
                 <button type="button" class="bdh-atk" data-action="rollAttack">⚔ {{w.attackChar}}</button>
                 <span class="bdh-name" data-action="editItem">{{w.name}}</span>
                 <span class="bdh-desc-line">{{w.summary}}</span>
-                {{#if w.usesAmmo}}<span class="bdh-clip">{{w.clip}}</span>{{/if}}
+                {{#if w.usesAmmo}}<span class="bdh-clip">{{w.clip}}</span><button type="button" class="bdh-reload" data-action="reloadWeapon" title="Reload">⟳</button>{{/if}}
               </div>
             {{/each}}
             {{#unless combatWeapons.length}}<div class="bdh-empty">No equipped weapons — equip them on the Gear tab.</div>{{/unless}}

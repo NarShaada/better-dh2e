@@ -7,6 +7,7 @@ import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
 import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
+import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -235,6 +236,14 @@ export async function rollAttack(actor, weaponId) {
   const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod;
   const base = actor.system.characteristics[charKey].total;
 
+  // Ammo check — block if clip is too low; compute rounds consumed for this attack type
+  const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
+  const rounds = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1);
+  if (usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
+    ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
+    return null;
+  }
+
   // Roll and evaluate
   const roll = await new Roll("1d100").evaluate();
   const result = evaluateTest({ base, modifier: rawModifier, roll: roll.total });
@@ -319,5 +328,7 @@ export async function rollAttack(actor, weaponId) {
   };
   ChatMessage.applyRollMode(messageData, "roll");
   const msg = await ChatMessage.create(messageData);
+  // Deduct rounds after the message is created (jam still consumes)
+  if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - rounds });
   return msg;
 }
