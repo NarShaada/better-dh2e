@@ -57,8 +57,8 @@
 .better-dh2e .skill .tier i { width:9px; height:9px; border:1px solid var(--bdh-brown); border-radius:2px; display:inline-block; }
 .better-dh2e .skill .tier i.on { background:var(--bdh-maroon); }
 .better-dh2e .skill .sval { font-weight:bold; min-width:24px; text-align:right; }
-.better-dh2e .skill.untrained { opacity:.45; }
-.better-dh2e .hide-untrained .skill.untrained { display:none; }
+.better-dh2e .skill.untrained, .better-dh2e .skill-group.untrained { opacity:.45; }
+.better-dh2e .hide-untrained .skill.untrained, .better-dh2e .hide-untrained .skill-group.untrained { display:none; }
 
 /* Placeholders for not-yet-built tabs */
 .better-dh2e .placeholder { color:var(--bdh-muted); font-style:italic; padding:12px; }

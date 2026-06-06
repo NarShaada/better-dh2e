@@ -69,7 +69,7 @@
       <div class="skills">
         {{#each skills as |s|}}
           {{#if s.specialist}}
-            <div class="skill-group">
+            <div class="skill-group {{#unless s.specialties.length}}untrained{{/unless}}">
               <div class="skill-group-head"><span>{{localize s.label}}</span>{{#if @root.isCustom}}<button type="button" class="bdh-add" data-action="addSpecialty" data-skill="{{s.key}}" title="Add specialty">＋</button>{{/if}}</div>
               {{#each s.specialties as |sp|}}
                 <div class="skill specialty" {{#unless @root.isCustom}}data-action="rollSkill"{{/unless}} data-skill="{{s.key}}" data-specialty="{{sp.index}}">
