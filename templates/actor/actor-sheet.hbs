@@ -376,27 +376,27 @@
   <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement">
     <div class="bdh-adv-ctl">
       <div class="bdh-adv-modes">
-        <button type="button" class="bdh-mode {{#if isSimple}}on{{/if}}" data-action="setMode" data-mode="simple">Simple</button>
+        {{#unless isNpc}}<button type="button" class="bdh-mode {{#if isSimple}}on{{/if}}" data-action="setMode" data-mode="simple">Simple</button>{{/unless}}
         <button type="button" class="bdh-mode {{#if isCustom}}on{{/if}}" data-action="setMode" data-mode="custom">Custom</button>
         <span class="bdh-mode-hint">{{#if isCustom}}Custom: edit freely across the sheet.{{else if isSimple}}Simple: buy advances — each charges Free XP and is logged below.{{else}}Pick a mode to edit; press again to return to play.{{/if}}</span>
       </div>
-      <div class="bdh-xp">
+      {{#unless isNpc}}<div class="bdh-xp">
         <label>Total</label><input type="number" name="system.experience.total" value="{{experience.total}}" min="0"/>
         <label>Spent</label>{{#if isCustom}}<input type="number" name="system.experience.spent" value="{{experience.spent}}" min="0"/>{{else}}<span class="bdh-xp-v">{{experience.spent}}</span>{{/if}}
         <label>Free</label><span class="bdh-xp-v bdh-xp-free">{{experience.free}}</span>
-      </div>
+      </div>{{/unless}}
     </div>
     <div class="bdh-section">
       <div class="bdh-section-head">Aptitudes <span class="bdh-hint2">the character's fixed aptitudes</span></div>
       <select class="bdh-apt-select" name="system.aptitudes" multiple size="10">{{selectOptions aptitudeChoices selected=system.aptitudes}}</select>
     </div>
-    <div class="bdh-section">
+    {{#unless isNpc}}<div class="bdh-section">
       <div class="bdh-section-head">Advancement Log</div>
       {{#each advancementLog as |e|}}
         <div class="bdh-log-row"><span class="bdh-log-what">{{e.label}}</span><span class="bdh-log-detail">{{e.detail}}</span><span class="bdh-log-cost">{{e.cost}} xp</span>{{#if @root.isSimple}}<a class="bdh-del bdh-log-refund" data-action="refund" data-log-index="{{@index}}" title="Refund this advance">✖</a>{{/if}}</div>
       {{/each}}
       {{#unless advancementLog.length}}<div class="bdh-empty">No Simple-advancement purchases yet.</div>{{/unless}}
-    </div>
+    </div>{{/unless}}
   </section>
 
 </div>

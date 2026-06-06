@@ -27,6 +27,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** Action: toggle an advancement mode (press again to return to play mode). */
   static #onSetMode(event, target) {
     const m = target.dataset.mode;
+    if (m === "simple" && this.actor.type === "npc") return; // NPCs don't earn XP — Custom only.
     this._advancementMode = this._advancementMode === m ? "none" : m;
     this.render();
   }
@@ -489,6 +490,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.advancementMode = this._advancementMode;
     context.isCustom = this._advancementMode === "custom";
     context.isSimple = this._advancementMode === "simple";
+    context.isNpc = this.document.type === "npc";
     context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
     context.experience = {
       total: sys.experience.total, spent: sys.experience.spent,
