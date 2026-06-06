@@ -83,7 +83,7 @@ async function rollDamage(message) {
       bonusBreak = formatRoll(bRoll);
     }
     const total = wRoll.total + bonusTotal;
-    const breakdown = formatRoll(wRoll) + (bonusBreak ? `+${bonusBreak}` : "");
+    const breakdown = formatRoll(wRoll) + (bonusBreak ? `+${bonusBreak.replace(/^\+/, "")}` : "");
     hits.push({ index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown });
   }
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
