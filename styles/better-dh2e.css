@@ -182,7 +182,10 @@
 .better-dh2e .bdh-xp input, .better-dh2e .bdh-xp .bdh-xp-v { width:70px; text-align:right; font-weight:bold; }
 .better-dh2e .bdh-xp-free { color:#3d6a4a; }
 .better-dh2e .bdh-apt-select { width:calc(100% - 16px); margin:4px 8px 8px; min-height:180px; }
-.better-dh2e .bdh-edit { background:#fff6df; border:1px solid var(--bdh-gold); border-radius:3px; }
+.better-dh2e .bdh-edit { background:#fff6df; border:1px solid var(--bdh-gold); border-radius:3px; color:var(--bdh-ink); }
+.better-dh2e .bdh-unnat { display:inline-flex; align-items:center; justify-content:center; padding:0 2px; }
+.better-dh2e .bdh-unnat .bdh-plus { color:var(--bdh-ink); font-weight:bold; }
+.better-dh2e .bdh-unnat input { border:none; background:transparent; width:22px; padding:0; text-align:left; color:var(--bdh-ink); }
 .better-dh2e .char .box input.val { width:80%; text-align:center; font-size:18px; font-weight:bold; }
 .better-dh2e input.bonus { width:60%; text-align:center; }
 .better-dh2e .skill select.sval { min-width:90px; }
