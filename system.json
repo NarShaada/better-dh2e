@@ -3,16 +3,17 @@
   "title": "Better Dark Heresy 2E",
   "description": "A fresh, Foundry-v13-native unofficial system for Dark Heresy 2nd Edition. Ships content-free.",
   "version": "0.1.0",
-  "compatibility": { "minimum": "13", "verified": "13" },
-  "authors": [{ "name": "BetterDH2e" }],
+  "compatibility": { "minimum": "13", "verified": "13.351" },
+  "authors": [{ "name": "NarShaada", "url": "https://github.com/NarShaada" }],
   "esmodules": ["scripts/better-dh2e.mjs"],
   "styles": ["styles/better-dh2e.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "packs": [],
   "gridDistance": 1,
   "gridUnits": "m",
-  "license": "LICENSE",
-  "url": "https://example.invalid/better-dh2e",
-  "manifest": "https://example.invalid/better-dh2e/system.json",
-  "download": "https://example.invalid/better-dh2e/better-dh2e.zip"
+  "license": "GPL-3.0",
+  "readme": "https://github.com/NarShaada/better-dh2e/blob/main/README.md",
+  "url": "https://github.com/NarShaada/better-dh2e",
+  "manifest": "https://github.com/NarShaada/better-dh2e/releases/latest/download/system.json",
+  "download": "https://github.com/NarShaada/better-dh2e/releases/latest/download/better-dh2e.zip"
 }

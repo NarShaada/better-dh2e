@@ -13,3 +13,6 @@ reference/
 # Node
 node_modules/
 npm-debug.log*
+
+# Build artifact (uploaded as a release asset, not committed)
+better-dh2e.zip
