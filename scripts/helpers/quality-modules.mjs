@@ -46,8 +46,20 @@ export function hasShocking(qualities) {
   return has(qualities, "shocking");
 }
 
-/** The numeric X of a weapon's Concussive quality (0 if absent or blank). */
-export function concussiveValue(qualities) {
-  const q = Array.isArray(qualities) ? qualities.find((x) => x.key === "concussive") : null;
+/** The numeric value of a weapon quality by key (0 if absent or blank). */
+function qualityValue(qualities, key) {
+  const q = Array.isArray(qualities) ? qualities.find((x) => x.key === key) : null;
   return q ? (Number(q.value) || 0) : 0;
 }
+export function concussiveValue(qualities) { return qualityValue(qualities, "concussive"); }
+export function fellingValue(qualities) { return qualityValue(qualities, "felling"); }
+export function hallucinogenicValue(qualities) { return qualityValue(qualities, "hallucinogenic"); }
+
+/** Felling: ignore X points of the target's UNNATURAL Toughness (natural bonus untouched). */
+export function felledToughnessBonus(toughnessBonus, unnatural, fellingX) {
+  return toughnessBonus - Math.min(unnatural ?? 0, fellingX);
+}
+
+export function hasFlame(qualities) { return has(qualities, "flame"); }
+export function hasFlexible(qualities) { return has(qualities, "flexible"); }
+export function hasGraviton(qualities) { return has(qualities, "graviton"); }

@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -34,6 +34,8 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "applyDamage") await applyDamage(message);
       else if (btn.dataset.bdh === "shockTest") await rollShockTest(message);
       else if (btn.dataset.bdh === "concussiveTest") await rollConcussiveTest(message);
+      else if (btn.dataset.bdh === "flameTest") await rollFlameTest(message);
+      else if (btn.dataset.bdh === "hallucinogenicTest") await rollHallucinogenicTest(message);
     });
   });
 }
@@ -74,6 +76,24 @@ async function rollConcussiveTest(message) {
   const x = concussiveValue(f.qualities);
   const label = `Toughness (Concussive ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });   // penalty pre-filled, GM can adjust
+  if (!choice) return null;
+  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+}
+async function rollFlameTest(message) {
+  const defender = await resolveDefender(message.flags[NS]);
+  if (!defender) { ui.notifications.warn("Select a token to test Agility."); return; }
+  const label = "Agility (Flame)";
+  const choice = await promptTest({ title: label });
+  if (!choice) return null;
+  return performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+}
+async function rollHallucinogenicTest(message) {
+  const f = message.flags[NS];
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const x = hallucinogenicValue(f.qualities);
+  const label = `Toughness (Hallucinogenic ${x})`;
+  const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
   return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
 }
@@ -135,6 +155,8 @@ async function rollDamage(message) {
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
     targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid, shocking: hasShocking(qualities),
     concussive: concussiveValue(qualities) || null,
+    flame: hasFlame(qualities),
+    hallucinogenic: hallucinogenicValue(qualities) || null,
     damageNotes: qualityNotes(qualities, "damage") };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
@@ -151,15 +173,25 @@ async function rollEvade(message) {
   // Defender: the bound target if available, else the user's controlled token, else their assigned character.
   const defender = (await fromUuid(f.targetUuid)) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
   if (!defender) { ui.notifications.warn("Select a token to evade with."); return; }
+  const flexible = hasFlexible(f.qualities);
+  const parryOption = flexible ? "" : `<option value="parry">Parry</option>`;
+  const flexibleNote = flexible
+    ? `<div class="form-group"><p class="hint">This weapon is Flexible — it cannot be parried.</p></div>`
+    : "";
   const choice = await DialogV2.prompt({
     window: { title: "Evade" },
-    content: `<div class="form-group"><label>Reaction</label><select name="reaction"><option value="dodge">Dodge</option><option value="parry">Parry</option></select></div>
+    content: `${flexibleNote}<div class="form-group"><label>Reaction</label><select name="reaction"><option value="dodge">Dodge</option>${parryOption}</select></div>
               <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>`,
     ok: { label: "React", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
     rejectClose: false
   });
   if (!choice) return;
   const modifier = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
+  // Defensive guard: block Parry if the incoming weapon is Flexible (covers any path that still surfaces Parry).
+  if (flexible && choice.reaction === "parry") {
+    ui.notifications.warn("A Flexible weapon cannot be parried.");
+    return null;
+  }
   if (choice.reaction === "parry") {
     const meleeWeapons = defender.items
       .filter((i) => i.type === "weapon" && i.system.weaponClass === "melee" && i.system.equipped)
@@ -181,11 +213,16 @@ async function applyDamage(message) {
   const tb = sys.characteristics.toughness.bonus;
   const equipped = target.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
   const ap = computeArmour(equipped, 0);               // pure per-location AP (tb=0 so TB isn't folded in)
+  const qualities = f.qualities ?? [];
+  const felX = fellingValue(qualities);
+  const tbEff = felX ? felledToughnessBonus(tb, sys.characteristics.toughness.unnatural ?? 0, felX) : tb;
+  const graviton = hasGraviton(qualities);
   let wounds = sys.wounds.value;
   let totalCrit = 0;
   const lines = [];
   for (const h of f.hits) {
-    const eff = soak(h.total, ap[h.location] ?? 0, f.penetration, tb);  // pen vs AP, then TB
+    const locAp = ap[h.location] ?? 0;
+    const eff = soak(h.total + (graviton ? locAp : 0), locAp, f.penetration, tbEff);  // pen vs AP, then tbEff
     const res = applyWounds(wounds, sys.wounds.max, eff);
     wounds = res.wounds;
     totalCrit += res.critical;

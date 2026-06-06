@@ -109,14 +109,14 @@ BDH.qualities = {
   proven:     { label: "Proven", takesValue: true },
   primitive:  { label: "Primitive", takesValue: true },
   razorSharp: { label: "Razor Sharp", takesValue: false },
-  felling:    { label: "Felling", takesValue: true },
+  felling:    { label: "Felling", takesValue: true, automation: "full" },
   accurate:   { label: "Accurate", takesValue: false, automation: "full" },
   storm:      { label: "Storm", takesValue: false },
   twinLinked: { label: "Twin-Linked", takesValue: false },
   reliable:   { label: "Reliable", takesValue: false, automation: "full" },
   unreliable: { label: "Unreliable", takesValue: false, automation: "full" },
   unwieldy:   { label: "Unwieldy", takesValue: false },
-  flexible:   { label: "Flexible", takesValue: false },
+  flexible:   { label: "Flexible", takesValue: false, automation: "full" },
   balanced:   { label: "Balanced", takesValue: false, automation: "full" },
   unbalanced: { label: "Unbalanced", takesValue: false, automation: "full" },
   shocking:   { label: "Shocking", takesValue: false, automation: "full" },
@@ -124,7 +124,11 @@ BDH.qualities = {
   concussive: { label: "Concussive", takesValue: true, automation: "full" },
   corrosive:  { label: "Corrosive", takesValue: false, noteOn: "damage" },
   crippling:  { label: "Crippling", takesValue: true, noteOn: "damage" },
-  defensive:  { label: "Defensive", takesValue: false, automation: "full" }
+  defensive:  { label: "Defensive", takesValue: false, automation: "full" },
+  flame:         { label: "Flame", takesValue: false, automation: "full" },
+  force:         { label: "Force", takesValue: false },
+  graviton:      { label: "Graviton", takesValue: false, automation: "full" },
+  hallucinogenic:{ label: "Hallucinogenic", takesValue: true, automation: "partial" },
 };
 
 /** Aim bonuses. */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -74,5 +74,29 @@ describe("concussiveValue", () => {
     expect(concussiveValue([{ key: "concussive", value: "" }])).toBe(0);
     expect(concussiveValue(Q())).toBe(0);
     expect(concussiveValue([{ key: "tearing", value: "" }])).toBe(0);
+  });
+});
+describe("fellingValue / hallucinogenicValue", () => {
+  it("read the numeric X (0 if absent/blank)", () => {
+    expect(fellingValue([{ key: "felling", value: "4" }])).toBe(4);
+    expect(fellingValue(Q())).toBe(0);
+    expect(hallucinogenicValue([{ key: "hallucinogenic", value: "2" }])).toBe(2);
+    expect(hallucinogenicValue([{ key: "hallucinogenic", value: "" }])).toBe(0);
+  });
+});
+describe("felledToughnessBonus", () => {
+  it("removes the unnatural part up to X, never the natural part", () => {
+    expect(felledToughnessBonus(5, 2, 4)).toBe(3);
+    expect(felledToughnessBonus(5, 2, 1)).toBe(4);
+    expect(felledToughnessBonus(3, 0, 4)).toBe(3);
+    expect(felledToughnessBonus(6, 3, 3)).toBe(3);
+  });
+});
+describe("flag helpers", () => {
+  it("detect Flame / Flexible / Graviton", () => {
+    expect(hasFlame(Q("flame"))).toBe(true);
+    expect(hasFlexible(Q("flexible"))).toBe(true);
+    expect(hasGraviton(Q("graviton"))).toBe(true);
+    expect(hasFlame(Q())).toBe(false);
   });
 });
