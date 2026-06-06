@@ -3,16 +3,16 @@ export const BDH = {};
 
 /** The ten characteristics, in sheet order. `short` is the FFG abbreviation. */
 BDH.characteristics = {
-  weaponSkill:    { label: "BDH.Char.WeaponSkill",    short: "WS"  },
-  ballisticSkill: { label: "BDH.Char.BallisticSkill", short: "BS"  },
-  strength:       { label: "BDH.Char.Strength",       short: "S"   },
-  toughness:      { label: "BDH.Char.Toughness",      short: "T"   },
-  agility:        { label: "BDH.Char.Agility",        short: "Ag"  },
-  intelligence:   { label: "BDH.Char.Intelligence",   short: "Int" },
-  perception:     { label: "BDH.Char.Perception",     short: "Per" },
-  willpower:      { label: "BDH.Char.Willpower",       short: "WP"  },
-  fellowship:     { label: "BDH.Char.Fellowship",     short: "Fel" },
-  influence:      { label: "BDH.Char.Influence",      short: "Inf" }
+  weaponSkill:    { label: "BDH.Char.WeaponSkill",    short: "WS",  aptitudes: ["Weapon Skill", "Offence"] },
+  ballisticSkill: { label: "BDH.Char.BallisticSkill", short: "BS",  aptitudes: ["Ballistic Skill", "Finesse"] },
+  strength:       { label: "BDH.Char.Strength",       short: "S",   aptitudes: ["Strength", "Offence"] },
+  toughness:      { label: "BDH.Char.Toughness",      short: "T",   aptitudes: ["Toughness", "Defence"] },
+  agility:        { label: "BDH.Char.Agility",        short: "Ag",  aptitudes: ["Agility", "Finesse"] },
+  intelligence:   { label: "BDH.Char.Intelligence",   short: "Int", aptitudes: ["Intelligence", "Knowledge"] },
+  perception:     { label: "BDH.Char.Perception",     short: "Per", aptitudes: ["Perception", "Fieldcraft"] },
+  willpower:      { label: "BDH.Char.Willpower",       short: "WP",  aptitudes: ["Willpower", "Psyker"] },
+  fellowship:     { label: "BDH.Char.Fellowship",     short: "Fel", aptitudes: ["Fellowship", "Social"] },
+  influence:      { label: "BDH.Char.Influence",      short: "Inf", aptitudes: [] }
 };
 
 /** Skill rank -> flat bonus added to the governing characteristic. */
@@ -24,25 +24,39 @@ BDH.skillRanks = {
   veteran:      30
 };
 
-/**
- * Core (non-specialist) skills with their governing characteristic key.
- * Specialist skills are added in a later plan; the data-model pattern is the same.
- */
+/** Specialist-skill specialty ranks (a specialty exists only once owned — no "untrained"). */
+BDH.specialtyRanks = ["known", "trained", "experienced", "veteran"];
+
+/** Full 28-skill list with governing characteristic, aptitudes, and specialist flag. */
 BDH.skills = {
-  acrobatics:  { label: "BDH.Skill.Acrobatics",  characteristic: "agility"      },
-  athletics:   { label: "BDH.Skill.Athletics",   characteristic: "strength"     },
-  awareness:   { label: "BDH.Skill.Awareness",   characteristic: "perception"   },
-  charm:       { label: "BDH.Skill.Charm",       characteristic: "fellowship"   },
-  command:     { label: "BDH.Skill.Command",     characteristic: "fellowship"   },
-  deceive:     { label: "BDH.Skill.Deceive",     characteristic: "fellowship"   },
-  dodge:       { label: "BDH.Skill.Dodge",       characteristic: "agility"      },
-  inquiry:     { label: "BDH.Skill.Inquiry",     characteristic: "fellowship"   },
-  logic:       { label: "BDH.Skill.Logic",       characteristic: "intelligence" },
-  medicae:     { label: "BDH.Skill.Medicae",     characteristic: "intelligence" },
-  parry:       { label: "BDH.Skill.Parry",       characteristic: "weaponSkill"  },
-  scrutiny:    { label: "BDH.Skill.Scrutiny",    characteristic: "perception"   },
-  stealth:     { label: "BDH.Skill.Stealth",     characteristic: "agility"      },
-  survival:    { label: "BDH.Skill.Survival",    characteristic: "perception"   }
+  acrobatics:     { label: "BDH.Skill.Acrobatics",     characteristic: "agility",      aptitudes: ["Agility", "General"],        specialist: false },
+  athletics:      { label: "BDH.Skill.Athletics",      characteristic: "strength",     aptitudes: ["Strength", "General"],       specialist: false },
+  awareness:      { label: "BDH.Skill.Awareness",      characteristic: "perception",   aptitudes: ["Perception", "Fieldcraft"],  specialist: false },
+  charm:          { label: "BDH.Skill.Charm",          characteristic: "fellowship",   aptitudes: ["Fellowship", "Social"],      specialist: false },
+  command:        { label: "BDH.Skill.Command",        characteristic: "fellowship",   aptitudes: ["Fellowship", "Leadership"],  specialist: false },
+  commerce:       { label: "BDH.Skill.Commerce",       characteristic: "intelligence", aptitudes: ["Intelligence", "Knowledge"], specialist: false },
+  commonLore:     { label: "BDH.Skill.CommonLore",     characteristic: "intelligence", aptitudes: ["Intelligence", "Knowledge"], specialist: true },
+  deceive:        { label: "BDH.Skill.Deceive",        characteristic: "fellowship",   aptitudes: ["Fellowship", "Social"],      specialist: false },
+  dodge:          { label: "BDH.Skill.Dodge",          characteristic: "agility",      aptitudes: ["Agility", "Defence"],        specialist: false },
+  forbiddenLore:  { label: "BDH.Skill.ForbiddenLore",  characteristic: "intelligence", aptitudes: ["Intelligence", "Knowledge"], specialist: true },
+  inquiry:        { label: "BDH.Skill.Inquiry",        characteristic: "fellowship",   aptitudes: ["Fellowship", "Social"],      specialist: false },
+  interrogation:  { label: "BDH.Skill.Interrogation",  characteristic: "willpower",    aptitudes: ["Willpower", "Social"],       specialist: false },
+  intimidate:     { label: "BDH.Skill.Intimidate",     characteristic: "strength",     aptitudes: ["Strength", "Social"],        specialist: false },
+  linguistics:    { label: "BDH.Skill.Linguistics",    characteristic: "intelligence", aptitudes: ["Intelligence", "General"],   specialist: true },
+  logic:          { label: "BDH.Skill.Logic",          characteristic: "intelligence", aptitudes: ["Intelligence", "Knowledge"], specialist: false },
+  medicae:        { label: "BDH.Skill.Medicae",        characteristic: "intelligence", aptitudes: ["Intelligence", "Fieldcraft"], specialist: false },
+  navigate:       { label: "BDH.Skill.Navigate",       characteristic: "intelligence", aptitudes: ["Intelligence", "Fieldcraft"], specialist: true },
+  operate:        { label: "BDH.Skill.Operate",        characteristic: "agility",      aptitudes: ["Agility", "Fieldcraft"],     specialist: true },
+  parry:          { label: "BDH.Skill.Parry",          characteristic: "weaponSkill",  aptitudes: ["Weapon Skill", "Defence"],   specialist: false },
+  psyniscience:   { label: "BDH.Skill.Psyniscience",   characteristic: "perception",   aptitudes: ["Perception", "Psyker"],      specialist: false },
+  scholasticLore: { label: "BDH.Skill.ScholasticLore", characteristic: "intelligence", aptitudes: ["Intelligence", "Knowledge"], specialist: true },
+  scrutiny:       { label: "BDH.Skill.Scrutiny",       characteristic: "perception",   aptitudes: ["Perception", "General"],     specialist: false },
+  security:       { label: "BDH.Skill.Security",       characteristic: "intelligence", aptitudes: ["Intelligence", "Tech"],      specialist: false },
+  sleightOfHand:  { label: "BDH.Skill.SleightOfHand",  characteristic: "agility",      aptitudes: ["Agility", "Knowledge"],      specialist: false },
+  stealth:        { label: "BDH.Skill.Stealth",        characteristic: "agility",      aptitudes: ["Agility", "Fieldcraft"],     specialist: false },
+  survival:       { label: "BDH.Skill.Survival",       characteristic: "perception",   aptitudes: ["Perception", "Fieldcraft"],  specialist: false },
+  techUse:        { label: "BDH.Skill.TechUse",        characteristic: "intelligence", aptitudes: ["Intelligence", "Tech"],      specialist: false },
+  trade:          { label: "BDH.Skill.Trade",          characteristic: "intelligence", aptitudes: ["Intelligence", "General"],   specialist: true }
 };
 
 /** Item craftsmanship tiers (key -> label). */
