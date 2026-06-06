@@ -12,13 +12,6 @@ export function qualityToHitMod(qualities, { aiming }) {
   return aiming && has(qualities, "accurate") ? 10 : 0;
 }
 
-/** Jam floor (Reliable 100, Unreliable 91, else the base floor). */
-export function qualityJamFloor(qualities, base = 94) {
-  if (has(qualities, "reliable")) return 100;
-  if (has(qualities, "unreliable")) return 91;
-  return base;
-}
-
 /** Accurate bonus damage dice (+1d10 per 2 DoS, capped +2d10; ranged & aiming only). Formula string or null. */
 export function accurateBonusDice(qualities, { isRanged, aiming, dos }) {
   if (!isRanged || !aiming || !has(qualities, "accurate")) return null;
