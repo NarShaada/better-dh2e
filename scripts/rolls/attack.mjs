@@ -27,15 +27,16 @@ export function bindCardButtons(message, html) {
   });
 }
 
-/** Render a Roll as a transparent breakdown, e.g. "[4]+3+[5]+[2]" (dice in brackets, flats plain). */
-function formatRoll(roll) {
+/** Render a Roll as a transparent breakdown, e.g. "[4]+3+[5]+[2]" (dice in brackets, flats plain).
+ *  Tearing-dropped dice show as "[a|b]" with the kept one bold; the DoS-substituted die (if any) reads "[v(N DoS)]". */
+function formatRoll(roll, subResult = null, dos = 0) {
+  const ann = (r) => (r === subResult ? `${r.result}(${dos} DoS)` : `${r.result}`);
   return roll.terms.map((t) => {
     if (Array.isArray(t.results)) {
-      // Dropped dice present (e.g. Tearing keep-highest): show all in one bracket, the kept one bold.
       if (t.results.some((r) => !r.active)) {
-        return `[${t.results.map((r) => (r.active ? `<b>${r.result}</b>` : `${r.result}`)).join("|")}]`;
+        return `[${t.results.map((r) => (r.active ? `<b>${ann(r)}</b>` : `${ann(r)}`)).join("|")}]`;
       }
-      return t.results.filter((r) => r.active).map((r) => `[${r.result}]`).join("+");
+      return t.results.filter((r) => r.active).map((r) => `[${ann(r)}]`).join("+");
     }
     if (t.operator) return t.operator;
     if (t.number !== undefined && t.number !== null) return String(t.number);
@@ -65,8 +66,9 @@ async function rollDamage(message) {
   if (mod == null) return;
   const trimmed = String(mod).trim();
   const qualities = f.qualities ?? [];
+  const dos = f.dos ?? 0;
   const rolls = [];
-  const hits = [];
+  const rolled = [];   // per hit: { hit, wRoll, bRoll, rf, baseTotal }
   for (const hit of f.hits) {
     // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
     const weaponFormula = weaponDamageFormula(qualities, baseFormula);
@@ -77,21 +79,31 @@ async function rollDamage(message) {
     const bonusParts = [];
     if (hit.index === 0) {
       if (trimmed && trimmed !== "+0") bonusParts.push(trimmed);
-      const acc = accurateBonusDice(qualities, { isRanged: f.isRanged, aiming: f.aiming, dos: f.dos });
+      const acc = accurateBonusDice(qualities, { isRanged: f.isRanged, aiming: f.aiming, dos });
       if (acc) bonusParts.push(acc);
     }
-    let bonusTotal = 0;
-    let bonusBreak = "";
-    if (bonusParts.length) {
-      const bRoll = await new Roll(bonusParts.join(" + ")).evaluate();
-      rolls.push(bRoll);
-      bonusTotal = bRoll.total;
-      bonusBreak = formatRoll(bRoll);
-    }
-    const total = wRoll.total + bonusTotal;
-    const breakdown = formatRoll(wRoll) + (bonusBreak ? `+${bonusBreak.replace(/^\+/, "")}` : "");
-    hits.push({ index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown });
+    let bRoll = null;
+    if (bonusParts.length) { bRoll = await new Roll(bonusParts.join(" + ")).evaluate(); rolls.push(bRoll); }
+    rolled.push({ hit, wRoll, bRoll, rf, baseTotal: wRoll.total + (bRoll?.total ?? 0) });
   }
+  // RAW: the attacker may replace ONE damage die in the whole attack with the DoS — auto-pick the global lowest active die if it's below the DoS.
+  let subResult = null;
+  let subHitIdx = -1;
+  rolled.forEach(({ wRoll, bRoll }, i) => {
+    for (const roll of [wRoll, bRoll].filter(Boolean)) {
+      for (const die of roll.dice) for (const r of die.results) {
+        if (r.active && (subResult === null || r.result < subResult.result)) { subResult = r; subHitIdx = i; }
+      }
+    }
+  });
+  const applySub = subResult !== null && subResult.result < dos;
+  const hits = rolled.map(({ hit, wRoll, bRoll, rf, baseTotal }, i) => {
+    const sr = applySub && i === subHitIdx ? subResult : null;
+    const total = baseTotal + (sr ? dos - subResult.result : 0);
+    const bonusBreak = bRoll ? formatRoll(bRoll, sr, dos) : "";
+    const breakdown = formatRoll(wRoll, sr, dos) + (bonusBreak ? `+${bonusBreak.replace(/^\+/, "")}` : "");
+    return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown };
+  });
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
     targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid, shocking: hasShocking(qualities) };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
