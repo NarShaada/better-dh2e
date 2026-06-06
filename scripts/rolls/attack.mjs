@@ -1,6 +1,7 @@
 // scripts/rolls/attack.mjs
 // Full to-hit flow: dialog → 1d100 → DoS/hits/locations/jam → attack chat card.
 import { evaluateTest } from "./test-logic.mjs";
+import { performTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
@@ -60,7 +61,28 @@ async function rollDamage(message) {
   ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
 }
-async function rollEvade(message) { /* Plan 16 Task 7 */ }
+async function rollEvade(message) {
+  const f = message.flags[NS];
+  // Defender: the bound target if available, else the user's controlled token, else their assigned character.
+  const defender = (await fromUuid(f.targetUuid)) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
+  if (!defender) { ui.notifications.warn("Select a token to evade with."); return; }
+  const choice = await DialogV2.prompt({
+    window: { title: "Evade" },
+    content: `<div class="form-group"><label>Reaction</label><select name="reaction"><option value="dodge">Dodge</option><option value="parry">Parry</option></select></div>
+              <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>`,
+    ok: { label: "React", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
+    rejectClose: false
+  });
+  if (!choice) return;
+  const modifier = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
+  if (choice.reaction === "parry") {
+    const base = defender.system.characteristics.weaponSkill.total;
+    return performTest(defender, { label: "Parry (WS)", base, modifier });
+  }
+  const dodge = defender.system.skills.dodge;
+  const base = defender.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
+  return performTest(defender, { label: "Dodge", base, modifier });
+}
 async function applyDamage(message) {
   const f = message.flags[NS];
   const target = await fromUuid(f.targetUuid);
