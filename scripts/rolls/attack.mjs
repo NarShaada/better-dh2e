@@ -13,6 +13,14 @@ const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
 const { renderTemplate } = foundry.applications.handlebars;
 
+/** Comma-joined "Label (value)" for the weapon qualities whose config noteOn matches `on` (red card note). */
+function qualityNotes(qualities, on) {
+  return (qualities ?? [])
+    .filter((q) => CONFIG.BDH.qualities[q.key]?.noteOn === on)
+    .map((q) => `${CONFIG.BDH.qualities[q.key].label}${q.value ? ` (${q.value})` : ""}`)
+    .join(", ");
+}
+
 const CARD = "systems/better-dh2e/templates/chat/attack-card.hbs";
 
 /** Bind attack/damage card buttons (called from the renderChatMessageHTML hook). */
@@ -120,7 +128,8 @@ async function rollDamage(message) {
   });
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
     targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid, shocking: hasShocking(qualities),
-    concussive: concussiveValue(qualities) || null };
+    concussive: concussiveValue(qualities) || null,
+    damageNotes: qualityNotes(qualities, "damage") };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
@@ -327,7 +336,8 @@ export async function rollAttack(actor, weaponId) {
     jammed,
     targetName: targetToken?.name ?? null,
     hasHits: nHits > 0,
-    qualityLabels
+    qualityLabels,
+    attackNotes: qualityNotes(weapon.system.qualities, "attack")
   });
 
   // Create chat message (apply current roll mode)
