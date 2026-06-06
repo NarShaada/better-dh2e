@@ -102,23 +102,24 @@ BDH.damageTypes = { energy: "Energy", explosive: "Explosive", rending: "Rending"
 /** Reload duration (key -> label). */
 BDH.reload = { free: "Free", half: "Half", full: "Full", twoFull: "2 Full", threeFull: "3 Full" };
 
-/** Weapon qualities (key -> {label, takesValue, automated}). `automated: true` = applied by the attack pipeline; others are display-only for now. */
+/** Weapon qualities (key -> {label, takesValue, automation}). `automation`: "full" = black gear (fully automated),
+ *  "partial" = red gear (mostly automated, minor manual input e.g. consult a table), absent = no gear (display-only, just flagged). */
 BDH.qualities = {
-  tearing:    { label: "Tearing", takesValue: false, automated: true },
+  tearing:    { label: "Tearing", takesValue: false, automation: "full" },
   proven:     { label: "Proven", takesValue: true },
   primitive:  { label: "Primitive", takesValue: true },
   razorSharp: { label: "Razor Sharp", takesValue: false },
   felling:    { label: "Felling", takesValue: true },
-  accurate:   { label: "Accurate", takesValue: false, automated: true },
+  accurate:   { label: "Accurate", takesValue: false, automation: "full" },
   storm:      { label: "Storm", takesValue: false },
   twinLinked: { label: "Twin-Linked", takesValue: false },
-  reliable:   { label: "Reliable", takesValue: false, automated: true },
-  unreliable: { label: "Unreliable", takesValue: false, automated: true },
+  reliable:   { label: "Reliable", takesValue: false, automation: "full" },
+  unreliable: { label: "Unreliable", takesValue: false, automation: "full" },
   unwieldy:   { label: "Unwieldy", takesValue: false },
   flexible:   { label: "Flexible", takesValue: false },
-  balanced:   { label: "Balanced", takesValue: false, automated: true },
-  unbalanced: { label: "Unbalanced", takesValue: false, automated: true },
-  shocking:   { label: "Shocking", takesValue: false, automated: true }
+  balanced:   { label: "Balanced", takesValue: false, automation: "full" },
+  unbalanced: { label: "Unbalanced", takesValue: false, automation: "full" },
+  shocking:   { label: "Shocking", takesValue: false, automation: "full" }
 };
 
 /** Aim bonuses. */

@@ -89,7 +89,7 @@
     <div class="bdh-list-section">
       <div class="bdh-list-head">Qualities</div>
       {{#each qualityList as |q|}}
-        <div class="bdh-list-row"><span>{{q.display}}{{#if q.automated}} <span class="bdh-auto" title="Automated by the attack pipeline">⚙</span>{{/if}}</span>
+        <div class="bdh-list-row"><span>{{q.display}}{{#if q.autoFull}} <span class="bdh-auto" title="Fully automated">⚙</span>{{else if q.autoPartial}} <span class="bdh-auto partial" title="Mostly automated — some manual input (e.g. consult a table)">⚙</span>{{/if}}</span>
           <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
       {{/each}}
       <div class="bdh-add-row">

@@ -16,7 +16,8 @@ export function characteristicBonus(characteristic) {
 /** skill total = governing characteristic total + flat rank bonus */
 export function skillTotal(characteristicTotalValue, rank) {
   const bonus = BDH.skillRanks[rank] ?? BDH.skillRanks.untrained;
-  return characteristicTotalValue + bonus;
+  // Floor at 1: a natural 01 always succeeds, so a skill target never drops below 1.
+  return Math.max(1, characteristicTotalValue + bonus);
 }
 
 /** fatigue threshold = toughness bonus + willpower bonus */

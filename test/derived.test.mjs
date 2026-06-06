@@ -38,6 +38,10 @@ describe("skillTotal", () => {
   it("defaults unknown ranks to untrained", () => {
     expect(skillTotal(40, "nonsense")).toBe(20);
   });
+  it("floors at 1 (a natural 01 always succeeds)", () => {
+    expect(skillTotal(10, "untrained")).toBe(1);   // 10 - 20 = -10 -> 1
+    expect(skillTotal(20, "untrained")).toBe(1);   // 20 - 20 = 0 -> 1
+  });
 });
 
 describe("fatigueMax", () => {
