@@ -51,15 +51,33 @@ async function rollDamage(message) {
   });
   if (mod == null) return;
   const trimmed = String(mod).trim();
+  const qualities = f.qualities ?? [];
   const rolls = [];
   const hits = [];
   for (const hit of f.hits) {
-    const formula = (hit.index === 0 && trimmed && trimmed !== "+0") ? `${baseFormula} + ${trimmed}` : baseFormula;
-    const r = await new Roll(formula).evaluate();
-    // Righteous Fury: any d10 term die showing a natural 10.
-    const rf = r.dice.some((d) => d.faces === 10 && d.results.some((res) => res.active && res.result === 10));
-    rolls.push(r);
-    hits.push({ index: hit.index, location: hit.location, label: hit.label, total: r.total, rf, breakdown: formatRoll(r) });
+    // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
+    const weaponFormula = weaponDamageFormula(qualities, baseFormula);
+    const wRoll = await new Roll(weaponFormula).evaluate();
+    const rf = wRoll.dice.some((d) => d.faces === 10 && d.results.some((res) => res.active && res.result === 10));
+    rolls.push(wRoll);
+    // Bonus damage — non-RF; first hit only: the input modifier + Accurate's DoS dice.
+    const bonusParts = [];
+    if (hit.index === 0) {
+      if (trimmed && trimmed !== "+0") bonusParts.push(trimmed);
+      const acc = accurateBonusDice(qualities, { isRanged: f.isRanged, aiming: f.aiming, dos: f.dos });
+      if (acc) bonusParts.push(acc);
+    }
+    let bonusTotal = 0;
+    let bonusBreak = "";
+    if (bonusParts.length) {
+      const bRoll = await new Roll(bonusParts.join(" + ")).evaluate();
+      rolls.push(bRoll);
+      bonusTotal = bRoll.total;
+      bonusBreak = formatRoll(bRoll);
+    }
+    const total = wRoll.total + bonusTotal;
+    const breakdown = formatRoll(wRoll) + (bonusBreak ? `+${bonusBreak}` : "");
+    hits.push({ index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown });
   }
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
     targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid };
@@ -67,6 +85,7 @@ async function rollDamage(message) {
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
     flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: f.penetration, damageType: f.damageType,
+      qualities: f.qualities ?? [],
       hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf })) } }
   };
   ChatMessage.applyRollMode(messageData, "roll");
