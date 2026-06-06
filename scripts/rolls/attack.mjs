@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -358,6 +358,7 @@ export async function rollAttack(actor, weaponId) {
   });
   if (!choice) return null;
   const maximal = isRanged && !!choice.maximal;
+  const storm = hasStorm(weapon.system.qualities);
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
@@ -367,12 +368,13 @@ export async function rollAttack(actor, weaponId) {
   const aiming = choice.aim !== "none";
   const qualMod = qualityToHitMod(weapon.system.qualities, { aiming });
   const craftMod = isMelee ? meleeCraftToHit(weapon.system.craftsmanship) : 0;
-  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod;
+  const scatterMod = scatterToHit(weapon.system.qualities, choice.range);
+  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod + scatterMod;
   const base = actor.system.characteristics[charKey].total;
 
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
-  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1);
+  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (storm ? 2 : 1);
   if (usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
     ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
     return null;
@@ -399,12 +401,16 @@ export async function rollAttack(actor, weaponId) {
   const rofCap = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : Infinity;
 
   // Hit count and locations
-  const nHits = success ? computeHits(at, dos, rofCap) : 0;
+  let nHits = success ? computeHits(at, dos, storm ? Infinity : rofCap) : 0;
+  if (storm && success) nHits = Math.min(nHits * 2, rofCap);
   const firstLoc = at.calledShot ? choice.calledShotLocation : hitLocation(roll.total);
   const locs = success ? locationSequence(firstLoc, nHits) : [];
 
   // Jam check
   const jammed = checkJam(roll.total, success, isRanged, effectiveJamFloor(weapon.system.qualities, weapon.system.craftsmanship));
+
+  // Scatter flat damage modifier (range-based; 0 for melee or no Scatter quality)
+  const scatterDmg = scatterDamage(weapon.system.qualities, choice.range);
 
   // Target token (if any)
   const targetToken = game.user.targets.first() ?? null;
@@ -429,7 +435,8 @@ export async function rollAttack(actor, weaponId) {
       targetName: targetToken?.name ?? null,
       hits,
       success,
-      jammed
+      jammed,
+      scatterDmg
     }
   };
 
