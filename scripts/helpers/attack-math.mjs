@@ -4,7 +4,20 @@ const HIT_BANDS = [
   { max: 10, key: "head" }, { max: 20, key: "rightArm" }, { max: 30, key: "leftArm" },
   { max: 70, key: "body" }, { max: 85, key: "rightLeg" }, { max: 100, key: "leftLeg" }
 ];
-const SEQ = ["head", "rightArm", "leftArm", "body", "rightLeg", "leftLeg"];
+// Multiple-hits sequence by first-hit category (generic limbs resolved to the first hit's side).
+const MULTI_SEQ = {
+  head: ["head", "arm", "body", "arm", "body"],
+  arm:  ["arm", "body", "head", "body", "arm"],
+  body: ["body", "arm", "head", "arm", "body"],
+  leg:  ["leg", "body", "arm", "head", "body"]
+};
+const categoryOf = (loc) =>
+  loc === "head" ? "head" : loc === "body" ? "body"
+  : (loc === "rightArm" || loc === "leftArm") ? "arm" : "leg";
+const sideOf = (loc) => (loc === "leftArm" || loc === "leftLeg") ? "left" : "right";   // Body/Head -> right
+const resolveLoc = (generic, side) =>
+  generic === "head" ? "head" : generic === "body" ? "body"
+  : generic === "arm" ? `${side}Arm` : `${side}Leg`;
 
 /** Hit location from a d100 roll by reversing its two digits onto the bands. */
 export function hitLocation(roll) {
@@ -20,10 +33,12 @@ export function computeHits(attackType, dos, rof) {
   return Math.min(rof, 1 + Math.floor(dos / attackType.hits.dosPer));
 }
 
-/** Locations for `count` hits: first as rolled, the rest cycling a fixed order (verify §10). */
+/** Locations for `count` hits: first as rolled; subsequent follow the category sequence
+ *  (limbs use the first hit's side); the 6th and further hits repeat the 5th. */
 export function locationSequence(first, count) {
-  const start = SEQ.indexOf(first);
-  return Array.from({ length: count }, (_, i) => (i === 0 ? first : SEQ[(start + i) % SEQ.length]));
+  const tmpl = MULTI_SEQ[categoryOf(first)];
+  const side = sideOf(first);
+  return Array.from({ length: count }, (_, i) => resolveLoc(tmpl[Math.min(i, tmpl.length - 1)], side));
 }
 
 /** Effective damage after armour+pen and Toughness Bonus (floored at 0). */

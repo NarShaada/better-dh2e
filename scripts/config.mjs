@@ -112,7 +112,7 @@ BDH.qualities = {
   powerField: { label: "Power Field", takesValue: false },
   felling:    { label: "Felling", takesValue: true, automation: "full" },
   accurate:   { label: "Accurate", takesValue: false, automation: "full" },
-  storm:      { label: "Storm", takesValue: false },
+  storm:      { label: "Storm", takesValue: false, automation: "full" },
   twinLinked: { label: "Twin-Linked", takesValue: false },
   reliable:   { label: "Reliable", takesValue: false, automation: "full" },
   unreliable: { label: "Unreliable", takesValue: false, automation: "full" },
@@ -138,6 +138,11 @@ BDH.qualities = {
   overheats:  { label: "Overheats", takesValue: false, automation: "full" },
   maximal:    { label: "Maximal", takesValue: false, automation: "full" },
   recharge:   { label: "Recharge", takesValue: false, noteOn: "attack" },
+  sanctified: { label: "Sanctified", takesValue: false },
+  scatter:    { label: "Scatter", takesValue: false, automation: "full" },
+  smoke:      { label: "Smoke", takesValue: true, noteOn: "attack" },
+  snare:      { label: "Snare", takesValue: true, automation: "full" },
+  spray:      { label: "Spray", takesValue: false, noteOn: "attack" },
 };
 
 /** Aim bonuses. */

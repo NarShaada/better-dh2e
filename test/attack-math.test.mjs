@@ -22,10 +22,21 @@ describe("computeHits", () => {
     expect(computeHits(full, 3, 99)).toBe(4);   // 1 + 3
   });
 });
-describe("locationSequence", () => {
-  it("first is the rolled location, rest cycle", () => {
-    expect(locationSequence("body", 1)).toEqual(["body"]);
-    expect(locationSequence("body", 3)).toEqual(["body", "rightLeg", "leftLeg"]);
+describe("locationSequence (multi-hit table, side tracks first hit)", () => {
+  it("Body-first: Body, R Arm, Head, R Arm, Body", () => {
+    expect(locationSequence("body", 5)).toEqual(["body", "rightArm", "head", "rightArm", "body"]);
+  });
+  it("Left-Arm-first tracks the left side", () => {
+    expect(locationSequence("leftArm", 5)).toEqual(["leftArm", "body", "head", "body", "leftArm"]);
+  });
+  it("Right-Leg-first", () => {
+    expect(locationSequence("rightLeg", 5)).toEqual(["rightLeg", "body", "rightArm", "head", "body"]);
+  });
+  it("Head-first; 6th+ repeats the 5th", () => {
+    expect(locationSequence("head", 6)).toEqual(["head", "rightArm", "body", "rightArm", "body", "body"]);
+  });
+  it("single hit is just the rolled location", () => {
+    expect(locationSequence("leftLeg", 1)).toEqual(["leftLeg"]);
   });
 });
 describe("soak", () => {

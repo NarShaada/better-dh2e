@@ -69,6 +69,22 @@ export function felledToughnessBonus(toughnessBonus, unnatural, fellingX) {
   return toughnessBonus - Math.min(unnatural ?? 0, fellingX);
 }
 
+/** Scatter to-hit: +10 at Point-Blank or Short range. */
+export function scatterToHit(qualities, range) {
+  if (!has(qualities, "scatter")) return 0;
+  return (range === "pointBlank" || range === "short") ? 10 : 0;
+}
+/** Scatter flat damage: +3 Point-Blank, 0 Short, -3 Normal/Long/Extreme (0 for melee/unknown). */
+export function scatterDamage(qualities, range) {
+  if (!has(qualities, "scatter")) return 0;
+  if (range === "pointBlank") return 3;
+  if (range === "short") return 0;
+  if (range === "normal" || range === "long" || range === "extreme") return -3;
+  return 0;
+}
+export function snareValue(qualities) { return qualityValue(qualities, "snare"); }
+export function hasStorm(qualities) { return has(qualities, "storm"); }
+
 export function hasFlame(qualities) { return has(qualities, "flame"); }
 export function hasFlexible(qualities) { return has(qualities, "flexible"); }
 export function hasGraviton(qualities) { return has(qualities, "graviton"); }
