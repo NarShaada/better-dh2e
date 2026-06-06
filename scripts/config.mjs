@@ -119,7 +119,12 @@ BDH.qualities = {
   flexible:   { label: "Flexible", takesValue: false },
   balanced:   { label: "Balanced", takesValue: false, automation: "full" },
   unbalanced: { label: "Unbalanced", takesValue: false, automation: "full" },
-  shocking:   { label: "Shocking", takesValue: false, automation: "full" }
+  shocking:   { label: "Shocking", takesValue: false, automation: "full" },
+  blast:      { label: "Blast", takesValue: true, noteOn: "attack" },
+  concussive: { label: "Concussive", takesValue: true, automation: "full" },
+  corrosive:  { label: "Corrosive", takesValue: false, noteOn: "damage" },
+  crippling:  { label: "Crippling", takesValue: true, noteOn: "damage" },
+  defensive:  { label: "Defensive", takesValue: false, automation: "full" }
 };
 
 /** Aim bonuses. */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 
@@ -45,5 +45,28 @@ describe("hasShocking", () => {
   it("detects Shocking", () => {
     expect(hasShocking(Q("shocking"))).toBe(true);
     expect(hasShocking(Q())).toBe(false);
+  });
+});
+describe("parryModifier with Defensive", () => {
+  it("Defensive is +15; sums with Balanced on ONE weapon; best single weapon wins across weapons", () => {
+    expect(parryModifier([Q("defensive")])).toBe(15);
+    expect(parryModifier([Q("balanced", "defensive")])).toBe(25);
+    expect(parryModifier([Q("balanced"), Q("defensive")])).toBe(15);
+    expect(parryModifier([Q("defensive", "unbalanced")])).toBe(5);
+  });
+});
+describe("qualityToHitMod with Defensive", () => {
+  it("Defensive is -10, and combines with Accurate", () => {
+    expect(qualityToHitMod(Q("defensive"), { aiming: false })).toBe(-10);
+    expect(qualityToHitMod(Q("accurate", "defensive"), { aiming: true })).toBe(0);
+    expect(qualityToHitMod(Q("accurate", "defensive"), { aiming: false })).toBe(-10);
+  });
+});
+describe("concussiveValue", () => {
+  it("returns the numeric X, or 0 if absent/blank", () => {
+    expect(concussiveValue([{ key: "concussive", value: "2" }])).toBe(2);
+    expect(concussiveValue([{ key: "concussive", value: "" }])).toBe(0);
+    expect(concussiveValue(Q())).toBe(0);
+    expect(concussiveValue([{ key: "tearing", value: "" }])).toBe(0);
   });
 });
