@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, snareValue, hasStorm } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -157,5 +157,32 @@ describe("hasMaximal", () => {
   it("detects Maximal", () => {
     expect(hasMaximal(Q("maximal"))).toBe(true);
     expect(hasMaximal(Q())).toBe(false);
+  });
+});
+describe("scatterToHit", () => {
+  it("+10 at Point-Blank/Short only", () => {
+    expect(scatterToHit(Q("scatter"), "pointBlank")).toBe(10);
+    expect(scatterToHit(Q("scatter"), "short")).toBe(10);
+    expect(scatterToHit(Q("scatter"), "normal")).toBe(0);
+    expect(scatterToHit(Q(), "pointBlank")).toBe(0);
+  });
+});
+describe("scatterDamage", () => {
+  it("+3 PB, 0 Short, -3 Normal/Long/Extreme, 0 otherwise/no-scatter", () => {
+    expect(scatterDamage(Q("scatter"), "pointBlank")).toBe(3);
+    expect(scatterDamage(Q("scatter"), "short")).toBe(0);
+    expect(scatterDamage(Q("scatter"), "normal")).toBe(-3);
+    expect(scatterDamage(Q("scatter"), "long")).toBe(-3);
+    expect(scatterDamage(Q("scatter"), "extreme")).toBe(-3);
+    expect(scatterDamage(Q("scatter"), undefined)).toBe(0);
+    expect(scatterDamage(Q(), "normal")).toBe(0);
+  });
+});
+describe("snareValue / hasStorm", () => {
+  it("snareValue reads X; hasStorm detects Storm", () => {
+    expect(snareValue([{ key: "snare", value: "2" }])).toBe(2);
+    expect(snareValue(Q())).toBe(0);
+    expect(hasStorm(Q("storm"))).toBe(true);
+    expect(hasStorm(Q())).toBe(false);
   });
 });
