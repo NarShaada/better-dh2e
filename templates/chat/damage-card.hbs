@@ -2,5 +2,6 @@
   <div class="bdh-card-head">{{weaponName}} — Damage ({{damageType}}, Pen {{penetration}})</div>
   <ol class="bdh-hits">{{#each hits}}<li>{{label}}: <span class="bdh-dmg-break">{{{breakdown}}}</span> — <b>{{total}}</b>{{#if rf}} <span class="bdh-rf">☠ Righteous Fury!</span>{{/if}}</li>{{/each}}</ol>
   {{#if shocking}}<div class="bdh-card-line">⚡ Shocking — Toughness test or Stunned: <button type="button" data-bdh="shockTest">Toughness Test</button></div>{{/if}}
+  {{#if concussive}}<div class="bdh-card-line">⚡ Concussive ({{concussive}}) — Toughness test or Stunned: <button type="button" data-bdh="concussiveTest">Toughness Test</button></div>{{/if}}
   {{#if canApply}}<div class="bdh-card-actions"><button type="button" data-bdh="applyDamage">Apply Damage → {{targetName}}</button></div>{{/if}}
 </div>

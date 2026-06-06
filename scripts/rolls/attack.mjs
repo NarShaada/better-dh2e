@@ -5,7 +5,7 @@ import { performTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -25,6 +25,7 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "evade") await rollEvade(message);
       else if (btn.dataset.bdh === "applyDamage") await applyDamage(message);
       else if (btn.dataset.bdh === "shockTest") await rollShockTest(message);
+      else if (btn.dataset.bdh === "concussiveTest") await rollConcussiveTest(message);
     });
   });
 }
@@ -47,11 +48,20 @@ function formatRoll(roll, subResult = null, dos = 0) {
 }
 
 // --- Follow-up step handlers ---
+async function resolveDefender(f) {
+  return (f.targetUuid ? await fromUuid(f.targetUuid) : null) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
+}
 async function rollShockTest(message) {
-  const f = message.flags[NS];
-  const defender = (f.targetUuid ? await fromUuid(f.targetUuid) : null) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
+  const defender = await resolveDefender(message.flags[NS]);
   if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
   return performTest(defender, { label: "Toughness (Shocking)", base: defender.system.characteristics.toughness.total, modifier: 0 });
+}
+async function rollConcussiveTest(message) {
+  const f = message.flags[NS];
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const x = concussiveValue(f.qualities);
+  return performTest(defender, { label: `Toughness (Concussive ${x})`, base: defender.system.characteristics.toughness.total, modifier: -10 * x });
 }
 async function rollDamage(message) {
   const f = message.flags[NS];
@@ -109,7 +119,8 @@ async function rollDamage(message) {
     return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown };
   });
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
-    targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid, shocking: hasShocking(qualities) };
+    targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid, shocking: hasShocking(qualities),
+    concussive: concussiveValue(qualities) || null };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
