@@ -22,6 +22,7 @@ export function bindCardButtons(message, html) {
       if (btn.dataset.bdh === "rollDamage") await rollDamage(message);
       else if (btn.dataset.bdh === "evade") await rollEvade(message);
       else if (btn.dataset.bdh === "applyDamage") await applyDamage(message);
+      else if (btn.dataset.bdh === "shockTest") await rollShockTest(message);
     });
   });
 }
@@ -37,6 +38,12 @@ function formatRoll(roll) {
 }
 
 // --- Follow-up step handlers ---
+async function rollShockTest(message) {
+  const f = message.flags[NS];
+  const target = await fromUuid(f.targetUuid);
+  if (!target) return;
+  return performTest(target, { label: "Toughness (Shocking)", base: target.system.characteristics.toughness.total, modifier: 0 });
+}
 async function rollDamage(message) {
   const f = message.flags[NS];
   const actor = await fromUuid(f.actorUuid);
@@ -128,9 +135,11 @@ async function applyDamage(message) {
   const ap = computeArmour(equipped, 0);               // pure per-location AP (tb=0 so TB isn't folded in)
   let wounds = sys.wounds.value;
   let totalCrit = 0;
+  let dealtDamage = false;
   const lines = [];
   for (const h of f.hits) {
     const eff = soak(h.total, ap[h.location] ?? 0, f.penetration, tb);  // pen vs AP, then TB
+    if (eff > 0) dealtDamage = true;
     const res = applyWounds(wounds, sys.wounds.max, eff);
     wounds = res.wounds;
     totalCrit += res.critical;
@@ -142,6 +151,13 @@ async function applyDamage(message) {
     speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div><div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${wounds} / ${sys.wounds.max}</div></div>`
   });
+  if (hasShocking(f.qualities) && dealtDamage) {
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: target }),
+      content: `<div class="bdh-card"><div class="bdh-card-head">⚡ Shocking — ${target.name}</div><div class="bdh-card-line">Must pass a Toughness test or be Stunned.</div><div class="bdh-card-actions"><button type="button" data-bdh="shockTest">Toughness Test</button></div></div>`,
+      flags: { [NS]: { type: "shock", targetUuid: f.targetUuid } }
+    });
+  }
 }
 
 /**
