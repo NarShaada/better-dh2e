@@ -99,7 +99,7 @@
               {{#unless s.specialties.length}}<div class="bdh-empty">{{#if @root.isCustom}}Press ＋ to add a specialty.{{else}}—{{/if}}</div>{{/unless}}
             </div>
           {{else}}
-            <div class="skill {{#unless s.trained}}untrained{{/unless}}" {{#unless @root.isCustom}}data-action="rollSkill"{{/unless}} data-skill="{{s.key}}">
+            <div class="skill {{#unless s.trained}}untrained{{/unless}}" {{#unless @root.isCustom}}{{#unless @root.isSimple}}data-action="rollSkill"{{/unless}}{{/unless}} data-skill="{{s.key}}">
               <a class="bdh-fav {{#if s.favourite}}on{{/if}}" data-action="toggleSkillFavourite" title="Favourite">★</a>
               <span class="snm">{{localize s.label}}</span>
               <span class="tier">{{#each s.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
@@ -378,7 +378,7 @@
       <div class="bdh-adv-modes">
         <button type="button" class="bdh-mode {{#if isSimple}}on{{/if}}" data-action="setMode" data-mode="simple">Simple</button>
         <button type="button" class="bdh-mode {{#if isCustom}}on{{/if}}" data-action="setMode" data-mode="custom">Custom</button>
-        <span class="bdh-mode-hint">{{#if isCustom}}Custom: edit freely across the sheet.{{else if isSimple}}Simple advancement arrives in the next plan.{{else}}Pick a mode to edit; press again to return to play.{{/if}}</span>
+        <span class="bdh-mode-hint">{{#if isCustom}}Custom: edit freely across the sheet.{{else if isSimple}}Simple: buy advances — each charges Free XP and is logged below.{{else}}Pick a mode to edit; press again to return to play.{{/if}}</span>
       </div>
       <div class="bdh-xp">
         <label>Total</label><input type="number" name="system.experience.total" value="{{experience.total}}" min="0"/>
