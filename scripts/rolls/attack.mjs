@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -44,6 +44,7 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "concussiveTest") await rollConcussiveTest(message);
       else if (btn.dataset.bdh === "flameTest") await rollFlameTest(message);
       else if (btn.dataset.bdh === "hallucinogenicTest") await rollHallucinogenicTest(message);
+      else if (btn.dataset.bdh === "snareTest") await rollSnareTest(message);
       else if (btn.dataset.bdh === "overheatDrop") await rollOverheatDrop(message);
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
     });
@@ -111,6 +112,16 @@ async function rollHallucinogenicTest(message) {
   if (!choice) return null;
   return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
 }
+async function rollSnareTest(message) {
+  const f = message.flags[NS];
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to test Agility."); return; }
+  const x = snareValue(f.qualities);
+  const label = `Agility (Snare ${x})`;
+  const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
+  if (!choice) return null;
+  return performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+}
 async function rollDamage(message) {
   const f = message.flags[NS];
   const actor = await fromUuid(f.actorUuid);
@@ -139,6 +150,7 @@ async function rollDamage(message) {
   const craftDmg = !f.isRanged ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
   let weaponBase = craftDmg ? `${baseFormula} + ${craftDmg}` : baseFormula;
   if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
+  if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
   const rolls = [];
   const rolled = [];   // per hit: { hit, wRoll, bRoll, rf, baseTotal }
   for (const hit of f.hits) {
@@ -181,6 +193,7 @@ async function rollDamage(message) {
     concussive: concussiveValue(qualities) || null,
     flame: hasFlame(qualities),
     hallucinogenic: hallucinogenicValue(qualities) || null,
+    snare: snareValue(qualities) || null,
     damageNotes: qualityNotes(qualities, "damage") };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
