@@ -393,7 +393,7 @@
     <div class="bdh-section">
       <div class="bdh-section-head">Advancement Log</div>
       {{#each advancementLog as |e|}}
-        <div class="bdh-log-row"><span class="bdh-log-what">{{e.label}}</span><span class="bdh-log-detail">{{e.detail}}</span><span class="bdh-log-cost">{{e.cost}} xp</span></div>
+        <div class="bdh-log-row"><span class="bdh-log-what">{{e.label}}</span><span class="bdh-log-detail">{{e.detail}}</span><span class="bdh-log-cost">{{e.cost}} xp</span>{{#if @root.isSimple}}<a class="bdh-del bdh-log-refund" data-action="refund" data-log-index="{{@index}}" title="Refund this advance">✖</a>{{/if}}</div>
       {{/each}}
       {{#unless advancementLog.length}}<div class="bdh-empty">No Simple-advancement purchases yet.</div>{{/unless}}
     </div>
