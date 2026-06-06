@@ -2,7 +2,7 @@
 
 const HIT_BANDS = [
   { max: 10, key: "head" }, { max: 20, key: "rightArm" }, { max: 30, key: "leftArm" },
-  { max: 69, key: "body" }, { max: 85, key: "rightLeg" }, { max: 100, key: "leftLeg" }
+  { max: 70, key: "body" }, { max: 85, key: "rightLeg" }, { max: 100, key: "leftLeg" }
 ];
 const SEQ = ["head", "rightArm", "leftArm", "body", "rightLeg", "leftLeg"];
 

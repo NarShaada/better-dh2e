@@ -3,7 +3,7 @@ import { hitLocation, computeHits, locationSequence, soak, applyWounds, checkJam
 
 describe("hitLocation (reversed digits)", () => {
   it("reverses the d100 digits onto the bands", () => {
-    expect(hitLocation(7)).toBe("rightLeg");   // 07 -> 70
+    expect(hitLocation(7)).toBe("body");       // 07 -> 70 (Body band 31-70)
     expect(hitLocation(10)).toBe("head");      // 10 -> 01
     expect(hitLocation(47)).toBe("rightLeg");  // 47 -> 74
     expect(hitLocation(55)).toBe("body");      // 55 -> 55
