@@ -179,7 +179,7 @@ export async function rollAttack(actor, weaponId) {
   const dos = success ? degrees : 0;
 
   // RoF cap
-  const rofCap = at.rof ? (weapon.system.rateOfFire?.[at.rof] ?? 1) : Infinity;
+  const rofCap = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : Infinity;
 
   // Hit count and locations
   const nHits = success ? computeHits(at, dos, rofCap) : 0;
