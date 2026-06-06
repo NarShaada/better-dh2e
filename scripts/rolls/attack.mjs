@@ -30,7 +30,13 @@ export function bindCardButtons(message, html) {
 /** Render a Roll as a transparent breakdown, e.g. "[4]+3+[5]+[2]" (dice in brackets, flats plain). */
 function formatRoll(roll) {
   return roll.terms.map((t) => {
-    if (Array.isArray(t.results)) return t.results.filter((r) => r.active).map((r) => `[${r.result}]`).join("+");
+    if (Array.isArray(t.results)) {
+      // Dropped dice present (e.g. Tearing keep-highest): show all in one bracket, the kept one bold.
+      if (t.results.some((r) => !r.active)) {
+        return `[${t.results.map((r) => (r.active ? `<b>${r.result}</b>` : `${r.result}`)).join("|")}]`;
+      }
+      return t.results.filter((r) => r.active).map((r) => `[${r.result}]`).join("+");
+    }
     if (t.operator) return t.operator;
     if (t.number !== undefined && t.number !== null) return String(t.number);
     return "";
@@ -40,9 +46,9 @@ function formatRoll(roll) {
 // --- Follow-up step handlers ---
 async function rollShockTest(message) {
   const f = message.flags[NS];
-  const target = await fromUuid(f.targetUuid);
-  if (!target) return;
-  return performTest(target, { label: "Toughness (Shocking)", base: target.system.characteristics.toughness.total, modifier: 0 });
+  const defender = (f.targetUuid ? await fromUuid(f.targetUuid) : null) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
+  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  return performTest(defender, { label: "Toughness (Shocking)", base: defender.system.characteristics.toughness.total, modifier: 0 });
 }
 async function rollDamage(message) {
   const f = message.flags[NS];
@@ -87,7 +93,7 @@ async function rollDamage(message) {
     hits.push({ index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown });
   }
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
-    targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid };
+    targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid, shocking: hasShocking(qualities) };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
@@ -135,11 +141,9 @@ async function applyDamage(message) {
   const ap = computeArmour(equipped, 0);               // pure per-location AP (tb=0 so TB isn't folded in)
   let wounds = sys.wounds.value;
   let totalCrit = 0;
-  let dealtDamage = false;
   const lines = [];
   for (const h of f.hits) {
     const eff = soak(h.total, ap[h.location] ?? 0, f.penetration, tb);  // pen vs AP, then TB
-    if (eff > 0) dealtDamage = true;
     const res = applyWounds(wounds, sys.wounds.max, eff);
     wounds = res.wounds;
     totalCrit += res.critical;
@@ -151,13 +155,6 @@ async function applyDamage(message) {
     speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div><div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${wounds} / ${sys.wounds.max}</div></div>`
   });
-  if (hasShocking(f.qualities) && dealtDamage) {
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: target }),
-      content: `<div class="bdh-card"><div class="bdh-card-head">⚡ Shocking — ${target.name}</div><div class="bdh-card-line">Must pass a Toughness test or be Stunned.</div><div class="bdh-card-actions"><button type="button" data-bdh="shockTest">Toughness Test</button></div></div>`,
-      flags: { [NS]: { type: "shock", targetUuid: f.targetUuid } }
-    });
-  }
 }
 
 /**

@@ -102,23 +102,23 @@ BDH.damageTypes = { energy: "Energy", explosive: "Explosive", rending: "Rending"
 /** Reload duration (key -> label). */
 BDH.reload = { free: "Free", half: "Half", full: "Full", twoFull: "2 Full", threeFull: "3 Full" };
 
-/** Weapon qualities (key -> {label, takesValue}). Behaviours are implemented in the attack pipeline later. */
+/** Weapon qualities (key -> {label, takesValue, automated}). `automated: true` = applied by the attack pipeline; others are display-only for now. */
 BDH.qualities = {
-  tearing:    { label: "Tearing", takesValue: false },
+  tearing:    { label: "Tearing", takesValue: false, automated: true },
   proven:     { label: "Proven", takesValue: true },
   primitive:  { label: "Primitive", takesValue: true },
   razorSharp: { label: "Razor Sharp", takesValue: false },
   felling:    { label: "Felling", takesValue: true },
-  accurate:   { label: "Accurate", takesValue: false },
+  accurate:   { label: "Accurate", takesValue: false, automated: true },
   storm:      { label: "Storm", takesValue: false },
   twinLinked: { label: "Twin-Linked", takesValue: false },
-  reliable:   { label: "Reliable", takesValue: false },
-  unreliable: { label: "Unreliable", takesValue: false },
+  reliable:   { label: "Reliable", takesValue: false, automated: true },
+  unreliable: { label: "Unreliable", takesValue: false, automated: true },
   unwieldy:   { label: "Unwieldy", takesValue: false },
   flexible:   { label: "Flexible", takesValue: false },
-  balanced:   { label: "Balanced", takesValue: false },
-  unbalanced: { label: "Unbalanced", takesValue: false },
-  shocking:   { label: "Shocking", takesValue: false },
+  balanced:   { label: "Balanced", takesValue: false, automated: true },
+  unbalanced: { label: "Unbalanced", takesValue: false, automated: true },
+  shocking:   { label: "Shocking", takesValue: false, automated: true }
 };
 
 /** Aim bonuses. */
