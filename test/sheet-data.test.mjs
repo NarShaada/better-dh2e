@@ -5,9 +5,9 @@ import { BDH } from "../scripts/config.mjs";
 
 function charStub() {
   const o = {};
-  for (const k of Object.keys(BDH.characteristics)) o[k] = { total: 25, bonus: 2 };
-  o.toughness = { total: 42, bonus: 4 };
-  o.influence = { total: 37, bonus: 3 };
+  for (const k of Object.keys(BDH.characteristics)) o[k] = { base: 25, advance: 0, unnatural: 0, total: 25, bonus: 2 };
+  o.toughness = { base: 42, advance: 0, unnatural: 0, total: 42, bonus: 4 };
+  o.influence = { base: 25, advance: 0, unnatural: 0, total: 37, bonus: 3 };
   return o;
 }
 
@@ -34,6 +34,12 @@ describe("buildCharacteristics", () => {
     expect(t.bonus).toBe(4);
     expect(t.isInfluence).toBe(false);
     expect(rows.find((r) => r.key === "influence").isInfluence).toBe(true);
+  });
+  it("carries base and unnatural for Custom editing", () => {
+    const rows = buildCharacteristics(charStub());
+    const t = rows.find((r) => r.key === "toughness");
+    expect(t.base).toBe(42);
+    expect(t.unnatural).toBe(0);
   });
 });
 

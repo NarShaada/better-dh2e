@@ -52,7 +52,8 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
         critical: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
       }),
       fatigue: new fields.SchemaField({
-        value: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+        value: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        maxOverride: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null, min: 0 })
       }),
       fate: new fields.SchemaField({
         value: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
@@ -70,7 +71,15 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       notes: new fields.StringField({ required: true, initial: "" }),
       corruption: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       insanity: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
-      psyRating: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      psyRating: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      experience: new fields.SchemaField({
+        total: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        spent: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      }),
+      aptitudes: new fields.ArrayField(new fields.StringField({ choices: BDH.aptitudes })),
+      initiative: new fields.SchemaField({
+        characteristic: new fields.StringField({ required: true, choices: Object.keys(BDH.characteristics), initial: "agility" })
+      })
     };
   }
 
@@ -84,7 +93,7 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       const charKey = BDH.skills[key].characteristic;
       skill.total = skillTotal(this.characteristics[charKey].total, skill.rank);
     }
-    this.fatigue.max = fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus);
+    this.fatigue.max = this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus);
     this.movement = movement(this.characteristics.agility.bonus, this.size);
   }
 }

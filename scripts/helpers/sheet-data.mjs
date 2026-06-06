@@ -14,6 +14,8 @@ export function buildCharacteristics(characteristics) {
       label: BDH.characteristics[key].label,
       value: c.total ?? 0,
       bonus: c.bonus ?? 0,
+      base: c.base ?? 0,
+      unnatural: c.unnatural ?? 0,
       isInfluence: key === "influence"
     };
   });

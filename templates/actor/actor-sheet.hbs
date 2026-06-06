@@ -19,7 +19,7 @@
     </div>
     <div class="fate">
       <div class="lbl">Fate</div>
-      <div class="v">{{system.fate.value}} / {{system.fate.max}}</div>
+      <div class="v">{{system.fate.value}} / {{#if isCustom}}<input class="bdh-edit bdh-fate-max" type="number" name="system.fate.max" value="{{system.fate.max}}" min="0"/>{{else}}{{system.fate.max}}{{/if}}</div>
     </div>
   </header>
 
@@ -34,16 +34,26 @@
     <div class="char-row">
       {{#each characteristics as |c|}}
         <div class="char {{#if c.isInfluence}}inf{{/if}}" data-characteristic="{{c.key}}">
-          <div class="bonus">{{c.bonus}}</div>
-          <div class="box rollable" data-action="rollCharacteristic" data-characteristic="{{c.key}}"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
+          {{#if @root.isCustom}}
+            <span class="bonus bdh-edit bdh-unnat"><span class="bdh-plus">+</span><input type="number" name="system.characteristics.{{c.key}}.unnatural" value="{{c.unnatural}}" title="Unnatural bonus (additive)"/></span>
+          {{else}}
+            <div class="bonus">{{c.bonus}}</div>
+          {{/if}}
+          {{#if @root.isCustom}}
+            <div class="box"><input class="val bdh-edit" type="number" name="system.characteristics.{{c.key}}.base" value="{{c.base}}"/><div class="nm">{{c.short}}</div></div>
+          {{else}}
+            <div class="box rollable" data-action="rollCharacteristic" data-characteristic="{{c.key}}"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
+          {{/if}}
         </div>
       {{/each}}
     </div>
 
     <div class="fatigue">
       <span class="lbl">Fatigue</span>
+      <button type="button" class="bdh-fat-btn" data-action="adjustFatigue" data-delta="-1" title="−1">−</button>
       <span class="bar"><i style="width:{{fatiguePct}}%"></i></span>
-      <span class="v">{{system.fatigue.value}} / {{system.fatigue.max}}</span>
+      <button type="button" class="bdh-fat-btn" data-action="adjustFatigue" data-delta="1" title="+1">＋</button>
+      <span class="v">{{system.fatigue.value}} / {{#if isCustom}}<input class="bdh-edit bdh-fat-max" type="number" name="system.fatigue.maxOverride" value="{{system.fatigue.maxOverride}}" placeholder="{{system.fatigue.max}}" min="0"/>{{else}}{{system.fatigue.max}}{{/if}}</span>
     </div>
 
     <nav class="tabs secondary" data-group="secondary">
@@ -58,11 +68,15 @@
       </div>
       <div class="skills">
         {{#each skills as |s|}}
-          <div class="skill {{#unless s.trained}}untrained{{/unless}}" data-action="rollSkill" data-skill="{{s.key}}">
+          <div class="skill {{#unless s.trained}}untrained{{/unless}}" {{#unless @root.isCustom}}data-action="rollSkill"{{/unless}} data-skill="{{s.key}}">
             <a class="bdh-fav {{#if s.favourite}}on{{/if}}" data-action="toggleSkillFavourite" title="Favourite">★</a>
             <span class="snm">{{localize s.label}}</span>
             <span class="tier">{{#each s.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
-            <span class="sval">{{s.total}}</span>
+            {{#if @root.isCustom}}
+              <select class="sval bdh-edit" name="system.skills.{{s.key}}.rank">{{selectOptions @root.rankChoices selected=s.rank}}</select>
+            {{else}}
+              <span class="sval">{{s.total}}</span>
+            {{/if}}
           </div>
         {{/each}}
       </div>
@@ -126,7 +140,7 @@
             <div class="bdh-section-head">Wounds</div>
             <div class="bdh-wounds">
               <label>Current</label><input type="number" name="system.wounds.value" value="{{system.wounds.value}}"/>
-              <label>Max</label><input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>
+              <label>Max</label>{{#if isCustom}}<input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>{{else}}<span class="bdh-ro">{{system.wounds.max}}</span>{{/if}}
               <label>Critical</label><input type="number" name="system.wounds.critical" value="{{system.wounds.critical}}"/>
             </div>
           </div>
@@ -146,7 +160,9 @@
               <span>Half {{system.movement.half}} m</span><span>Full {{system.movement.full}} m</span>
               <span>Charge {{system.movement.charge}} m</span><span>Run {{system.movement.run}} m</span>
             </div>
-            <div class="bdh-init">Initiative: 1d10 + {{agilityBonus}} (Ag)</div>
+            <div class="bdh-init">Initiative: 1d10 +
+              {{#if isCustom}}<select name="system.initiative.characteristic">{{selectOptions charChoices selected=system.initiative.characteristic}}</select>{{else}}<b>{{initBonus}}</b> ({{initShort}}){{/if}}
+            </div>
           </div>
         </div>
       </div>
@@ -319,6 +335,23 @@
       {{#unless psychicPowers.length}}<div class="bdh-empty">No powers — drag one in or press ＋.</div>{{/unless}}
     </div>
   </section>
-  <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement"><p class="placeholder">Advancement — later plan.</p></section>
+  <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement">
+    <div class="bdh-adv-ctl">
+      <div class="bdh-adv-modes">
+        <button type="button" class="bdh-mode {{#if isSimple}}on{{/if}}" data-action="setMode" data-mode="simple">Simple</button>
+        <button type="button" class="bdh-mode {{#if isCustom}}on{{/if}}" data-action="setMode" data-mode="custom">Custom</button>
+        <span class="bdh-mode-hint">{{#if isCustom}}Custom: edit freely across the sheet.{{else if isSimple}}Simple advancement arrives in the next plan.{{else}}Pick a mode to edit; press again to return to play.{{/if}}</span>
+      </div>
+      <div class="bdh-xp">
+        <label>Total</label><input type="number" name="system.experience.total" value="{{experience.total}}" min="0"/>
+        <label>Spent</label>{{#if isCustom}}<input type="number" name="system.experience.spent" value="{{experience.spent}}" min="0"/>{{else}}<span class="bdh-xp-v">{{experience.spent}}</span>{{/if}}
+        <label>Free</label><span class="bdh-xp-v bdh-xp-free">{{experience.free}}</span>
+      </div>
+    </div>
+    <div class="bdh-section">
+      <div class="bdh-section-head">Aptitudes <span class="bdh-hint2">the character's fixed aptitudes</span></div>
+      <select class="bdh-apt-select" name="system.aptitudes" multiple size="10">{{selectOptions aptitudeChoices selected=system.aptitudes}}</select>
+    </div>
+  </section>
 
 </div>

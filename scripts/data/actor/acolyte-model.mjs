@@ -12,9 +12,6 @@ export class AcolyteModel extends BaseActorModel {
         background: new fields.StringField({ required: true, initial: "" }),
         role:       new fields.StringField({ required: true, initial: "" }),
         elite:      new fields.StringField({ required: true, initial: "" })
-      }),
-      experience: new fields.SchemaField({
-        total: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
       })
     };
   }

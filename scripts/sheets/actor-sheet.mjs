@@ -14,10 +14,27 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** Investigation "hide untrained" filter state (per open sheet). */
   _hideUntrained = false;
 
+  /** Advancement mode overlay: "none" | "custom" | "simple" (transient per open sheet). */
+  _advancementMode = "none";
+
   /** Action handler: toggle the hide-untrained filter and re-render. */
   static #onToggleUntrained(event, target) {
     this._hideUntrained = !this._hideUntrained;
     this.render();
+  }
+
+  /** Action: toggle an advancement mode (press again to return to play mode). */
+  static #onSetMode(event, target) {
+    const m = target.dataset.mode;
+    this._advancementMode = this._advancementMode === m ? "none" : m;
+    this.render();
+  }
+
+  /** Action: nudge current fatigue by +/-1 (play mode). */
+  static async #onAdjustFatigue(event, target) {
+    const delta = Number(target.dataset.delta);
+    const next = Math.max(0, (this.actor.system.fatigue.value ?? 0) + delta);
+    await this.actor.update({ "system.fatigue.value": next });
   }
 
   /** Action: roll the clicked characteristic. */
@@ -161,7 +178,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       removeInjury: DarkHeresyActorSheet.#onRemoveInjury,
       rollAffliction: DarkHeresyActorSheet.#onRollAffliction,
       addAffliction: DarkHeresyActorSheet.#onAddAffliction,
-      removeAffliction: DarkHeresyActorSheet.#onRemoveAffliction
+      removeAffliction: DarkHeresyActorSheet.#onRemoveAffliction,
+      setMode: DarkHeresyActorSheet.#onSetMode,
+      adjustFatigue: DarkHeresyActorSheet.#onAdjustFatigue
     }
   };
 
@@ -273,7 +292,6 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.favSkills = Object.entries(sys.skills).filter(([, s]) => s.favourite)
       .map(([key, s]) => ({ key, label: BDH.skills[key].label, total: s.total }));
     context.injuries = sys.injuries.map((inj, i) => ({ index: i, description: inj.description }));
-    context.agilityBonus = sys.characteristics.agility.bonus;
     const cor = corruptionTrack(sys.corruption);
     const ins = insanityTrack(sys.insanity);
     context.corruption = { value: sys.corruption, tier: cor.tier, penalty: cor.penalty, nextAt: nextTestAt(sys.corruption) };
@@ -288,6 +306,19 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.psychicPowers = items.filter((i) => i.type === "psychicPower").map((p) => ({
       id: p.id, name: p.name, desc: firstLine(p.system.description)
     }));
+    context.advancementMode = this._advancementMode;
+    context.isCustom = this._advancementMode === "custom";
+    context.isSimple = this._advancementMode === "simple";
+    context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
+    context.experience = {
+      total: sys.experience.total, spent: sys.experience.spent,
+      free: sys.experience.total - sys.experience.spent
+    };
+    context.charChoices = Object.fromEntries(Object.keys(BDH.characteristics).map((k) => [k, BDH.characteristics[k].short]));
+    context.rankChoices = { untrained: "Untrained −20", known: "Known +0", trained: "Trained +10", experienced: "Experienced +20", veteran: "Veteran +30" };
+    const initKey = sys.initiative.characteristic;
+    context.initBonus = sys.characteristics[initKey].bonus;
+    context.initShort = BDH.characteristics[initKey].short;
     return context;
   }
 
