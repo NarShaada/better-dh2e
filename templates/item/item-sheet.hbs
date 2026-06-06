@@ -46,6 +46,7 @@
       <label>Availability</label><select name="system.availability">{{selectOptions availChoices selected=system.availability}}</select>
       <label>Weight</label><input type="number" step="0.1" name="system.weight" value="{{system.weight}}"/>
       <label>Additive to other armour</label><input type="checkbox" name="system.additive" {{checked system.additive}}/>
+      <label>Max Agility</label><input type="number" name="system.maxAgility" value="{{system.maxAgility}}" min="0"/>
     </div>
     <div class="bdh-armour-locs">
       <label>Head</label><input type="number" name="system.locations.head" value="{{system.locations.head}}"/>
