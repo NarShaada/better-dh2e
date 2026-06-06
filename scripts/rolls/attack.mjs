@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -44,8 +44,12 @@ export function bindCardButtons(message, html) {
 
 /** Render a Roll as a transparent breakdown, e.g. "[4]+3+[5]+[2]" (dice in brackets, flats plain).
  *  Tearing-dropped dice show as "[a|b]" with the kept one bold; the DoS-substituted die (if any) reads "[v(N DoS)]". */
-function formatRoll(roll, subResult = null, dos = 0) {
-  const ann = (r) => (r === subResult ? `${r.result}(${dos} DoS)` : `${r.result}`);
+function formatRoll(roll, subResult = null, dos = 0, transform = (v) => v) {
+  const ann = (r) => {
+    if (r === subResult) return `${r.result}(${dos} DoS)`;
+    const v = transform(r.result);
+    return v === r.result ? `${v}` : `${r.result}→${v}`;   // e.g. 9→7
+  };
   return roll.terms.map((t) => {
     if (Array.isArray(t.results)) {
       if (t.results.some((r) => !r.active)) {
@@ -115,6 +119,15 @@ async function rollDamage(message) {
   const trimmed = String(mod).trim();
   const qualities = f.qualities ?? [];
   const dos = f.dos ?? 0;
+  const primitiveX = primitiveValue(qualities);
+  const provenX = provenValue(qualities);
+  const transform = (v) => transformDamageDie(v, { primitiveX, provenX });
+  const dieDelta = (roll) => {
+    if (!roll) return 0;
+    let d = 0;
+    for (const die of roll.dice) for (const r of die.results) if (r.active) d += transform(r.result) - r.result;
+    return d;
+  };
   const craftDmg = !f.isRanged ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
   const weaponBase = craftDmg ? `${baseFormula} + ${craftDmg}` : baseFormula;
   const rolls = [];
@@ -134,7 +147,7 @@ async function rollDamage(message) {
     }
     let bRoll = null;
     if (bonusParts.length) { bRoll = await new Roll(bonusParts.join(" + ")).evaluate(); rolls.push(bRoll); }
-    rolled.push({ hit, wRoll, bRoll, rf, baseTotal: wRoll.total + (bRoll?.total ?? 0) });
+    rolled.push({ hit, wRoll, bRoll, rf, baseTotal: wRoll.total + (bRoll?.total ?? 0) + dieDelta(wRoll) + dieDelta(bRoll) });
   }
   // RAW: the attacker may replace ONE damage die in the whole attack with the DoS — auto-pick the global lowest active die if it's below the DoS.
   let subResult = null;
@@ -142,16 +155,16 @@ async function rollDamage(message) {
   rolled.forEach(({ wRoll, bRoll }, i) => {
     for (const roll of [wRoll, bRoll].filter(Boolean)) {
       for (const die of roll.dice) for (const r of die.results) {
-        if (r.active && (subResult === null || r.result < subResult.result)) { subResult = r; subHitIdx = i; }
+        if (r.active && (subResult === null || transform(r.result) < transform(subResult.result))) { subResult = r; subHitIdx = i; }
       }
     }
   });
-  const applySub = subResult !== null && subResult.result < dos;
+  const applySub = subResult !== null && transform(subResult.result) < dos;
   const hits = rolled.map(({ hit, wRoll, bRoll, rf, baseTotal }, i) => {
     const sr = applySub && i === subHitIdx ? subResult : null;
-    const total = baseTotal + (sr ? dos - subResult.result : 0);
-    const bonusBreak = bRoll ? formatRoll(bRoll, sr, dos) : "";
-    const breakdown = formatRoll(wRoll, sr, dos) + (bonusBreak ? `+${bonusBreak.replace(/^\+/, "")}` : "");
+    const total = baseTotal + (sr ? dos - transform(subResult.result) : 0);
+    const bonusBreak = bRoll ? formatRoll(bRoll, sr, dos, transform) : "";
+    const breakdown = formatRoll(wRoll, sr, dos, transform) + (bonusBreak ? `+${bonusBreak.replace(/^\+/, "")}` : "");
     return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown };
   });
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
