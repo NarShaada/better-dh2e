@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
+const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
 
 describe("tearingFormula", () => {
   it("adds a die and keeps highest of the first dice term", () => {
@@ -34,11 +35,15 @@ describe("weaponDamageFormula", () => {
   });
 });
 describe("parryModifier", () => {
-  it("best of the defender's melee weapons (Balanced +10 / Unbalanced -10)", () => {
-    expect(parryModifier([Q("balanced")])).toBe(10);
-    expect(parryModifier([Q("unbalanced")])).toBe(-10);
-    expect(parryModifier([Q("balanced"), Q("unbalanced")])).toBe(10);
+  it("best of the defender's melee weapons (Balanced +10 / Unbalanced -10) incl. craftsmanship WS bonus", () => {
+    expect(parryModifier([W(Q("balanced"))])).toBe(10);
+    expect(parryModifier([W(Q("unbalanced"))])).toBe(-10);
+    expect(parryModifier([W(Q("balanced")), W(Q("unbalanced"))])).toBe(10);
     expect(parryModifier([])).toBe(0);
+    expect(parryModifier([W(Q(), "best")])).toBe(10);                  // Best craftsmanship = +10 WS
+    expect(parryModifier([W(Q("balanced"), "best")])).toBe(20);        // balanced 10 + Best 10, same weapon
+    expect(parryModifier([W(Q("balanced")), W(Q(), "good")])).toBe(10);// best of (10) vs (Good +5) = 10
+    expect(parryModifier([W(Q("unbalanced"), "poor")])).toBe(-20);     // unbalanced -10 + Poor -10
   });
 });
 describe("hasShocking", () => {
@@ -48,11 +53,12 @@ describe("hasShocking", () => {
   });
 });
 describe("parryModifier with Defensive", () => {
-  it("Defensive is +15; sums with Balanced on ONE weapon; best single weapon wins across weapons", () => {
-    expect(parryModifier([Q("defensive")])).toBe(15);
-    expect(parryModifier([Q("balanced", "defensive")])).toBe(25);
-    expect(parryModifier([Q("balanced"), Q("defensive")])).toBe(15);
-    expect(parryModifier([Q("defensive", "unbalanced")])).toBe(5);
+  it("Defensive is +15; sums with Balanced/craftsmanship on ONE weapon; best single weapon wins", () => {
+    expect(parryModifier([W(Q("defensive"))])).toBe(15);
+    expect(parryModifier([W(Q("balanced", "defensive"))])).toBe(25);
+    expect(parryModifier([W(Q("balanced")), W(Q("defensive"))])).toBe(15);
+    expect(parryModifier([W(Q("defensive", "unbalanced"))])).toBe(5);
+    expect(parryModifier([W(Q("defensive"), "best")])).toBe(25);       // defensive 15 + Best 10
   });
 });
 describe("qualityToHitMod with Defensive", () => {

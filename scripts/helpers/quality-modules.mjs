@@ -1,4 +1,5 @@
 // scripts/helpers/quality-modules.mjs — PURE. Weapon-quality effect modules (registry of keyed behaviours).
+import { meleeCraftToHit } from "./craftsmanship-data.mjs";
 
 const has = (qualities, key) => Array.isArray(qualities) && qualities.some((q) => q.key === key);
 
@@ -27,11 +28,15 @@ export function weaponDamageFormula(qualities, baseFormula) {
   return has(qualities, "tearing") ? tearingFormula(baseFormula) : baseFormula;
 }
 
-/** Best parry modifier across the defender's equipped melee weapons (Balanced +10 / Defensive +15 / Unbalanced -10).
- *  Each weapon contributes the SUM of its own parry qualities; the best single weapon wins. */
-export function parryModifier(meleeWeaponQualityLists) {
-  const mods = meleeWeaponQualityLists.map(
-    (qs) => (has(qs, "balanced") ? 10 : 0) + (has(qs, "unbalanced") ? -10 : 0) + (has(qs, "defensive") ? 15 : 0)
+/** Best parry modifier across the defender's equipped melee weapons.
+ *  Each weapon `{qualities, craftsmanship}` contributes the SUM of its own parry qualities
+ *  (Balanced +10 / Defensive +15 / Unbalanced -10) plus its melee craftsmanship WS bonus
+ *  (Poor -10 / Good +5 / Best +10 — craftsmanship applies to all WS tests, parry included);
+ *  the best single weapon wins (no stacking across weapons). */
+export function parryModifier(meleeWeapons) {
+  const mods = meleeWeapons.map((w) =>
+    (has(w.qualities, "balanced") ? 10 : 0) + (has(w.qualities, "unbalanced") ? -10 : 0)
+    + (has(w.qualities, "defensive") ? 15 : 0) + meleeCraftToHit(w.craftsmanship)
   );
   return mods.length ? Math.max(...mods) : 0;
 }
