@@ -34,12 +34,12 @@
     <div class="char-row">
       {{#each characteristics as |c|}}
         <div class="char {{#if c.isInfluence}}inf{{/if}}" data-characteristic="{{c.key}}">
-          {{#if isCustom}}
+          {{#if @root.isCustom}}
             <input class="bonus bdh-edit" type="number" name="system.characteristics.{{c.key}}.unnatural" value="{{c.unnatural}}" title="Unnatural bonus"/>
           {{else}}
             <div class="bonus">{{c.bonus}}</div>
           {{/if}}
-          {{#if isCustom}}
+          {{#if @root.isCustom}}
             <div class="box"><input class="val bdh-edit" type="number" name="system.characteristics.{{c.key}}.base" value="{{c.base}}"/><div class="nm">{{c.short}}</div></div>
           {{else}}
             <div class="box rollable" data-action="rollCharacteristic" data-characteristic="{{c.key}}"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
@@ -68,12 +68,12 @@
       </div>
       <div class="skills">
         {{#each skills as |s|}}
-          <div class="skill {{#unless s.trained}}untrained{{/unless}}" data-action="rollSkill" data-skill="{{s.key}}">
+          <div class="skill {{#unless s.trained}}untrained{{/unless}}" {{#unless @root.isCustom}}data-action="rollSkill"{{/unless}} data-skill="{{s.key}}">
             <a class="bdh-fav {{#if s.favourite}}on{{/if}}" data-action="toggleSkillFavourite" title="Favourite">★</a>
             <span class="snm">{{localize s.label}}</span>
             <span class="tier">{{#each s.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
-            {{#if isCustom}}
-              <select class="sval bdh-edit" name="system.skills.{{s.key}}.rank">{{selectOptions ../rankChoices selected=s.rank}}</select>
+            {{#if @root.isCustom}}
+              <select class="sval bdh-edit" name="system.skills.{{s.key}}.rank">{{selectOptions @root.rankChoices selected=s.rank}}</select>
             {{else}}
               <span class="sval">{{s.total}}</span>
             {{/if}}
