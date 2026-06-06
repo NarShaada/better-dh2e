@@ -319,6 +319,23 @@
       {{#unless psychicPowers.length}}<div class="bdh-empty">No powers — drag one in or press ＋.</div>{{/unless}}
     </div>
   </section>
-  <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement"><p class="placeholder">Advancement — later plan.</p></section>
+  <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement">
+    <div class="bdh-adv-ctl">
+      <div class="bdh-adv-modes">
+        <button type="button" class="bdh-mode {{#if isSimple}}on{{/if}}" data-action="setMode" data-mode="simple">Simple</button>
+        <button type="button" class="bdh-mode {{#if isCustom}}on{{/if}}" data-action="setMode" data-mode="custom">Custom</button>
+        <span class="bdh-mode-hint">{{#if isCustom}}Custom: edit freely across the sheet.{{else if isSimple}}Simple advancement arrives in the next plan.{{else}}Pick a mode to edit; press again to return to play.{{/if}}</span>
+      </div>
+      <div class="bdh-xp">
+        <label>Total</label><input type="number" name="system.experience.total" value="{{experience.total}}" min="0"/>
+        <label>Spent</label>{{#if isCustom}}<input type="number" name="system.experience.spent" value="{{experience.spent}}" min="0"/>{{else}}<span class="bdh-xp-v">{{experience.spent}}</span>{{/if}}
+        <label>Free</label><span class="bdh-xp-v bdh-xp-free">{{experience.free}}</span>
+      </div>
+    </div>
+    <div class="bdh-section">
+      <div class="bdh-section-head">Aptitudes <span class="bdh-hint2">the character's fixed aptitudes</span></div>
+      <select class="bdh-apt-select" name="system.aptitudes" multiple size="10">{{selectOptions aptitudeChoices selected=system.aptitudes}}</select>
+    </div>
+  </section>
 
 </div>
