@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -98,5 +98,27 @@ describe("flag helpers", () => {
     expect(hasFlexible(Q("flexible"))).toBe(true);
     expect(hasGraviton(Q("graviton"))).toBe(true);
     expect(hasFlame(Q())).toBe(false);
+  });
+});
+describe("hasInaccurate", () => {
+  it("detects Inaccurate", () => {
+    expect(hasInaccurate(Q("inaccurate"))).toBe(true);
+    expect(hasInaccurate(Q())).toBe(false);
+  });
+});
+describe("effectivePenetration", () => {
+  it("Lance multiplies Pen by DoS on a hit; nothing on a miss", () => {
+    expect(effectivePenetration(4, { qualities: Q("lance"), dos: 3, success: true, closeRange: false })).toBe(12);
+    expect(effectivePenetration(4, { qualities: Q("lance"), dos: 3, success: false, closeRange: false })).toBe(4);
+  });
+  it("Melta doubles Pen at close range only", () => {
+    expect(effectivePenetration(4, { qualities: Q("melta"), dos: 1, success: true, closeRange: true })).toBe(8);
+    expect(effectivePenetration(4, { qualities: Q("melta"), dos: 1, success: true, closeRange: false })).toBe(4);
+  });
+  it("stacks Lance and Melta", () => {
+    expect(effectivePenetration(4, { qualities: Q("lance", "melta"), dos: 2, success: true, closeRange: true })).toBe(16);
+  });
+  it("no relevant qualities -> base Pen", () => {
+    expect(effectivePenetration(4, { qualities: Q(), dos: 3, success: true, closeRange: true })).toBe(4);
   });
 });
