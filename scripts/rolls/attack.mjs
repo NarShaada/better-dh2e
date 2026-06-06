@@ -5,6 +5,7 @@ import { performTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
+import { qualityToHitMod, qualityJamFloor, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking } from "../helpers/quality-modules.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -176,7 +177,9 @@ export async function rollAttack(actor, weaponId) {
   const aimMod = BDH.aimOptions[choice.aim]?.mod ?? 0;
   const rangeMod = isRanged ? (BDH.rangeOptions[choice.range]?.mod ?? 0) : 0;
   const manual = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
-  const rawModifier = manual + aimMod + rangeMod + at.mod;
+  const aiming = choice.aim !== "none";
+  const qualMod = qualityToHitMod(weapon.system.qualities, { aiming });
+  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod;
   const base = actor.system.characteristics[charKey].total;
 
   // Roll and evaluate
@@ -197,7 +200,7 @@ export async function rollAttack(actor, weaponId) {
   const locs = success ? locationSequence(firstLoc, nHits) : [];
 
   // Jam check
-  const jammed = checkJam(roll.total, success, isRanged);
+  const jammed = checkJam(roll.total, success, isRanged, qualityJamFloor(weapon.system.qualities));
 
   // Target token (if any)
   const targetToken = game.user.targets.first() ?? null;
@@ -215,6 +218,8 @@ export async function rollAttack(actor, weaponId) {
       penetration: weapon.system.penetration ?? 0,
       damageType: weapon.system.damageType,
       qualities: weapon.system.qualities ?? [],
+      aiming,
+      dos,
       targetUuid: targetToken?.actor?.uuid ?? null,
       targetName: targetToken?.name ?? null,
       hits,
@@ -222,6 +227,11 @@ export async function rollAttack(actor, weaponId) {
       jammed
     }
   };
+
+  // Quality labels for the card
+  const qualityLabels = (weapon.system.qualities ?? [])
+    .map((q) => `${CONFIG.BDH.qualities[q.key]?.label ?? q.key}${q.value ? ` (${q.value})` : ""}`)
+    .join(", ");
 
   // Render card template
   const modifierLabel = `${modifier >= 0 ? "+" : ""}${modifier}`;
@@ -243,7 +253,8 @@ export async function rollAttack(actor, weaponId) {
     hits,
     jammed,
     targetName: targetToken?.name ?? null,
-    hasHits: nHits > 0
+    hasHits: nHits > 0,
+    qualityLabels
   });
 
   // Create chat message (apply current roll mode)
