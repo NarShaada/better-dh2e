@@ -230,5 +230,6 @@
 .bdh-card-line .fail, .bdh-card .fail { color:#7a2a2a; font-weight:bold; }
 .bdh-hits { margin:3px 0 4px 18px; font-size:12px; }
 .bdh-rf { color:#7a2a2a; font-weight:bold; }
+.bdh-dmg-break { color:#6b5a3a; font-size:11px; }
 .bdh-card-actions { display:flex; gap:6px; margin-top:4px; }
 .bdh-card-actions button { flex:1; background:#5a2a2a; color:#e7d8b8; border:none; border-radius:3px; font-size:11px; padding:3px; cursor:pointer; }

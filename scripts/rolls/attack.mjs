@@ -25,7 +25,17 @@ export function bindCardButtons(message, html) {
   });
 }
 
-// --- Follow-up step handlers (filled in by later tasks) ---
+/** Render a Roll as a transparent breakdown, e.g. "[4]+3+[5]+[2]" (dice in brackets, flats plain). */
+function formatRoll(roll) {
+  return roll.terms.map((t) => {
+    if (Array.isArray(t.results)) return t.results.filter((r) => r.active).map((r) => `[${r.result}]`).join("+");
+    if (t.operator) return t.operator;
+    if (t.number !== undefined && t.number !== null) return String(t.number);
+    return "";
+  }).join("");
+}
+
+// --- Follow-up step handlers ---
 async function rollDamage(message) {
   const f = message.flags[NS];
   const actor = await fromUuid(f.actorUuid);
@@ -48,7 +58,7 @@ async function rollDamage(message) {
     // Righteous Fury: any d10 term die showing a natural 10.
     const rf = r.dice.some((d) => d.faces === 10 && d.results.some((res) => res.active && res.result === 10));
     rolls.push(r);
-    hits.push({ index: hit.index, location: hit.location, label: hit.label, total: r.total, rf });
+    hits.push({ index: hit.index, location: hit.location, label: hit.label, total: r.total, rf, breakdown: formatRoll(r) });
   }
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
     targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid };
@@ -101,7 +111,7 @@ async function applyDamage(message) {
     totalCrit += res.critical;
     lines.push(`${h.label}: ${h.total} → ${eff} dmg${res.critical ? ` (${res.critical} critical)` : ""}`);
   }
-  await target.update({ "system.wounds.value": wounds });
+  await target.update({ "system.wounds.value": wounds, "system.wounds.critical": (sys.wounds.critical ?? 0) + totalCrit });
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit} — consult Critical Effects (location × type).</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
@@ -215,6 +225,9 @@ export async function rollAttack(actor, weaponId) {
 
   // Render card template
   const modifierLabel = `${modifier >= 0 ? "+" : ""}${modifier}`;
+  const stripMod = (s) => (s ?? "").replace(/\s[+−-]\d+$/, "");   // "Half Aim +10" -> "Half Aim"
+  const aimLabel = stripMod(BDH.aimOptions[choice.aim]?.label) || "No Aim";
+  const rangeLabel = isRanged ? (stripMod(BDH.rangeOptions[choice.range]?.label) || "Normal") : null;
   const content = await renderTemplate(CARD, {
     weaponName: weapon.name,
     charShort,
@@ -225,6 +238,8 @@ export async function rollAttack(actor, weaponId) {
     success,
     degrees,
     attackTypeLabel: at.label,
+    aimLabel,
+    rangeLabel,
     hits,
     jammed,
     targetName: targetToken?.name ?? null,
