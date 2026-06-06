@@ -292,7 +292,6 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.favSkills = Object.entries(sys.skills).filter(([, s]) => s.favourite)
       .map(([key, s]) => ({ key, label: BDH.skills[key].label, total: s.total }));
     context.injuries = sys.injuries.map((inj, i) => ({ index: i, description: inj.description }));
-    context.agilityBonus = sys.characteristics.agility.bonus;
     const cor = corruptionTrack(sys.corruption);
     const ins = insanityTrack(sys.insanity);
     context.corruption = { value: sys.corruption, tier: cor.tier, penalty: cor.penalty, nextAt: nextTestAt(sys.corruption) };
