@@ -106,9 +106,10 @@ BDH.reload = { free: "Free", half: "Half", full: "Full", twoFull: "2 Full", thre
  *  "partial" = red gear (mostly automated, minor manual input e.g. consult a table), absent = no gear (display-only, just flagged). */
 BDH.qualities = {
   tearing:    { label: "Tearing", takesValue: false, automation: "full" },
-  proven:     { label: "Proven", takesValue: true },
-  primitive:  { label: "Primitive", takesValue: true },
-  razorSharp: { label: "Razor Sharp", takesValue: false },
+  proven:     { label: "Proven", takesValue: true, automation: "full" },
+  primitive:  { label: "Primitive", takesValue: true, automation: "full" },
+  razorSharp: { label: "Razor Sharp", takesValue: false, automation: "full" },
+  powerField: { label: "Power Field", takesValue: false },
   felling:    { label: "Felling", takesValue: true, automation: "full" },
   accurate:   { label: "Accurate", takesValue: false, automation: "full" },
   storm:      { label: "Storm", takesValue: false },

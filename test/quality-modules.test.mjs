@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -126,5 +126,30 @@ describe("hasOverheats", () => {
   it("detects Overheats", () => {
     expect(hasOverheats(Q("overheats"))).toBe(true);
     expect(hasOverheats(Q())).toBe(false);
+  });
+});
+describe("primitiveValue / provenValue", () => {
+  it("read the numeric X (0 if absent/blank)", () => {
+    expect(primitiveValue([{ key: "primitive", value: "6" }])).toBe(6);
+    expect(provenValue([{ key: "proven", value: "3" }])).toBe(3);
+    expect(primitiveValue(Q())).toBe(0);
+    expect(provenValue([{ key: "proven", value: "" }])).toBe(0);
+  });
+});
+describe("transformDamageDie", () => {
+  it("Primitive caps at X; Proven floors at X; neither -> unchanged", () => {
+    expect(transformDamageDie(9, { primitiveX: 7 })).toBe(7);
+    expect(transformDamageDie(5, { primitiveX: 7 })).toBe(5);
+    expect(transformDamageDie(10, { primitiveX: 7 })).toBe(7);
+    expect(transformDamageDie(2, { provenX: 3 })).toBe(3);
+    expect(transformDamageDie(5, { provenX: 3 })).toBe(5);
+    expect(transformDamageDie(8, {})).toBe(8);
+  });
+});
+describe("effectivePenetration with Razor Sharp", () => {
+  it("doubles Pen at 3+ DoS on a hit only", () => {
+    expect(effectivePenetration(4, { qualities: Q("razorSharp"), dos: 3, success: true, closeRange: false })).toBe(8);
+    expect(effectivePenetration(4, { qualities: Q("razorSharp"), dos: 2, success: true, closeRange: false })).toBe(4);
+    expect(effectivePenetration(4, { qualities: Q("razorSharp"), dos: 5, success: false, closeRange: false })).toBe(4);
   });
 });

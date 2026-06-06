@@ -54,6 +54,15 @@ function qualityValue(qualities, key) {
 export function concussiveValue(qualities) { return qualityValue(qualities, "concussive"); }
 export function fellingValue(qualities) { return qualityValue(qualities, "felling"); }
 export function hallucinogenicValue(qualities) { return qualityValue(qualities, "hallucinogenic"); }
+export function primitiveValue(qualities) { return qualityValue(qualities, "primitive"); }
+export function provenValue(qualities) { return qualityValue(qualities, "proven"); }
+
+/** Primitive caps a damage die at X; Proven floors it at X (exclusive; Primitive wins if both somehow set). */
+export function transformDamageDie(result, { primitiveX = 0, provenX = 0 } = {}) {
+  if (primitiveX > 0) return Math.min(result, primitiveX);
+  if (provenX > 0) return Math.max(result, provenX);
+  return result;
+}
 
 /** Felling: ignore X points of the target's UNNATURAL Toughness (natural bonus untouched). */
 export function felledToughnessBonus(toughnessBonus, unnatural, fellingX) {
@@ -67,10 +76,11 @@ export function hasGraviton(qualities) { return has(qualities, "graviton"); }
 export function hasInaccurate(qualities) { return has(qualities, "inaccurate"); }
 export function hasOverheats(qualities) { return has(qualities, "overheats"); }
 
-/** Penetration after Lance (×DoS on a hit) and Melta (×2 at Point-Blank/Short range). */
+/** Penetration after Lance (×DoS on a hit), Razor Sharp (×2 at 3+ DoS on a hit), and Melta (×2 at Point-Blank/Short range). */
 export function effectivePenetration(basePen, { qualities, dos, success, closeRange }) {
   let pen = basePen;
   if (success && has(qualities, "lance")) pen *= dos;
+  if (success && has(qualities, "razorSharp") && dos >= 3) pen *= 2;
   if (closeRange && has(qualities, "melta")) pen *= 2;
   return pen;
 }
