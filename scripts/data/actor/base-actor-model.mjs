@@ -82,6 +82,12 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
         total: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         spent: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
       }),
+      advancementLog: new fields.ArrayField(new fields.SchemaField({
+        type:   new fields.StringField({ required: true, initial: "" }),
+        label:  new fields.StringField({ required: true, initial: "" }),
+        detail: new fields.StringField({ required: true, initial: "" }),
+        cost:   new fields.NumberField({ required: true, integer: true, initial: 0 })
+      })),
       aptitudes: new fields.ArrayField(new fields.StringField({ choices: BDH.aptitudes })),
       initiative: new fields.SchemaField({
         characteristic: new fields.StringField({ required: true, choices: Object.keys(BDH.characteristics), initial: "agility" })

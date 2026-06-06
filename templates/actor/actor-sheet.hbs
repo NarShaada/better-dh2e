@@ -44,6 +44,12 @@
           {{else}}
             <div class="box rollable" data-action="rollCharacteristic" data-characteristic="{{c.key}}"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
           {{/if}}
+          {{#if @root.isSimple}}{{#unless c.noAdvance}}
+            <div class="char-buy">
+              <span class="adv-dots">{{#each c.advDots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
+              {{#if c.nextCost}}<button type="button" class="bdh-buy" data-action="buyCharacteristic" data-characteristic="{{c.key}}">＋ {{c.nextCost}}</button>{{else}}<span class="bdh-maxed">max</span>{{/if}}
+            </div>
+          {{/unless}}{{/if}}
         </div>
       {{/each}}
     </div>
@@ -70,14 +76,19 @@
         {{#each skills as |s|}}
           {{#if s.specialist}}
             <div class="skill-group {{#unless s.specialties.length}}untrained{{/unless}}">
-              <div class="skill-group-head"><span>{{localize s.label}}</span>{{#if @root.isCustom}}<button type="button" class="bdh-add" data-action="addSpecialty" data-skill="{{s.key}}" title="Add specialty">＋</button>{{/if}}</div>
+              <div class="skill-group-head"><span>{{localize s.label}}</span>{{#if @root.isCustom}}<button type="button" class="bdh-add" data-action="addSpecialty" data-skill="{{s.key}}" title="Add specialty">＋</button>{{/if}}{{#if @root.isSimple}}<button type="button" class="bdh-buy" data-action="addSpecialty" data-skill="{{s.key}}" title="Add specialty">＋ {{s.addCost}}</button>{{/if}}</div>
               {{#each s.specialties as |sp|}}
-                <div class="skill specialty" {{#unless @root.isCustom}}data-action="rollSkill"{{/unless}} data-skill="{{s.key}}" data-specialty="{{sp.index}}">
+                <div class="skill specialty" {{#unless @root.isCustom}}{{#unless @root.isSimple}}data-action="rollSkill"{{/unless}}{{/unless}} data-skill="{{s.key}}" data-specialty="{{sp.index}}">
                   <a class="bdh-fav {{#if sp.favourite}}on{{/if}}" data-action="toggleSkillFavourite" data-skill="{{s.key}}" data-specialty="{{sp.index}}" title="Favourite">★</a>
                   {{#if @root.isCustom}}
                     <input class="snm bdh-edit bdh-spec-input" type="text" data-skill="{{s.key}}" data-specialty="{{sp.index}}" data-field="name" value="{{sp.name}}" placeholder="Specialty"/>
                     <select class="sval bdh-edit bdh-spec-input" data-skill="{{s.key}}" data-specialty="{{sp.index}}" data-field="rank">{{selectOptions @root.specialtyRankChoices selected=sp.rank}}</select>
                     <a class="bdh-del" data-action="removeSpecialty" data-skill="{{s.key}}" data-specialty="{{sp.index}}" title="Remove">✖</a>
+                  {{else if @root.isSimple}}
+                    <input class="snm bdh-edit bdh-spec-input" type="text" data-skill="{{s.key}}" data-specialty="{{sp.index}}" data-field="name" value="{{sp.name}}" placeholder="Specialty"/>
+                    <span class="tier">{{#each sp.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
+                    <span class="sval">{{sp.total}}</span>
+                    {{#if sp.nextCost}}<button type="button" class="bdh-buy" data-action="buySpecialty" data-skill="{{s.key}}" data-specialty="{{sp.index}}">＋ {{sp.nextCost}}</button>{{else}}<span class="bdh-maxed">max</span>{{/if}}
                   {{else}}
                     <span class="snm">{{sp.name}}</span>
                     <span class="tier">{{#each sp.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
@@ -88,7 +99,7 @@
               {{#unless s.specialties.length}}<div class="bdh-empty">{{#if @root.isCustom}}Press ＋ to add a specialty.{{else}}—{{/if}}</div>{{/unless}}
             </div>
           {{else}}
-            <div class="skill {{#unless s.trained}}untrained{{/unless}}" {{#unless @root.isCustom}}data-action="rollSkill"{{/unless}} data-skill="{{s.key}}">
+            <div class="skill {{#unless s.trained}}untrained{{/unless}}" {{#unless @root.isCustom}}{{#unless @root.isSimple}}data-action="rollSkill"{{/unless}}{{/unless}} data-skill="{{s.key}}">
               <a class="bdh-fav {{#if s.favourite}}on{{/if}}" data-action="toggleSkillFavourite" title="Favourite">★</a>
               <span class="snm">{{localize s.label}}</span>
               <span class="tier">{{#each s.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
@@ -97,6 +108,7 @@
               {{else}}
                 <span class="sval">{{s.total}}</span>
               {{/if}}
+              {{#if @root.isSimple}}{{#if s.nextCost}}<button type="button" class="bdh-buy" data-action="buySkill" data-skill="{{s.key}}">＋ {{s.nextCost}}</button>{{else}}<span class="bdh-maxed">max</span>{{/if}}{{/if}}
             </div>
           {{/if}}
         {{/each}}
@@ -193,13 +205,18 @@
   {{!-- Other primary tabs: placeholders for later plans --}}
   <section class="tab {{tabs.abilities.cssClass}}" data-group="primary" data-tab="abilities">
     <div class="bdh-section">
-      <div class="bdh-section-head">Talents <button type="button" class="bdh-add" data-action="createItem" data-type="talent">＋</button></div>
+      <div class="bdh-section-head">Talents {{#if isCustom}}<button type="button" class="bdh-add" data-action="createItem" data-type="talent">＋</button>{{/if}}{{#if isSimple}}<button type="button" class="bdh-add" data-action="createItem" data-type="talent">＋</button>{{/if}}</div>
       {{#each talents as |t|}}
         <div class="bdh-item-row" data-item-id="{{t.id}}">
           <a class="bdh-fav {{#if t.favourite}}on{{/if}}" data-action="toggleFavourite" title="Favourite">★</a>
           <span class="bdh-name" data-action="editItem">{{t.name}}</span>
           <span class="bdh-tier">Tier {{t.tier}}</span>
           <span class="bdh-desc-line">{{t.desc}}</span>
+          {{#if @root.isSimple}}
+            {{#if t.purchased}}<span class="bdh-cost-done">{{t.cost}} xp ✓</span>
+            {{else if t.valid}}<button type="button" class="bdh-buy" data-action="buyTalent">Buy {{t.cost}}</button>
+            {{else}}<span class="bdh-warn">set tier + 2 aptitudes</span>{{/if}}
+          {{/if}}
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
         </div>
       {{/each}}
@@ -361,7 +378,7 @@
       <div class="bdh-adv-modes">
         <button type="button" class="bdh-mode {{#if isSimple}}on{{/if}}" data-action="setMode" data-mode="simple">Simple</button>
         <button type="button" class="bdh-mode {{#if isCustom}}on{{/if}}" data-action="setMode" data-mode="custom">Custom</button>
-        <span class="bdh-mode-hint">{{#if isCustom}}Custom: edit freely across the sheet.{{else if isSimple}}Simple advancement arrives in the next plan.{{else}}Pick a mode to edit; press again to return to play.{{/if}}</span>
+        <span class="bdh-mode-hint">{{#if isCustom}}Custom: edit freely across the sheet.{{else if isSimple}}Simple: buy advances — each charges Free XP and is logged below.{{else}}Pick a mode to edit; press again to return to play.{{/if}}</span>
       </div>
       <div class="bdh-xp">
         <label>Total</label><input type="number" name="system.experience.total" value="{{experience.total}}" min="0"/>
@@ -372,6 +389,13 @@
     <div class="bdh-section">
       <div class="bdh-section-head">Aptitudes <span class="bdh-hint2">the character's fixed aptitudes</span></div>
       <select class="bdh-apt-select" name="system.aptitudes" multiple size="10">{{selectOptions aptitudeChoices selected=system.aptitudes}}</select>
+    </div>
+    <div class="bdh-section">
+      <div class="bdh-section-head">Advancement Log</div>
+      {{#each advancementLog as |e|}}
+        <div class="bdh-log-row"><span class="bdh-log-what">{{e.label}}</span><span class="bdh-log-detail">{{e.detail}}</span><span class="bdh-log-cost">{{e.cost}} xp</span></div>
+      {{/each}}
+      {{#unless advancementLog.length}}<div class="bdh-empty">No Simple-advancement purchases yet.</div>{{/unless}}
     </div>
   </section>
 

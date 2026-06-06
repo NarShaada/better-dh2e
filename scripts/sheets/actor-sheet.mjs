@@ -6,6 +6,7 @@ import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
+import { aptitudeMatches, characteristicCost, skillCost, talentCost, RANK_ORDER } from "../helpers/advancement-costs.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -111,11 +112,19 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     }
   }
 
-  /** Action: add a blank specialty (starts at Known) to a specialist skill. */
+  /** Action: add a specialty (free in Custom; charges the Known cost in Simple). */
   static async #onAddSpecialty(event, target) {
     const key = target.dataset.skill;
     const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
     list.push({ name: "New Specialty", rank: "known", favourite: false });
+    if (this._advancementMode === "simple") {
+      const matches = aptitudeMatches(CONFIG.BDH.skills[key].aptitudes, this.actor.system.aptitudes);
+      const cost = skillCost(matches, "untrained");
+      const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list },
+        { type: "specialty", label: `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (new)`, detail: "→ Known", cost });
+      if (upd) await this.actor.update(upd);
+      return;
+    }
     await this.actor.update({ [`system.skills.${key}.specialties`]: list });
   }
 
@@ -190,6 +199,76 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update({ [`system.afflictions.${arr}`]: list });
   }
 
+  /** Build an update payload that applies `extraUpdates`, charges spent, and appends a log entry; null if too expensive. */
+  #chargeXP(extraUpdates, entry) {
+    const sys = this.actor.system;
+    const free = sys.experience.total - sys.experience.spent;
+    if (entry.cost > free) { ui.notifications.warn(`Not enough XP: needs ${entry.cost}, ${free} free.`); return null; }
+    return {
+      ...extraUpdates,
+      "system.experience.spent": sys.experience.spent + entry.cost,
+      "system.advancementLog": [...sys.advancementLog, entry]
+    };
+  }
+
+  /** Action: buy the next +5 characteristic advance (Simple). */
+  static async #onBuyCharacteristic(event, target) {
+    const key = target.dataset.characteristic;
+    const owned = (this.actor.system.characteristics[key].advance ?? 0) / 5;
+    const matches = aptitudeMatches(CONFIG.BDH.characteristics[key].aptitudes, this.actor.system.aptitudes);
+    const cost = characteristicCost(matches, owned);
+    if (cost == null) return;
+    const label = game.i18n.localize(CONFIG.BDH.characteristics[key].label);
+    const upd = this.#chargeXP({ [`system.characteristics.${key}.advance`]: (owned + 1) * 5 },
+      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost });
+    if (upd) await this.actor.update(upd);
+  }
+
+  /** Action: advance a standard skill to the next rank (Simple). */
+  static async #onBuySkill(event, target) {
+    const key = target.dataset.skill;
+    const rank = this.actor.system.skills[key].rank;
+    const next = RANK_ORDER[RANK_ORDER.indexOf(rank) + 1];
+    const matches = aptitudeMatches(CONFIG.BDH.skills[key].aptitudes, this.actor.system.aptitudes);
+    const cost = skillCost(matches, rank);
+    if (cost == null || !next) return;
+    const label = game.i18n.localize(CONFIG.BDH.skills[key].label);
+    const upd = this.#chargeXP({ [`system.skills.${key}.rank`]: next }, { type: "skill", label, detail: `→ ${next}`, cost });
+    if (upd) await this.actor.update(upd);
+  }
+
+  /** Action: advance an existing specialty to the next rank (Simple). */
+  static async #onBuySpecialty(event, target) {
+    const key = target.dataset.skill;
+    const idx = Number(target.dataset.specialty);
+    const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
+    const sp = list[idx];
+    const next = RANK_ORDER[RANK_ORDER.indexOf(sp.rank) + 1];
+    const matches = aptitudeMatches(CONFIG.BDH.skills[key].aptitudes, this.actor.system.aptitudes);
+    const cost = skillCost(matches, sp.rank);
+    if (cost == null || !next) return;
+    sp.rank = next;
+    const label = `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (${sp.name})`;
+    const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list }, { type: "specialty", label, detail: `→ ${next}`, cost });
+    if (upd) await this.actor.update(upd);
+  }
+
+  /** Action: buy a talent (Simple) — requires tier + exactly 2 aptitudes; charge once. */
+  static async #onBuyTalent(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId;
+    const item = this.actor.items.get(id);
+    if (!item || item.system.purchased) return;
+    if ((item.system.aptitudes?.length ?? 0) !== 2 || !(item.system.tier >= 1)) {
+      ui.notifications.warn("Set a tier and exactly two aptitudes on the talent before buying.");
+      return;
+    }
+    const cost = talentCost(aptitudeMatches(item.system.aptitudes, this.actor.system.aptitudes), item.system.tier);
+    const upd = this.#chargeXP({}, { type: "talent", label: item.name, detail: `Tier ${item.system.tier}`, cost });
+    if (!upd) return;
+    await item.update({ "system.purchased": true });
+    await this.actor.update(upd);
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor"],
     position: { width: 1000, height: 900 },
@@ -214,7 +293,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       setMode: DarkHeresyActorSheet.#onSetMode,
       adjustFatigue: DarkHeresyActorSheet.#onAdjustFatigue,
       addSpecialty: DarkHeresyActorSheet.#onAddSpecialty,
-      removeSpecialty: DarkHeresyActorSheet.#onRemoveSpecialty
+      removeSpecialty: DarkHeresyActorSheet.#onRemoveSpecialty,
+      buyCharacteristic: DarkHeresyActorSheet.#onBuyCharacteristic,
+      buySkill: DarkHeresyActorSheet.#onBuySkill,
+      buySpecialty: DarkHeresyActorSheet.#onBuySpecialty,
+      buyTalent: DarkHeresyActorSheet.#onBuyTalent
     }
   };
 
@@ -363,6 +446,28 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const initKey = sys.initiative.characteristic;
     context.initBonus = sys.characteristics[initKey].bonus;
     context.initShort = BDH.characteristics[initKey].short;
+    // Simple-mode cost data (cheap; the template reads it only when isSimple).
+    const apts = sys.aptitudes;
+    context.characteristics = context.characteristics.map((c) => {
+      if (c.key === "influence") return { ...c, noAdvance: true };
+      const owned = (sys.characteristics[c.key].advance ?? 0) / 5;
+      const matches = aptitudeMatches(BDH.characteristics[c.key].aptitudes, apts);
+      return { ...c, owned, advDots: [0, 1, 2, 3, 4].map((i) => i < owned), nextCost: characteristicCost(matches, owned) };
+    });
+    context.skills = context.skills.map((s) => {
+      const matches = aptitudeMatches(BDH.skills[s.key].aptitudes, apts);
+      if (s.specialist) {
+        return { ...s, addCost: skillCost(matches, "untrained"), specialties: s.specialties.map((sp) => ({ ...sp, nextCost: skillCost(matches, sp.rank) })) };
+      }
+      return { ...s, nextCost: skillCost(matches, s.rank) };
+    });
+    context.talents = context.talents.map((t) => {
+      const tsys = items.get(t.id).system;
+      const valid = (tsys.aptitudes?.length === 2) && tsys.tier >= 1;
+      const cost = valid ? talentCost(aptitudeMatches(tsys.aptitudes, apts), tsys.tier) : null;
+      return { ...t, cost, valid, purchased: tsys.purchased ?? false };
+    });
+    context.advancementLog = sys.advancementLog;
     return context;
   }
 
