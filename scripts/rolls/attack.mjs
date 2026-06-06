@@ -106,8 +106,13 @@ async function rollEvade(message) {
   if (!choice) return;
   const modifier = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
   if (choice.reaction === "parry") {
+    const meleeQs = defender.items
+      .filter((i) => i.type === "weapon" && i.system.weaponClass === "melee" && i.system.equipped)
+      .map((i) => i.system.qualities);
+    const pmod = parryModifier(meleeQs);
     const base = defender.system.characteristics.weaponSkill.total;
-    return performTest(defender, { label: "Parry (WS)", base, modifier });
+    const label = pmod ? `Parry (WS, weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry (WS)";
+    return performTest(defender, { label, base, modifier: modifier + pmod });
   }
   const dodge = defender.system.skills.dodge;
   const base = defender.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
