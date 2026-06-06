@@ -316,6 +316,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       free: sys.experience.total - sys.experience.spent
     };
     context.charChoices = Object.fromEntries(Object.keys(BDH.characteristics).map((k) => [k, BDH.characteristics[k].short]));
+    context.rankChoices = { untrained: "Untrained −20", known: "Known +0", trained: "Trained +10", experienced: "Experienced +20", veteran: "Veteran +30" };
+    const initKey = sys.initiative.characteristic;
+    context.initBonus = sys.characteristics[initKey].bonus;
+    context.initShort = BDH.characteristics[initKey].short;
     return context;
   }
 

@@ -19,7 +19,7 @@
     </div>
     <div class="fate">
       <div class="lbl">Fate</div>
-      <div class="v">{{system.fate.value}} / {{system.fate.max}}</div>
+      <div class="v">{{system.fate.value}} / {{#if isCustom}}<input class="bdh-edit bdh-fate-max" type="number" name="system.fate.max" value="{{system.fate.max}}" min="0"/>{{else}}{{system.fate.max}}{{/if}}</div>
     </div>
   </header>
 
@@ -140,7 +140,7 @@
             <div class="bdh-section-head">Wounds</div>
             <div class="bdh-wounds">
               <label>Current</label><input type="number" name="system.wounds.value" value="{{system.wounds.value}}"/>
-              <label>Max</label><input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>
+              <label>Max</label>{{#if isCustom}}<input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>{{else}}<span class="bdh-ro">{{system.wounds.max}}</span>{{/if}}
               <label>Critical</label><input type="number" name="system.wounds.critical" value="{{system.wounds.critical}}"/>
             </div>
           </div>
@@ -160,7 +160,9 @@
               <span>Half {{system.movement.half}} m</span><span>Full {{system.movement.full}} m</span>
               <span>Charge {{system.movement.charge}} m</span><span>Run {{system.movement.run}} m</span>
             </div>
-            <div class="bdh-init">Initiative: 1d10 + {{agilityBonus}} (Ag)</div>
+            <div class="bdh-init">Initiative: 1d10 +
+              {{#if isCustom}}<select name="system.initiative.characteristic">{{selectOptions charChoices selected=system.initiative.characteristic}}</select>{{else}}<b>{{initBonus}}</b> ({{initShort}}){{/if}}
+            </div>
           </div>
         </div>
       </div>
