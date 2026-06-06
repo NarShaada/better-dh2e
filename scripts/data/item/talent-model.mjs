@@ -11,7 +11,8 @@ export class TalentModel extends BaseItemModel {
       tier:          new fields.NumberField({ required: true, integer: true, initial: 1, min: 1, max: 3 }),
       prerequisites: new fields.StringField({ required: true, initial: "" }),
       aptitudes:     new fields.ArrayField(new fields.StringField({ choices: BDH.aptitudes })),
-      favourite:     new fields.BooleanField({ required: true, initial: false })
+      favourite:     new fields.BooleanField({ required: true, initial: false }),
+      purchased:     new fields.BooleanField({ required: true, initial: false })
     };
   }
 }

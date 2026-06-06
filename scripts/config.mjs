@@ -27,6 +27,13 @@ BDH.skillRanks = {
 /** Specialist-skill specialty ranks (a specialty exists only once owned — no "untrained"). */
 BDH.specialtyRanks = ["known", "trained", "experienced", "veteran"];
 
+/** XP cost tables, keyed by aptitude-match count (0/1/2), arrays indexed by advance level. */
+BDH.xpCosts = {
+  characteristic: { 2: [100, 250, 500, 750, 1250], 1: [250, 500, 750, 1000, 1500], 0: [500, 750, 1000, 1500, 2500] },
+  skill:          { 2: [100, 200, 300, 400],        1: [200, 400, 600, 800],         0: [300, 600, 900, 1200] },
+  talent:         { 2: [200, 300, 400],             1: [300, 450, 600],              0: [600, 900, 1200] }
+};
+
 /** Full 28-skill list with governing characteristic, aptitudes, and specialist flag. */
 BDH.skills = {
   acrobatics:     { label: "BDH.Skill.Acrobatics",     characteristic: "agility",      aptitudes: ["Agility", "General"],        specialist: false },
