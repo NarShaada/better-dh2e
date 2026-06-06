@@ -17,6 +17,7 @@ function skillStub() {
   o.dodge = { rank: "trained", total: 45 };
   o.awareness = { rank: "known", total: 28 };
   o.parry = { rank: "trained", total: 60, favourite: true };
+  o.commonLore = { specialties: [{ name: "Imperium", rank: "trained", total: 55, favourite: true }] };
   return o;
 }
 
@@ -63,6 +64,16 @@ describe("buildSkills", () => {
     const list = buildSkills(skillStub());
     expect(list.find((s) => s.key === "parry").favourite).toBe(true);
     expect(list.find((s) => s.key === "dodge").favourite).toBe(false);
+  });
+  it("emits a specialist group with specialty rows", () => {
+    const list = buildSkills(skillStub());
+    const cl = list.find((s) => s.key === "commonLore");
+    expect(cl.specialist).toBe(true);
+    expect(cl.specialties[0]).toMatchObject({ index: 0, name: "Imperium", rank: "trained", total: 55, favourite: true });
+  });
+  it("keeps standard skills flat with specialist=false", () => {
+    const list = buildSkills(skillStub());
+    expect(list.find((s) => s.key === "dodge").specialist).toBe(false);
   });
 });
 
