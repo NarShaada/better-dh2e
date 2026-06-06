@@ -78,7 +78,8 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.qualityChoices = Object.fromEntries(Object.entries(BDH.qualities).map(([k, v]) => [k, v.label]));
       context.qualityList = system.qualities.map((q, i) => {
         const label = BDH.qualities[q.key]?.label ?? q.key;
-        return { index: i, key: q.key, display: q.value != null ? `${label} (${q.value})` : label, automated: BDH.qualities[q.key]?.automated ?? false };
+        const automation = BDH.qualities[q.key]?.automation;
+        return { index: i, key: q.key, display: q.value != null ? `${label} (${q.value})` : label, autoFull: automation === "full", autoPartial: automation === "partial" };
       });
       context.modList = system.mods.map((m, i) => ({ index: i, ...m }));
     }

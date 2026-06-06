@@ -1,6 +1,7 @@
 // scripts/data/actor/base-actor-model.mjs
 import { BDH } from "../../config.mjs";
 import { characteristicTotal, characteristicBonus, skillTotal, fatigueMax, movement } from "../../helpers/derived.mjs";
+import { effectiveAgilityCap, applyImpairments } from "../../helpers/impairment-data.mjs";
 
 const fields = foundry.data.fields;
 
@@ -105,6 +106,12 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       c.total = characteristicTotal(c);
       c.bonus = characteristicBonus(c);
     }
+    // Fatigue max from UNIMPAIRED Toughness/Willpower bonuses (impairment must not shrink the max).
+    this.fatigue.max = this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus);
+    // Impairment: armour Agility cap + fatigue halving (mutates this.characteristics, sets `impaired`).
+    const equippedArmour = this.parent.items.filter((i) => i.type === "armour" && i.system.equipped).map((i) => i.system);
+    applyImpairments(this.characteristics, this.fatigue.value, effectiveAgilityCap(equippedArmour));
+    // Skills + movement use the (possibly impaired) characteristic totals/bonuses.
     for (const [key, skill] of Object.entries(this.skills)) {
       const charTotal = this.characteristics[BDH.skills[key].characteristic].total;
       if (BDH.skills[key].specialist) {
@@ -113,7 +120,6 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
         skill.total = skillTotal(charTotal, skill.rank);
       }
     }
-    this.fatigue.max = this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus);
     this.movement = movement(this.characteristics.agility.bonus, this.size);
   }
 }

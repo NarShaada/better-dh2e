@@ -234,7 +234,12 @@
 .bdh-card-actions { display:flex; gap:6px; margin-top:4px; }
 .bdh-card-actions button { flex:1; background:#5a2a2a; color:#e7d8b8; border:none; border-radius:3px; font-size:11px; padding:3px; cursor:pointer; }
 
-.better-dh2e .bdh-auto { color:#3d6a4a; font-size:11px; }
+.better-dh2e .bdh-auto { color:#1a1410; font-size:11px; }
+.better-dh2e .bdh-auto.partial { color:#a02020; }
 
 /* Reload button on the Combat weapon row */
 .better-dh2e .bdh-reload { flex:0 0 auto; background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:3px; color:var(--bdh-maroon); font-size:11px; padding:0 6px; cursor:pointer; }
+
+/* Impaired characteristic (armour Agility cap or fatigue halving) — value + bonus red */
+.better-dh2e .char.impaired .box .val { color:#a02020; }
+.better-dh2e .char.impaired .bonus { color:#a02020; }
