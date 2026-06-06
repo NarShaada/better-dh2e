@@ -112,7 +112,7 @@ async function applyDamage(message) {
     lines.push(`${h.label}: ${h.total} → ${eff} dmg${res.critical ? ` (${res.critical} critical)` : ""}`);
   }
   await target.update({ "system.wounds.value": wounds, "system.wounds.critical": (sys.wounds.critical ?? 0) + totalCrit });
-  const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit} — consult Critical Effects (location × type).</div>` : "";
+  const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div><div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${wounds} / ${sys.wounds.max}</div></div>`
