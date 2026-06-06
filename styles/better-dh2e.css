@@ -170,3 +170,21 @@
 .better-dh2e .bdh-psy-bar { display:flex; align-items:center; gap:8px; padding:8px 14px; }
 .better-dh2e .bdh-psy-bar label { font-variant:small-caps; letter-spacing:1px; color:var(--bdh-maroon); font-weight:bold; }
 .better-dh2e .bdh-psy-bar input { width:64px; font-size:16px; font-weight:bold; }
+
+/* Advancement control center + Custom-mode editables */
+.better-dh2e .bdh-adv-ctl { display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:8px 14px; }
+.better-dh2e .bdh-adv-modes { display:flex; align-items:center; gap:8px; }
+.better-dh2e .bdh-mode { background:var(--bdh-panel); color:var(--bdh-maroon); border:1px solid var(--bdh-brown); border-radius:5px; padding:4px 14px; cursor:pointer; font-variant:small-caps; letter-spacing:1px; }
+.better-dh2e .bdh-mode.on { background:var(--bdh-maroon); color:var(--bdh-parch); }
+.better-dh2e .bdh-mode-hint { font-size:11px; color:var(--bdh-muted); font-style:italic; }
+.better-dh2e .bdh-xp { display:flex; align-items:center; gap:6px; }
+.better-dh2e .bdh-xp label { font-size:10px; text-transform:uppercase; color:var(--bdh-muted); letter-spacing:1px; }
+.better-dh2e .bdh-xp input, .better-dh2e .bdh-xp .bdh-xp-v { width:70px; text-align:right; font-weight:bold; }
+.better-dh2e .bdh-xp-free { color:#3d6a4a; }
+.better-dh2e .bdh-apt-select { width:calc(100% - 16px); margin:4px 8px 8px; min-height:180px; }
+.better-dh2e .bdh-edit { background:#fff6df; border:1px solid var(--bdh-gold); border-radius:3px; }
+.better-dh2e .char .box input.val { width:80%; text-align:center; font-size:18px; font-weight:bold; }
+.better-dh2e input.bonus { width:60%; text-align:center; }
+.better-dh2e .skill select.sval { min-width:90px; }
+.better-dh2e .bdh-fat-btn { flex:0 0 auto; width:20px; height:18px; line-height:1; background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:3px; cursor:pointer; color:var(--bdh-maroon); }
+.better-dh2e .bdh-fat-max, .better-dh2e .bdh-fate-max { width:48px; }
