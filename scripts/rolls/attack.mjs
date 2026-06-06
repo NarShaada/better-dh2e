@@ -24,7 +24,41 @@ export function bindCardButtons(message, html) {
 }
 
 // --- Follow-up step handlers (filled in by later tasks) ---
-async function rollDamage(message) { /* Plan 16 Task 5 */ }
+async function rollDamage(message) {
+  const f = message.flags[NS];
+  const actor = await fromUuid(f.actorUuid);
+  const weapon = actor?.items.get(f.weaponId);
+  if (!weapon) return;
+  const baseFormula = weapon.system.damage;            // e.g. "1d10+3"
+  const mod = await DialogV2.prompt({
+    window: { title: `${weapon.name} — Damage` },
+    content: `<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
+    ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object.mod },
+    rejectClose: false
+  });
+  if (mod == null) return;
+  const trimmed = String(mod).trim();
+  const rolls = [];
+  const hits = [];
+  for (const hit of f.hits) {
+    const formula = (hit.index === 0 && trimmed && trimmed !== "+0") ? `${baseFormula} + ${trimmed}` : baseFormula;
+    const r = await new Roll(formula).evaluate();
+    // Righteous Fury: any d10 term die showing a natural 10.
+    const rf = r.dice.some((d) => d.faces === 10 && d.results.some((res) => res.active && res.result === 10));
+    rolls.push(r);
+    hits.push({ index: hit.index, location: hit.location, label: hit.label, total: r.total, rf });
+  }
+  const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
+    targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid };
+  const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
+  const messageData = {
+    speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
+    flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: f.penetration, damageType: f.damageType,
+      hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf })) } }
+  };
+  ChatMessage.applyRollMode(messageData, "roll");
+  await ChatMessage.create(messageData);
+}
 async function rollEvade(message) { /* Plan 16 Task 7 */ }
 async function applyDamage(message) { /* Plan 16 Task 6 */ }
 
