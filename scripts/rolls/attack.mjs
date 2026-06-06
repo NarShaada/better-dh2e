@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -181,11 +181,16 @@ async function applyDamage(message) {
   const tb = sys.characteristics.toughness.bonus;
   const equipped = target.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
   const ap = computeArmour(equipped, 0);               // pure per-location AP (tb=0 so TB isn't folded in)
+  const qualities = f.qualities ?? [];
+  const felX = fellingValue(qualities);
+  const tbEff = felX ? felledToughnessBonus(tb, sys.characteristics.toughness.unnatural ?? 0, felX) : tb;
+  const graviton = hasGraviton(qualities);
   let wounds = sys.wounds.value;
   let totalCrit = 0;
   const lines = [];
   for (const h of f.hits) {
-    const eff = soak(h.total, ap[h.location] ?? 0, f.penetration, tb);  // pen vs AP, then TB
+    const locAp = ap[h.location] ?? 0;
+    const eff = soak(h.total + (graviton ? locAp : 0), locAp, f.penetration, tbEff);  // pen vs AP, then tbEff
     const res = applyWounds(wounds, sys.wounds.max, eff);
     wounds = res.wounds;
     totalCrit += res.critical;
