@@ -20,6 +20,11 @@ describe("computeArmour", () => {
     ], 0);
     expect(r.body).toBe(6);
   });
+  it("Best-craftsmanship armour adds +1 AP per protected location (not 0-AP ones)", () => {
+    const r = computeArmour([{ additive: false, craftsmanship: "best", locations: { head: 0, body: 6, rightArm: 0, leftArm: 0, rightLeg: 0, leftLeg: 0 } }], 0);
+    expect(r.body).toBe(7);
+    expect(r.head).toBe(0);
+  });
   it("additive pieces stack on top of the best non-additive piece", () => {
     const r = computeArmour([
       { additive: false, locations: loc({ body: 6 }) },

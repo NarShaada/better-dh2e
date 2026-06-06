@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, qualityJamFloor, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 
@@ -14,13 +14,6 @@ describe("qualityToHitMod", () => {
     expect(qualityToHitMod(Q("accurate"), { aiming: true })).toBe(10);
     expect(qualityToHitMod(Q("accurate"), { aiming: false })).toBe(0);
     expect(qualityToHitMod(Q(), { aiming: true })).toBe(0);
-  });
-});
-describe("qualityJamFloor", () => {
-  it("Reliable 100, Unreliable 91, else base 94", () => {
-    expect(qualityJamFloor(Q("reliable"))).toBe(100);
-    expect(qualityJamFloor(Q("unreliable"))).toBe(91);
-    expect(qualityJamFloor(Q())).toBe(94);
   });
 });
 describe("accurateBonusDice", () => {

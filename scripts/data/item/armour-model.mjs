@@ -17,7 +17,8 @@ export class ArmourModel extends BaseItemModel {
       craftsmanship: new fields.StringField({ required: true, choices: Object.keys(BDH.craftsmanship), initial: "normal" }),
       availability:  new fields.StringField({ required: true, choices: Object.keys(BDH.availability), initial: "average" }),
       weight:        new fields.NumberField({ required: true, initial: 0, min: 0 }),
-      equipped:      new fields.BooleanField({ required: true, initial: false })
+      equipped:      new fields.BooleanField({ required: true, initial: false }),
+      maxAgility:    new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
     };
   }
 }

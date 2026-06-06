@@ -5,7 +5,9 @@ import { performTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, qualityJamFloor, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking } from "../helpers/quality-modules.mjs";
+import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
+import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -67,11 +69,13 @@ async function rollDamage(message) {
   const trimmed = String(mod).trim();
   const qualities = f.qualities ?? [];
   const dos = f.dos ?? 0;
+  const craftDmg = !f.isRanged ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
+  const weaponBase = craftDmg ? `${baseFormula} + ${craftDmg}` : baseFormula;
   const rolls = [];
   const rolled = [];   // per hit: { hit, wRoll, bRoll, rf, baseTotal }
   for (const hit of f.hits) {
     // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
-    const weaponFormula = weaponDamageFormula(qualities, baseFormula);
+    const weaponFormula = weaponDamageFormula(qualities, weaponBase);
     const wRoll = await new Roll(weaponFormula).evaluate();
     const rf = wRoll.dice.some((d) => d.faces === 10 && d.results.some((res) => res.active && res.result === 10));
     rolls.push(wRoll);
@@ -228,8 +232,17 @@ export async function rollAttack(actor, weaponId) {
   const manual = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
   const aiming = choice.aim !== "none";
   const qualMod = qualityToHitMod(weapon.system.qualities, { aiming });
-  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod;
+  const craftMod = isMelee ? meleeCraftToHit(weapon.system.craftsmanship) : 0;
+  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod;
   const base = actor.system.characteristics[charKey].total;
+
+  // Ammo check — block if clip is too low; compute rounds consumed for this attack type
+  const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
+  const rounds = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1);
+  if (usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
+    ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
+    return null;
+  }
 
   // Roll and evaluate
   const roll = await new Roll("1d100").evaluate();
@@ -249,7 +262,7 @@ export async function rollAttack(actor, weaponId) {
   const locs = success ? locationSequence(firstLoc, nHits) : [];
 
   // Jam check
-  const jammed = checkJam(roll.total, success, isRanged, qualityJamFloor(weapon.system.qualities));
+  const jammed = checkJam(roll.total, success, isRanged, effectiveJamFloor(weapon.system.qualities, weapon.system.craftsmanship));
 
   // Target token (if any)
   const targetToken = game.user.targets.first() ?? null;
@@ -315,5 +328,7 @@ export async function rollAttack(actor, weaponId) {
   };
   ChatMessage.applyRollMode(messageData, "roll");
   const msg = await ChatMessage.create(messageData);
+  // Deduct rounds after the message is created (jam still consumes)
+  if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - rounds });
   return msg;
 }
