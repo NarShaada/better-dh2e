@@ -6,6 +6,7 @@ import { BDH } from "../scripts/config.mjs";
 function charStub() {
   const o = {};
   for (const k of Object.keys(BDH.characteristics)) o[k] = { base: 25, advance: 0, unnatural: 0, total: 25, bonus: 2 };
+  o.agility = { base: 30, advance: 0, unnatural: 0, total: 30, bonus: 3, impaired: true };
   o.toughness = { base: 42, advance: 0, unnatural: 0, total: 42, bonus: 4 };
   o.influence = { base: 25, advance: 0, unnatural: 0, total: 37, bonus: 3 };
   return o;
@@ -41,6 +42,11 @@ describe("buildCharacteristics", () => {
     const t = rows.find((r) => r.key === "toughness");
     expect(t.base).toBe(42);
     expect(t.unnatural).toBe(0);
+  });
+  it("carries the impaired flag", () => {
+    const rows = buildCharacteristics(charStub());
+    expect(rows.find((r) => r.key === "agility").impaired).toBe(true);
+    expect(rows.find((r) => r.key === "toughness").impaired).toBe(false);
   });
 });
 

@@ -16,6 +16,7 @@ export function buildCharacteristics(characteristics) {
       bonus: c.bonus ?? 0,
       base: c.base ?? 0,
       unnatural: c.unnatural ?? 0,
+      impaired: c.impaired ?? false,
       isInfluence: key === "influence"
     };
   });
