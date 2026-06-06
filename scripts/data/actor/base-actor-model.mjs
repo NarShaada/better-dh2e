@@ -24,6 +24,7 @@ function skillsSchema() {
     if (BDH.skills[key].specialist) {
       schema[key] = new fields.SchemaField({
         specialties: new fields.ArrayField(new fields.SchemaField({
+          id:        new fields.StringField({ required: true, initial: "" }),
           name:      new fields.StringField({ required: true, initial: "" }),
           rank:      new fields.StringField({ required: true, choices: BDH.specialtyRanks, initial: "known" }),
           favourite: new fields.BooleanField({ required: true, initial: false })
@@ -83,10 +84,13 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
         spent: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
       }),
       advancementLog: new fields.ArrayField(new fields.SchemaField({
-        type:   new fields.StringField({ required: true, initial: "" }),
-        label:  new fields.StringField({ required: true, initial: "" }),
-        detail: new fields.StringField({ required: true, initial: "" }),
-        cost:   new fields.NumberField({ required: true, integer: true, initial: 0 })
+        type:        new fields.StringField({ required: true, initial: "" }),
+        label:       new fields.StringField({ required: true, initial: "" }),
+        detail:      new fields.StringField({ required: true, initial: "" }),
+        cost:        new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        ref:         new fields.StringField({ required: true, initial: "" }),
+        specialtyId: new fields.StringField({ required: true, initial: "" }),
+        toRank:      new fields.StringField({ required: true, initial: "" })
       })),
       aptitudes: new fields.ArrayField(new fields.StringField({ choices: BDH.aptitudes })),
       initiative: new fields.SchemaField({
