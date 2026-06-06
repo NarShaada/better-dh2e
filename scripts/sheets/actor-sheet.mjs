@@ -38,6 +38,14 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update({ "system.fatigue.value": next });
   }
 
+  /** Action: nudge current Fate by +/-1 (clamped to [0, max]). */
+  static async #onAdjustFate(event, target) {
+    const delta = Number(target.dataset.delta);
+    const max = this.actor.system.fate.max ?? 0;
+    const next = Math.min(max, Math.max(0, (this.actor.system.fate.value ?? 0) + delta));
+    await this.actor.update({ "system.fate.value": next });
+  }
+
   /** Action: roll the clicked characteristic. */
   static async #onRollCharacteristic(event, target) {
     await rollCharacteristic(this.document, target.dataset.characteristic);
@@ -335,6 +343,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       removeAffliction: DarkHeresyActorSheet.#onRemoveAffliction,
       setMode: DarkHeresyActorSheet.#onSetMode,
       adjustFatigue: DarkHeresyActorSheet.#onAdjustFatigue,
+      adjustFate: DarkHeresyActorSheet.#onAdjustFate,
       addSpecialty: DarkHeresyActorSheet.#onAddSpecialty,
       removeSpecialty: DarkHeresyActorSheet.#onRemoveSpecialty,
       buyCharacteristic: DarkHeresyActorSheet.#onBuyCharacteristic,
@@ -356,9 +365,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         { id: "stats", label: "BDH.Sheet.Stats" },
         { id: "abilities", label: "BDH.Sheet.Abilities" },
         { id: "gear", label: "BDH.Sheet.Gear" },
-        { id: "notes", label: "BDH.Sheet.Notes" },
         { id: "afflictions", label: "BDH.Sheet.Afflictions" },
         { id: "psychic", label: "BDH.Sheet.Psychic" },
+        { id: "notes", label: "BDH.Sheet.Notes" },
         { id: "advancement", label: "BDH.Sheet.Advancement" }
       ]
     },

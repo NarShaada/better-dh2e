@@ -20,6 +20,7 @@
     <div class="fate">
       <div class="lbl">Fate</div>
       <div class="v">{{system.fate.value}} / {{#if isCustom}}<input class="bdh-edit bdh-fate-max" type="number" name="system.fate.max" value="{{system.fate.max}}" min="0"/>{{else}}{{system.fate.max}}{{/if}}</div>
+      <div class="fate-adj"><button type="button" data-action="adjustFate" data-delta="-1" title="−1">−</button><button type="button" data-action="adjustFate" data-delta="1" title="+1">＋</button></div>
     </div>
   </header>
 
@@ -37,7 +38,7 @@
           {{#if @root.isCustom}}
             <span class="bonus bdh-edit bdh-unnat"><span class="bdh-plus">+</span><input type="number" name="system.characteristics.{{c.key}}.unnatural" value="{{c.unnatural}}" title="Unnatural bonus (additive)"/></span>
           {{else}}
-            <div class="bonus">{{c.bonus}}</div>
+            <div class="bonus">{{c.bonus}}{{#if c.unnatural}}<span class="bonus-u">(U)</span>{{/if}}</div>
           {{/if}}
           {{#if @root.isCustom}}
             <div class="box"><input class="val bdh-edit" type="number" name="system.characteristics.{{c.key}}.base" value="{{c.base}}"/><div class="nm">{{c.short}}</div></div>
@@ -119,7 +120,7 @@
       <div class="bdh-armour-row">
         {{#each armourRow as |a|}}
           <div class="bdh-armloc">
-            <div class="bdh-armtb">+{{a.tb}}</div>
+            <div class="bdh-armtb">{{a.tb}}</div>
             <div class="bdh-armap">{{a.ap}}</div>
             <div class="bdh-armlbl">{{a.label}}</div>
           </div>
@@ -172,8 +173,7 @@
           <div class="bdh-section">
             <div class="bdh-section-head">Wounds</div>
             <div class="bdh-wounds">
-              <label>Current</label><input type="number" name="system.wounds.value" value="{{system.wounds.value}}"/>
-              <label>Max</label>{{#if isCustom}}<input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>{{else}}<span class="bdh-ro">{{system.wounds.max}}</span>{{/if}}
+              <label>Wounds</label><span class="bdh-wval"><input type="number" name="system.wounds.value" value="{{system.wounds.value}}"/> / {{#if isCustom}}<input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>{{else}}<b class="bdh-ro">{{system.wounds.max}}</b>{{/if}}</span>
               <label>Critical</label><input type="number" name="system.wounds.critical" value="{{system.wounds.critical}}"/>
             </div>
           </div>

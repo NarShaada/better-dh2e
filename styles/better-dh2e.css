@@ -183,9 +183,10 @@
 .better-dh2e .bdh-xp-free { color:#3d6a4a; }
 .better-dh2e .bdh-apt-select { width:calc(100% - 16px); margin:4px 8px 8px; min-height:180px; }
 .better-dh2e .bdh-edit { background:#fff6df; border:1px solid var(--bdh-gold); border-radius:3px; color:var(--bdh-ink); }
-.better-dh2e .bdh-unnat { display:inline-flex; align-items:center; justify-content:center; padding:0 2px; }
-.better-dh2e .bdh-unnat .bdh-plus { color:var(--bdh-ink); font-weight:bold; }
-.better-dh2e .bdh-unnat input { border:none; background:transparent; width:22px; padding:0; text-align:left; color:var(--bdh-ink); }
+.better-dh2e .bdh-unnat { display:inline-flex; align-items:center; justify-content:center; padding:0 2px; background:var(--bdh-maroon); color:var(--bdh-parch); }
+.better-dh2e .bdh-unnat .bdh-plus { color:var(--bdh-parch); font-weight:bold; }
+.better-dh2e .bdh-unnat input { border:none; background:transparent; width:22px; padding:0; text-align:left; color:var(--bdh-parch); }
+.better-dh2e .char .bonus-u { font-size:8px; vertical-align:super; opacity:.85; }
 .better-dh2e .char .box input.val { width:80%; text-align:center; font-size:18px; font-weight:bold; }
 .better-dh2e input.bonus { width:60%; text-align:center; }
 .better-dh2e .skill select.sval { min-width:90px; }
@@ -214,3 +215,9 @@
 .better-dh2e .bdh-log-detail { flex:1; color:var(--bdh-muted); font-size:11px; }
 .better-dh2e .bdh-log-cost { font-weight:bold; color:var(--bdh-maroon); }
 .better-dh2e .bdh-log-refund { flex:0 0 auto; }
+
+/* Wounds current/max inline + Fate +/- buttons */
+.better-dh2e .bdh-wval { display:inline-flex; align-items:center; gap:5px; }
+.better-dh2e .bdh-wval input { width:46px; }
+.better-dh2e .bdh-header .fate-adj { display:flex; gap:3px; justify-content:center; margin-top:2px; }
+.better-dh2e .bdh-header .fate-adj button { flex:1; background:var(--bdh-panel); border:1px solid var(--bdh-gold); border-radius:3px; color:var(--bdh-gold); font-size:11px; line-height:1.3; padding:0; cursor:pointer; }
