@@ -204,6 +204,31 @@ The attack card shows outcome, **DoS**, the attack type, and **one line per hit 
 
 **Evade (from the attack card).** Prompts a **Reaction** — **Parry** (WS) or **Dodge** (Agility / Dodge skill) — plus a Modifier, and posts a **standard test card** like any other roll. Using its DoS to actually negate extra hits is later reaction automation (P3); for now the GM reads the result.
 
+### 11a. Attack Pipeline — resolved build design
+
+Built in **two plans**: **(A) core pipeline** — dialogs/cards, base jam, hits/locations, damage, soak, apply, evade (qualities stored + flagged, not yet automated); **(B) quality modules** — the registry hooks + the first seven modules. (Storm/Razor Sharp/Toxic/… remain flagged for later passes.)
+
+- **Pipeline:** ordered stages over a mutable context `{actor, weapon, target, modifiers, dice, hits[], ...}` — `collectModifiers → resolveToHit → checkJam (ranged) → computeHits → assignLocations → resolveDamage → modifyDamage → resolveSoak → applyToTarget → queuedEffects`. Pure stage math is unit-tested; quality modules (Plan B) register against stages by structured key (graceful degradation: unimplemented qualities are displayed/flagged, never dropped).
+- **Targeting:** captured **at to-hit** from the attacker's target and **bound to the attack card** ("vs ‹name›"). **No target → the chain ends at the damage roll** (no Apply step; GM/players apply by hand — useful for off-token situations).
+- **Apply Damage:** **GM-only** button (avoids a dead button for unprivileged players); runs soak against the bound target's actor.
+- **To-hit dialog/card:** Modifier · Aim (Half +10 / Full +20) · Attack Type · Range (ranged: PB +30 / Short +10 / Normal 0 / Long −10 / Extreme −30). Single: Standard +10, Called Shot −20 (pick location), All-Out +30 (melee, no reactions), Charge +10. Multi (capped at RoF; Storm doubles): Semi/Swift +0 (+1 hit/2 DoS), Full/Lightning −10 (+1 hit/DoS). Card shows outcome · DoS · type · one line per hit with its **reversed-digit hit location** (fixed sequence for extra hits) · jam status · **⚅ Roll damage** / **🛡 Evade**.
+- **Jam (ranged):** a failed attack rolling **94+** jams (base); Reliable → only **100**; Unreliable → **91+** (verify bands §10).
+- **Damage:** one Modifier popup per attack (regex: flat + dice). Weapon base damage rolled **per hit** at its location; **Modifier applied to the first hit only**. **Righteous Fury** = a natural **10 on a weapon damage die** (or Vengeful X) → flag the hit, roll its **1d5 as the crit-table index** (not bonus damage).
+- **Soak / application math:** per hit `effective = rolled − max(0, targetArmourAtLocation − penetration) − targetToughnessBonus`; ≤0 → no wound; otherwise add to **Wounds**; any overflow past **max Wounds → Critical** (by location × type, for future crit tables). Target armour from its **equipped armour** (`computeArmour`, per location).
+- **Evade:** Parry (WS, ± the parrying weapon's Balanced/Unbalanced) or Dodge (Ag / Dodge skill) + Modifier → a **standard test card**; DoS-driven hit negation deferred (P3, GM reads for now).
+
+**Quality effect-pattern framework (Plan B)** — the first seven modules, each a registered hook proving a reusable pattern:
+
+| Quality | Stage(s) | Behaviour | Pattern |
+|---|---|---|---|
+| **Accurate** | `collectModifiers` + `modifyDamage` | +10 to-hit when aiming; ranged & aimed → **+1d10 per 2 DoS, capped +2d10, to the first hit; these dice do NOT generate Righteous Fury** | modify-attack + modify-damage |
+| **Tearing** | `modifyDamage` | roll **+1 weapon damage die, drop the lowest** — **weapon dice only, never bonus/modifier dice** | modify-damage |
+| **Reliable** | `checkJam` | jam only on a natural 100 | modify-jam |
+| **Unreliable** | `checkJam` | jam on 91+ | modify-jam |
+| **Balanced** | evade | +10 to a Parry made with it | modify-evade |
+| **Unbalanced** | evade | −10 to a Parry made with it | modify-evade |
+| **Shocking** | `queuedEffects` | on a damaging hit, queue a Toughness test (fail → Stunned) | queued-condition |
+
 ## 12. Mockup References
 
 Validated wireframes are committed under `docs/superpowers/specs/mockups/`:
