@@ -1,7 +1,8 @@
 // scripts/rolls/attack.mjs
 // Full to-hit flow: dialog → 1d100 → DoS/hits/locations/jam → attack chat card.
 import { evaluateTest } from "./test-logic.mjs";
-import { hitLocation, computeHits, locationSequence, checkJam } from "../helpers/attack-math.mjs";
+import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
+import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
 
 const NS = "better-dh2e";
@@ -60,7 +61,31 @@ async function rollDamage(message) {
   await ChatMessage.create(messageData);
 }
 async function rollEvade(message) { /* Plan 16 Task 7 */ }
-async function applyDamage(message) { /* Plan 16 Task 6 */ }
+async function applyDamage(message) {
+  const f = message.flags[NS];
+  const target = await fromUuid(f.targetUuid);
+  if (!target) { ui.notifications.warn("No target to apply damage to."); return; }
+  const sys = target.system;
+  const tb = sys.characteristics.toughness.bonus;
+  const equipped = target.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
+  const ap = computeArmour(equipped, 0);               // pure per-location AP (tb=0 so TB isn't folded in)
+  let wounds = sys.wounds.value;
+  let totalCrit = 0;
+  const lines = [];
+  for (const h of f.hits) {
+    const eff = soak(h.total, ap[h.location] ?? 0, f.penetration, tb);  // pen vs AP, then TB
+    const res = applyWounds(wounds, sys.wounds.max, eff);
+    wounds = res.wounds;
+    totalCrit += res.critical;
+    lines.push(`${h.label}: ${h.total} → ${eff} dmg${res.critical ? ` (${res.critical} critical)` : ""}`);
+  }
+  await target.update({ "system.wounds.value": wounds });
+  const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit} — consult Critical Effects (location × type).</div>` : "";
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div><div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${wounds} / ${sys.wounds.max}</div></div>`
+  });
+}
 
 /**
  * Full to-hit roll for a weapon: dialog (Aim / Attack Type / Range / Called-Shot) →
