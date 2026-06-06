@@ -129,6 +129,11 @@ BDH.qualities = {
   force:         { label: "Force", takesValue: false },
   graviton:      { label: "Graviton", takesValue: false, automation: "full" },
   hallucinogenic:{ label: "Hallucinogenic", takesValue: true, automation: "partial" },
+  haywire:    { label: "Haywire", takesValue: true, noteOn: "attack" },
+  inaccurate: { label: "Inaccurate", takesValue: false, automation: "full" },
+  indirect:   { label: "Indirect", takesValue: true, noteOn: "attack" },
+  lance:      { label: "Lance", takesValue: false, automation: "full" },
+  melta:      { label: "Melta", takesValue: false, automation: "full" },
 };
 
 /** Aim bonuses. */
