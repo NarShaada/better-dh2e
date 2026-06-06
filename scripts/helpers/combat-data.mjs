@@ -14,7 +14,8 @@ export function computeArmour(armours, toughnessBonus = 0) {
     let best = 0;
     let additive = 0;
     for (const a of armours) {
-      const ap = a.locations?.[loc] ?? 0;
+      let ap = a.locations?.[loc] ?? 0;
+      if (a.craftsmanship === "best" && ap > 0) ap += 1;   // Best armour: +1 AP per protected location
       if (a.additive) additive += ap;
       else best = Math.max(best, ap);
     }
