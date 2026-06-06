@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -14,11 +14,19 @@ const { DialogV2 } = foundry.applications.api;
 const { renderTemplate } = foundry.applications.handlebars;
 
 /** Comma-joined "Label (value)" for the weapon qualities whose config noteOn matches `on` (red card note). */
-function qualityNotes(qualities, on) {
-  return (qualities ?? [])
+function qualityNotes(qualities, on, { maximal = false } = {}) {
+  const items = (qualities ?? [])
     .filter((q) => CONFIG.BDH.qualities[q.key]?.noteOn === on)
-    .map((q) => `${CONFIG.BDH.qualities[q.key].label}${q.value ? ` (${q.value})` : ""}`)
-    .join(", ");
+    .map((q) => {
+      let v = q.value;
+      if (maximal && q.key === "blast" && v) v = String(Number(v) + 2);   // Maximal: +2 Blast
+      return `${CONFIG.BDH.qualities[q.key].label}${v ? ` (${v})` : ""}`;
+    });
+  if (maximal && on === "attack") {
+    items.unshift("Maximal");
+    if (!qualities?.some((q) => q.key === "recharge")) items.push("Recharge");   // Maximal grants Recharge
+  }
+  return items.join(", ");
 }
 
 const CARD = "systems/better-dh2e/templates/chat/attack-card.hbs";
@@ -129,7 +137,8 @@ async function rollDamage(message) {
     return d;
   };
   const craftDmg = !f.isRanged ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
-  const weaponBase = craftDmg ? `${baseFormula} + ${craftDmg}` : baseFormula;
+  let weaponBase = craftDmg ? `${baseFormula} + ${craftDmg}` : baseFormula;
+  if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
   const rolls = [];
   const rolled = [];   // per hit: { hit, wRoll, bRoll, rf, baseTotal }
   for (const hit of f.hits) {
@@ -328,12 +337,15 @@ export async function rollAttack(actor, weaponId) {
     .join("");
 
   const charShort = BDH.characteristics[charKey].short;
+  const maximalRow = hasMaximal(weapon.system.qualities)
+    ? `<div class="form-group"><label>Maximal (×3 ammo)</label><input type="checkbox" name="maximal"/></div>` : "";
   const dialogContent = `
     <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>
     <div class="form-group"><label>Aim</label><select name="aim">${aimOpts}</select></div>
     <div class="form-group"><label>Attack Type</label><select name="attackType">${typeOpts}</select></div>
     ${isRanged ? `<div class="form-group"><label>Range</label><select name="range">${rangeOpts}</select></div>` : ""}
-    <div class="form-group"><label>Called-Shot Location</label><select name="calledShotLocation">${locOpts}</select></div>`;
+    <div class="form-group"><label>Called-Shot Location</label><select name="calledShotLocation">${locOpts}</select></div>
+    ${maximalRow}`;
 
   const choice = await DialogV2.prompt({
     window: { title: `${weapon.name} — Attack (${charShort})` },
@@ -345,6 +357,7 @@ export async function rollAttack(actor, weaponId) {
     }
   });
   if (!choice) return null;
+  const maximal = isRanged && !!choice.maximal;
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
@@ -359,7 +372,7 @@ export async function rollAttack(actor, weaponId) {
 
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
-  const rounds = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1);
+  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1);
   if (usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
     ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
     return null;
@@ -375,7 +388,7 @@ export async function rollAttack(actor, weaponId) {
   const dos = success ? degrees : 0;
 
   // Effective penetration (Lance scales with DoS; Melta doubles at close range)
-  const penetration = effectivePenetration(weapon.system.penetration ?? 0, {
+  const penetration = effectivePenetration((weapon.system.penetration ?? 0) + (maximal ? 2 : 0), {
     qualities: weapon.system.qualities,
     dos,
     success,
@@ -406,6 +419,7 @@ export async function rollAttack(actor, weaponId) {
       actorUuid: actor.uuid,
       weaponId,
       isRanged,
+      maximal,
       penetration,
       damageType: weapon.system.damageType,
       qualities: weapon.system.qualities ?? [],
@@ -447,7 +461,7 @@ export async function rollAttack(actor, weaponId) {
     targetName: targetToken?.name ?? null,
     hasHits: nHits > 0,
     qualityLabels,
-    attackNotes: qualityNotes(weapon.system.qualities, "attack")
+    attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal })
   });
 
   // Create chat message (apply current roll mode)
