@@ -200,3 +200,16 @@
 .better-dh2e .skill.specialty { padding-left:12px; }
 .better-dh2e .skill.specialty .snm.bdh-edit { width:45%; }
 .better-dh2e .skill.specialty input.snm { font-size:12px; }
+
+/* Simple advancement — buy affordances + log */
+.better-dh2e .bdh-buy { background:#3d5a2a; color:var(--bdh-parch); border:none; border-radius:3px; font-size:11px; padding:1px 7px; cursor:pointer; white-space:nowrap; }
+.better-dh2e .bdh-maxed { font-size:10px; color:var(--bdh-muted); text-transform:uppercase; }
+.better-dh2e .bdh-warn { font-size:10px; color:var(--bdh-maroon); font-style:italic; }
+.better-dh2e .bdh-cost-done { font-size:11px; color:#3d6a4a; }
+.better-dh2e .char-buy { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:3px; }
+.better-dh2e .char-buy .adv-dots { display:inline-flex; gap:2px; }
+.better-dh2e .char-buy .adv-dots i { width:6px; height:6px; border:1px solid var(--bdh-brown); border-radius:50%; display:inline-block; }
+.better-dh2e .char-buy .adv-dots i.on { background:var(--bdh-maroon); border-color:var(--bdh-maroon); }
+.better-dh2e .bdh-log-row { display:flex; align-items:center; gap:8px; padding:2px 10px; font-size:12px; border-bottom:1px solid #e2d2ac; }
+.better-dh2e .bdh-log-detail { flex:1; color:var(--bdh-muted); font-size:11px; }
+.better-dh2e .bdh-log-cost { font-weight:bold; color:var(--bdh-maroon); }
