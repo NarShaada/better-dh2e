@@ -243,3 +243,6 @@
 /* Impaired characteristic (armour Agility cap or fatigue halving) — value + bonus red */
 .better-dh2e .char.impaired .box .val { color:#a02020; }
 .better-dh2e .char.impaired .bonus { color:#a02020; }
+
+/* Non-automated weapon-quality note on a chat card (just the name+value, in red) */
+.better-dh2e .bdh-qnote, .chat-message .bdh-qnote { color:#a02020; font-weight:600; }

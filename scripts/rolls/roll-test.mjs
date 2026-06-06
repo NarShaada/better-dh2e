@@ -12,7 +12,7 @@ const CARD = "systems/better-dh2e/templates/chat/test-card.hbs";
  * Show the modifier dialog (plus an optional characteristic picker).
  * @returns {Promise<{modifier:string, characteristicKey:(string|null)}|null>} null if cancelled.
  */
-async function promptTest({ title, characteristics = null, defaultModifier = "+0" }) {
+export async function promptTest({ title, characteristics = null, defaultModifier = "+0" }) {
   let picker = "";
   if (characteristics) {
     const opts = characteristics.map((c) =>
