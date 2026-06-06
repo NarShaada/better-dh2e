@@ -337,7 +337,7 @@ export async function rollAttack(actor, weaponId) {
     .join("");
 
   const charShort = BDH.characteristics[charKey].short;
-  const maximalRow = hasMaximal(weapon.system.qualities)
+  const maximalRow = isRanged && hasMaximal(weapon.system.qualities)
     ? `<div class="form-group"><label>Maximal (×3 ammo)</label><input type="checkbox" name="maximal"/></div>` : "";
   const dialogContent = `
     <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>
