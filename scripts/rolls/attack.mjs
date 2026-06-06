@@ -10,6 +10,24 @@ const { renderTemplate } = foundry.applications.handlebars;
 
 const CARD = "systems/better-dh2e/templates/chat/attack-card.hbs";
 
+/** Bind attack/damage card buttons (called from the renderChatMessageHTML hook). */
+export function bindCardButtons(message, html) {
+  const flags = message.flags?.[NS];
+  if (!flags) return;
+  html.querySelectorAll("[data-bdh]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (btn.dataset.bdh === "rollDamage") await rollDamage(message);
+      else if (btn.dataset.bdh === "evade") await rollEvade(message);
+      else if (btn.dataset.bdh === "applyDamage") await applyDamage(message);
+    });
+  });
+}
+
+// --- Follow-up step handlers (filled in by later tasks) ---
+async function rollDamage(message) { /* Plan 16 Task 5 */ }
+async function rollEvade(message) { /* Plan 16 Task 7 */ }
+async function applyDamage(message) { /* Plan 16 Task 6 */ }
+
 /**
  * Full to-hit roll for a weapon: dialog (Aim / Attack Type / Range / Called-Shot) →
  * 1d100 vs WS or BS → DoS → hits + locations + jam → attack chat card.

@@ -1,5 +1,6 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
+import { bindCardButtons } from "./rolls/attack.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
@@ -55,3 +56,5 @@ Hooks.once("init", () => {
 
   console.log("Better DH2e | Initialized");
 });
+
+Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));
