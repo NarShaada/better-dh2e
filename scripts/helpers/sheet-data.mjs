@@ -56,7 +56,7 @@ export function buildSkills(skills) {
         favourite: s.favourite ?? false
       };
     })
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort((a, b) => (a.specialist === b.specialist ? a.label.localeCompare(b.label) : (a.specialist ? 1 : -1)));
 }
 
 /** Fatigue fill percentage (0..100). */

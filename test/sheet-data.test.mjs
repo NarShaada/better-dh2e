@@ -56,9 +56,15 @@ describe("buildSkills", () => {
     expect(acro.trained).toBe(false);
     expect(acro.dots).toEqual([false, false, false, false]);
   });
-  it("sorts entries by label", () => {
-    const labels = buildSkills(skillStub()).map((s) => s.label);
-    expect(labels).toEqual([...labels].sort((a, b) => a.localeCompare(b)));
+  it("sorts standard skills first then specialist, each alphabetical by label", () => {
+    const list = buildSkills(skillStub());
+    const lastStandard = list.map((s) => s.specialist).lastIndexOf(false);
+    const firstSpecialist = list.findIndex((s) => s.specialist);
+    expect(firstSpecialist).toBeGreaterThan(lastStandard);
+    const standard = list.filter((s) => !s.specialist).map((s) => s.label);
+    const specialist = list.filter((s) => s.specialist).map((s) => s.label);
+    expect(standard).toEqual([...standard].sort((a, b) => a.localeCompare(b)));
+    expect(specialist).toEqual([...specialist].sort((a, b) => a.localeCompare(b)));
   });
   it("carries the favourite flag", () => {
     const list = buildSkills(skillStub());
