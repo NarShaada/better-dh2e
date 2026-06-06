@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -34,6 +34,8 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "applyDamage") await applyDamage(message);
       else if (btn.dataset.bdh === "shockTest") await rollShockTest(message);
       else if (btn.dataset.bdh === "concussiveTest") await rollConcussiveTest(message);
+      else if (btn.dataset.bdh === "flameTest") await rollFlameTest(message);
+      else if (btn.dataset.bdh === "hallucinogenicTest") await rollHallucinogenicTest(message);
     });
   });
 }
@@ -74,6 +76,24 @@ async function rollConcussiveTest(message) {
   const x = concussiveValue(f.qualities);
   const label = `Toughness (Concussive ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });   // penalty pre-filled, GM can adjust
+  if (!choice) return null;
+  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+}
+async function rollFlameTest(message) {
+  const defender = await resolveDefender(message.flags[NS]);
+  if (!defender) { ui.notifications.warn("Select a token to test Agility."); return; }
+  const label = "Agility (Flame)";
+  const choice = await promptTest({ title: label });
+  if (!choice) return null;
+  return performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+}
+async function rollHallucinogenicTest(message) {
+  const f = message.flags[NS];
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const x = hallucinogenicValue(f.qualities);
+  const label = `Toughness (Hallucinogenic ${x})`;
+  const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
   return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
 }
@@ -135,6 +155,8 @@ async function rollDamage(message) {
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
     targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid, shocking: hasShocking(qualities),
     concussive: concussiveValue(qualities) || null,
+    flame: hasFlame(qualities),
+    hallucinogenic: hallucinogenicValue(qualities) || null,
     damageNotes: qualityNotes(qualities, "damage") };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
