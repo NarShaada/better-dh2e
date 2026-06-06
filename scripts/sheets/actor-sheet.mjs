@@ -58,7 +58,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   static async #onCreateItem(event, target) {
     const type = target.dataset.type;
     const name = `New ${game.i18n.localize(`TYPES.Item.${type}`)}`;
-    const [created] = await this.actor.createEmbeddedDocuments("Item", [{ name, type }]);
+    const data = { name, type };
+    // Talents created in Custom advancement are free/owned; created in Simple they await a Buy.
+    if (type === "talent") data.system = { purchased: this._advancementMode === "custom" };
+    const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
     created?.sheet.render(true);
   }
 
@@ -115,13 +118,14 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** Action: add a specialty (free in Custom; charges the Known cost in Simple). */
   static async #onAddSpecialty(event, target) {
     const key = target.dataset.skill;
+    const id = foundry.utils.randomID();
     const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
-    list.push({ name: "New Specialty", rank: "known", favourite: false });
+    list.push({ id, name: "New Specialty", rank: "known", favourite: false });
     if (this._advancementMode === "simple") {
       const matches = aptitudeMatches(CONFIG.BDH.skills[key].aptitudes, this.actor.system.aptitudes);
       const cost = skillCost(matches, "untrained");
       const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list },
-        { type: "specialty", label: `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (new)`, detail: "→ Known", cost });
+        { type: "specialty", label: `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (new)`, detail: "→ Known", cost, ref: key, specialtyId: id, toRank: "known" });
       if (upd) await this.actor.update(upd);
       return;
     }
@@ -220,7 +224,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (cost == null) return;
     const label = game.i18n.localize(CONFIG.BDH.characteristics[key].label);
     const upd = this.#chargeXP({ [`system.characteristics.${key}.advance`]: (owned + 1) * 5 },
-      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost });
+      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost, ref: key, specialtyId: "", toRank: String(owned + 1) });
     if (upd) await this.actor.update(upd);
   }
 
@@ -233,7 +237,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const cost = skillCost(matches, rank);
     if (cost == null || !next) return;
     const label = game.i18n.localize(CONFIG.BDH.skills[key].label);
-    const upd = this.#chargeXP({ [`system.skills.${key}.rank`]: next }, { type: "skill", label, detail: `→ ${next}`, cost });
+    const upd = this.#chargeXP({ [`system.skills.${key}.rank`]: next }, { type: "skill", label, detail: `→ ${next}`, cost, ref: key, specialtyId: "", toRank: next });
     if (upd) await this.actor.update(upd);
   }
 
@@ -249,7 +253,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (cost == null || !next) return;
     sp.rank = next;
     const label = `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (${sp.name})`;
-    const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list }, { type: "specialty", label, detail: `→ ${next}`, cost });
+    const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list }, { type: "specialty", label, detail: `→ ${next}`, cost, ref: key, specialtyId: sp.id, toRank: next });
     if (upd) await this.actor.update(upd);
   }
 
@@ -263,10 +267,49 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       return;
     }
     const cost = talentCost(aptitudeMatches(item.system.aptitudes, this.actor.system.aptitudes), item.system.tier);
-    const upd = this.#chargeXP({}, { type: "talent", label: item.name, detail: `Tier ${item.system.tier}`, cost });
+    const upd = this.#chargeXP({}, { type: "talent", label: item.name, detail: `Tier ${item.system.tier}`, cost, ref: item.id, specialtyId: "", toRank: "" });
     if (!upd) return;
     await item.update({ "system.purchased": true });
     await this.actor.update(upd);
+  }
+
+  /** Action: refund an advancement-log entry (Simple). Any order for chars/talents; stepped advances newest-first per target. */
+  static async #onRefund(event, target) {
+    const idx = Number(target.dataset.logIndex);
+    const sys = this.actor.system;
+    const log = foundry.utils.deepClone(sys.advancementLog);
+    const entry = log[idx];
+    if (!entry) return;
+    const extra = {};
+    if (entry.type === "characteristic") {
+      const cur = sys.characteristics[entry.ref]?.advance ?? 0;
+      if (cur < 5 || cur / 5 !== Number(entry.toRank)) { ui.notifications.warn("Refund this characteristic's later advances first."); return; }
+      extra[`system.characteristics.${entry.ref}.advance`] = cur - 5;
+    } else if (entry.type === "skill") {
+      if (sys.skills[entry.ref]?.rank !== entry.toRank) { ui.notifications.warn("Refund this skill's later advances first."); return; }
+      extra[`system.skills.${entry.ref}.rank`] = RANK_ORDER[RANK_ORDER.indexOf(entry.toRank) - 1];
+    } else if (entry.type === "specialty") {
+      const list = foundry.utils.deepClone(sys.skills[entry.ref]?.specialties ?? []);
+      const sidx = list.findIndex((s) => s.id === entry.specialtyId);
+      if (sidx < 0) { ui.notifications.warn("That specialty no longer exists."); return; }
+      if (entry.toRank === "known") {
+        if (list[sidx].rank !== "known") { ui.notifications.warn("Refund this specialty's advances first."); return; }
+        list.splice(sidx, 1);
+      } else {
+        if (list[sidx].rank !== entry.toRank) { ui.notifications.warn("Refund this specialty's later advances first."); return; }
+        list[sidx].rank = RANK_ORDER[RANK_ORDER.indexOf(entry.toRank) - 1];
+      }
+      extra[`system.skills.${entry.ref}.specialties`] = list;
+    } else if (entry.type === "talent") {
+      const item = this.actor.items.get(entry.ref);
+      if (item) await item.update({ "system.purchased": false });
+    }
+    log.splice(idx, 1);
+    await this.actor.update({
+      ...extra,
+      "system.experience.spent": Math.max(0, sys.experience.spent - entry.cost),
+      "system.advancementLog": log
+    });
   }
 
   static DEFAULT_OPTIONS = {
@@ -297,7 +340,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       buyCharacteristic: DarkHeresyActorSheet.#onBuyCharacteristic,
       buySkill: DarkHeresyActorSheet.#onBuySkill,
       buySpecialty: DarkHeresyActorSheet.#onBuySpecialty,
-      buyTalent: DarkHeresyActorSheet.#onBuyTalent
+      buyTalent: DarkHeresyActorSheet.#onBuyTalent,
+      refund: DarkHeresyActorSheet.#onRefund
     }
   };
 

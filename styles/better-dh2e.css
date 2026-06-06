@@ -213,3 +213,4 @@
 .better-dh2e .bdh-log-row { display:flex; align-items:center; gap:8px; padding:2px 10px; font-size:12px; border-bottom:1px solid #e2d2ac; }
 .better-dh2e .bdh-log-detail { flex:1; color:var(--bdh-muted); font-size:11px; }
 .better-dh2e .bdh-log-cost { font-weight:bold; color:var(--bdh-maroon); }
+.better-dh2e .bdh-log-refund { flex:0 0 auto; }
