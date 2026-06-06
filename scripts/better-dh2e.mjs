@@ -23,6 +23,9 @@ Hooks.once("init", () => {
   // Expose config
   CONFIG.BDH = BDH;
 
+  // Combat-tracker initiative: 1d10 + the actor's chosen initiative-characteristic bonus (see DarkHeresyActor#getRollData).
+  CONFIG.Combat.initiative = { formula: "1d10 + @initiativeBonus", decimals: 0 };
+
   // Document classes
   CONFIG.Actor.documentClass = DarkHeresyActor;
   CONFIG.Item.documentClass = DarkHeresyItem;

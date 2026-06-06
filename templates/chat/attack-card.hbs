@@ -7,6 +7,7 @@
     <span class="k">Rolled</span><span class="v"><b>{{roll}}</b></span>
   </div>
   <div class="bdh-card-line">{{attackTypeLabel}} · {{aimLabel}}{{#if rangeLabel}} · {{rangeLabel}}{{/if}}</div>
+  {{#if qualityLabels}}<div class="bdh-card-line bdh-quals">Qualities: {{qualityLabels}}</div>{{/if}}
   <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
     {{#if success}}Success ({{degrees}} DoS){{else}}Failure ({{degrees}} DoF){{/if}}
   </div>
