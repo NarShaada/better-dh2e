@@ -6,6 +6,7 @@ import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
+import { aptitudeMatches, characteristicCost, skillCost, talentCost, RANK_ORDER } from "../helpers/advancement-costs.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -363,6 +364,28 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const initKey = sys.initiative.characteristic;
     context.initBonus = sys.characteristics[initKey].bonus;
     context.initShort = BDH.characteristics[initKey].short;
+    // Simple-mode cost data (cheap; the template reads it only when isSimple).
+    const apts = sys.aptitudes;
+    context.characteristics = context.characteristics.map((c) => {
+      if (c.key === "influence") return { ...c, noAdvance: true };
+      const owned = (sys.characteristics[c.key].advance ?? 0) / 5;
+      const matches = aptitudeMatches(BDH.characteristics[c.key].aptitudes, apts);
+      return { ...c, owned, advDots: [0, 1, 2, 3, 4].map((i) => i < owned), nextCost: characteristicCost(matches, owned) };
+    });
+    context.skills = context.skills.map((s) => {
+      const matches = aptitudeMatches(BDH.skills[s.key].aptitudes, apts);
+      if (s.specialist) {
+        return { ...s, addCost: skillCost(matches, "untrained"), specialties: s.specialties.map((sp) => ({ ...sp, nextCost: skillCost(matches, sp.rank) })) };
+      }
+      return { ...s, nextCost: skillCost(matches, s.rank) };
+    });
+    context.talents = context.talents.map((t) => {
+      const tsys = items.get(t.id).system;
+      const valid = (tsys.aptitudes?.length === 2) && tsys.tier >= 1;
+      const cost = valid ? talentCost(aptitudeMatches(tsys.aptitudes, apts), tsys.tier) : null;
+      return { ...t, cost, valid, purchased: tsys.purchased ?? false };
+    });
+    context.advancementLog = sys.advancementLog;
     return context;
   }
 
