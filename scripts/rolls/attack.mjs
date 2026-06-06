@@ -1,7 +1,7 @@
 // scripts/rolls/attack.mjs
 // Full to-hit flow: dialog → 1d100 → DoS/hits/locations/jam → attack chat card.
 import { evaluateTest } from "./test-logic.mjs";
-import { performTest } from "./roll-test.mjs";
+import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
@@ -62,14 +62,20 @@ async function resolveDefender(f) {
 async function rollShockTest(message) {
   const defender = await resolveDefender(message.flags[NS]);
   if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
-  return performTest(defender, { label: "Toughness (Shocking)", base: defender.system.characteristics.toughness.total, modifier: 0 });
+  const label = "Toughness (Shocking)";
+  const choice = await promptTest({ title: label });
+  if (!choice) return null;
+  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
 }
 async function rollConcussiveTest(message) {
   const f = message.flags[NS];
   const defender = await resolveDefender(f);
   if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
   const x = concussiveValue(f.qualities);
-  return performTest(defender, { label: `Toughness (Concussive ${x})`, base: defender.system.characteristics.toughness.total, modifier: -10 * x });
+  const label = `Toughness (Concussive ${x})`;
+  const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });   // penalty pre-filled, GM can adjust
+  if (!choice) return null;
+  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
 }
 async function rollDamage(message) {
   const f = message.flags[NS];
