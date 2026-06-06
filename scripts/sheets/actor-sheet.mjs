@@ -44,9 +44,13 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   /** Action: roll the clicked skill (dialog offers a characteristic picker).
    * Reads the key via closest so it works whether data-skill is on the action element
-   * (Investigation rows) or an ancestor row (Combat favourite-skills list). */
+   * (Investigation rows) or an ancestor row (Combat favourite-skills list).
+   * Also reads an optional specialty index from the row. */
   static async #onRollSkill(event, target) {
-    await rollSkill(this.document, target.closest("[data-skill]")?.dataset.skill);
+    const row = target.closest("[data-skill]");
+    const key = row?.dataset.skill;
+    const sp = row?.dataset.specialty;
+    await rollSkill(this.document, key, sp != null && sp !== "" ? Number(sp) : null);
   }
 
   /** Action: create a new owned item of the given type and open its sheet. */
@@ -82,17 +86,45 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await item.update({ "system.favourite": next });
   }
 
-  /** Action: toggle a skill favourite (max 3). */
+  /** Action: toggle a skill favourite (max 3; counts standard favourites + specialty favourites). */
   static async #onToggleSkillFavourite(event, target) {
-    const key = target.closest("[data-skill]")?.dataset.skill;
+    const row = target.closest("[data-skill]");
+    const key = row?.dataset.skill;
     if (!key) return;
+    const sp = row?.dataset.specialty;
     const skills = this.actor.system.skills;
-    const next = !skills[key].favourite;
-    if (next && Object.values(skills).filter((s) => s.favourite).length >= 3) {
-      ui.notifications.warn("You can favourite at most 3 skills.");
-      return;
+    const favCount = Object.entries(skills).reduce((n, [k, s]) =>
+      CONFIG.BDH.skills[k].specialist
+        ? n + (s.specialties?.filter((x) => x.favourite).length ?? 0)
+        : n + (s.favourite ? 1 : 0), 0);
+    if (sp != null && sp !== "") {
+      const list = foundry.utils.deepClone(skills[key].specialties);
+      const idx = Number(sp);
+      const next = !list[idx].favourite;
+      if (next && favCount >= 3) { ui.notifications.warn("You can favourite at most 3 skills."); return; }
+      list[idx].favourite = next;
+      await this.actor.update({ [`system.skills.${key}.specialties`]: list });
+    } else {
+      const next = !skills[key].favourite;
+      if (next && favCount >= 3) { ui.notifications.warn("You can favourite at most 3 skills."); return; }
+      await this.actor.update({ [`system.skills.${key}.favourite`]: next });
     }
-    await this.actor.update({ [`system.skills.${key}.favourite`]: next });
+  }
+
+  /** Action: add a blank specialty (starts at Known) to a specialist skill. */
+  static async #onAddSpecialty(event, target) {
+    const key = target.dataset.skill;
+    const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
+    list.push({ name: "New Specialty", rank: "known", favourite: false });
+    await this.actor.update({ [`system.skills.${key}.specialties`]: list });
+  }
+
+  /** Action: remove a specialty by index. */
+  static async #onRemoveSpecialty(event, target) {
+    const key = target.dataset.skill;
+    const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
+    list.splice(Number(target.dataset.specialty), 1);
+    await this.actor.update({ [`system.skills.${key}.specialties`]: list });
   }
 
   /** Action: toggle an item's equipped flag. Armour: only one non-additive piece equipped at a time. */
@@ -180,7 +212,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       addAffliction: DarkHeresyActorSheet.#onAddAffliction,
       removeAffliction: DarkHeresyActorSheet.#onRemoveAffliction,
       setMode: DarkHeresyActorSheet.#onSetMode,
-      adjustFatigue: DarkHeresyActorSheet.#onAdjustFatigue
+      adjustFatigue: DarkHeresyActorSheet.#onAdjustFatigue,
+      addSpecialty: DarkHeresyActorSheet.#onAddSpecialty,
+      removeSpecialty: DarkHeresyActorSheet.#onRemoveSpecialty
     }
   };
 
@@ -289,8 +323,18 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
     context.favTraits = items.filter((i) => i.type === "trait" && i.system.favourite)
       .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
-    context.favSkills = Object.entries(sys.skills).filter(([, s]) => s.favourite)
-      .map(([key, s]) => ({ key, label: BDH.skills[key].label, total: s.total }));
+    const favSkills = [];
+    for (const [key, s] of Object.entries(sys.skills)) {
+      if (BDH.skills[key].specialist) {
+        (s.specialties ?? []).forEach((sp, i) => {
+          if (sp.favourite) favSkills.push({ key, specialty: i, label: `${game.i18n.localize(BDH.skills[key].label)} (${sp.name})`, total: sp.total });
+        });
+      } else if (s.favourite) {
+        favSkills.push({ key, specialty: null, label: game.i18n.localize(BDH.skills[key].label), total: s.total });
+      }
+    }
+    context.favSkills = favSkills;
+    context.specialtyRankChoices = { known: "Known +0", trained: "Trained +10", experienced: "Experienced +20", veteran: "Veteran +30" };
     context.injuries = sys.injuries.map((inj, i) => ({ index: i, description: inj.description }));
     const cor = corruptionTrack(sys.corruption);
     const ins = insanityTrack(sys.insanity);
@@ -352,6 +396,18 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         if (list[idx]) {
           list[idx][field] = event.currentTarget.value;
           this.actor.update({ [`system.afflictions.${arr}`]: list });
+        }
+      });
+    }
+    for (const input of this.element.querySelectorAll(".bdh-spec-input")) {
+      input.addEventListener("change", (event) => {
+        const el = event.currentTarget;
+        const key = el.dataset.skill;
+        const idx = Number(el.dataset.specialty);
+        const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
+        if (list[idx]) {
+          list[idx][el.dataset.field] = el.value;
+          this.actor.update({ [`system.skills.${key}.specialties`]: list });
         }
       });
     }

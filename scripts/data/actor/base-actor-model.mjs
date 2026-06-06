@@ -17,18 +17,24 @@ function characteristicsSchema() {
   return new fields.SchemaField(schema);
 }
 
-/** Build the skills schema: one object per skill with a rank string. */
+/** Build the skills schema: standard skills get rank+favourite; specialist skills get a specialties array of {name, rank, favourite}. */
 function skillsSchema() {
   const schema = {};
   for (const key of Object.keys(BDH.skills)) {
-    schema[key] = new fields.SchemaField({
-      rank: new fields.StringField({
-        required: true,
-        choices: Object.keys(BDH.skillRanks),
-        initial: "untrained"
-      }),
-      favourite: new fields.BooleanField({ required: true, initial: false })
-    });
+    if (BDH.skills[key].specialist) {
+      schema[key] = new fields.SchemaField({
+        specialties: new fields.ArrayField(new fields.SchemaField({
+          name:      new fields.StringField({ required: true, initial: "" }),
+          rank:      new fields.StringField({ required: true, choices: BDH.specialtyRanks, initial: "known" }),
+          favourite: new fields.BooleanField({ required: true, initial: false })
+        }))
+      });
+    } else {
+      schema[key] = new fields.SchemaField({
+        rank:      new fields.StringField({ required: true, choices: Object.keys(BDH.skillRanks), initial: "untrained" }),
+        favourite: new fields.BooleanField({ required: true, initial: false })
+      });
+    }
   }
   return new fields.SchemaField(schema);
 }
@@ -90,8 +96,12 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       c.bonus = characteristicBonus(c);
     }
     for (const [key, skill] of Object.entries(this.skills)) {
-      const charKey = BDH.skills[key].characteristic;
-      skill.total = skillTotal(this.characteristics[charKey].total, skill.rank);
+      const charTotal = this.characteristics[BDH.skills[key].characteristic].total;
+      if (BDH.skills[key].specialist) {
+        for (const sp of skill.specialties) sp.total = skillTotal(charTotal, sp.rank);
+      } else {
+        skill.total = skillTotal(charTotal, skill.rank);
+      }
     }
     this.fatigue.max = this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus);
     this.movement = movement(this.characteristics.agility.bonus, this.size);

@@ -21,16 +21,33 @@ export function buildCharacteristics(characteristics) {
   });
 }
 
-/** Skill view-models, sorted by label, with a 0..4 tier, a 4-dot array, and a trained flag. */
+/** Skill view-models, sorted by label, with a 0..4 tier, a 4-dot array, and a trained flag.
+ *  Specialist skills emit { specialist:true, specialties:[...] }.
+ *  Standard skills emit { specialist:false, rank, tier, dots, trained, total, favourite }.
+ */
 export function buildSkills(skills) {
   return Object.keys(BDH.skills)
     .map((key) => {
+      const cfg = BDH.skills[key];
       const s = skills[key] ?? {};
+      if (cfg.specialist) {
+        return {
+          key,
+          label: cfg.label,
+          specialist: true,
+          specialties: (s.specialties ?? []).map((sp, index) => {
+            const rank = sp.rank ?? "known";
+            const tier = TIER_BY_RANK[rank] ?? 0;
+            return { index, name: sp.name ?? "", rank, tier, dots: [0, 1, 2, 3].map((i) => i < tier), total: sp.total ?? 0, favourite: sp.favourite ?? false };
+          })
+        };
+      }
       const rank = s.rank ?? "untrained";
       const tier = TIER_BY_RANK[rank] ?? 0;
       return {
         key,
-        label: BDH.skills[key].label,
+        label: cfg.label,
+        specialist: false,
         rank,
         tier,
         dots: [0, 1, 2, 3].map((i) => i < tier),
@@ -39,7 +56,7 @@ export function buildSkills(skills) {
         favourite: s.favourite ?? false
       };
     })
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort((a, b) => (a.specialist === b.specialist ? a.label.localeCompare(b.label) : (a.specialist ? 1 : -1)));
 }
 
 /** Fatigue fill percentage (0..100). */

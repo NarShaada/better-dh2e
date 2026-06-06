@@ -61,20 +61,30 @@ export async function rollCharacteristic(actor, key) {
 }
 
 /** Skill test: dialog includes a characteristic picker defaulting to the skill's governing characteristic. */
-export async function rollSkill(actor, key) {
+export async function rollSkill(actor, key, specialtyIndex = null) {
   const skillCfg = CONFIG.BDH.skills[key];
   const skill = actor.system.skills[key];
+  let rank;
+  let suffix = "";
+  if (skillCfg.specialist) {
+    const sp = skill.specialties?.[specialtyIndex];
+    if (!sp) return null;
+    rank = sp.rank;
+    suffix = ` (${sp.name})`;
+  } else {
+    rank = skill.rank;
+  }
   const characteristics = Object.keys(CONFIG.BDH.characteristics).map((ck) => ({
     key: ck,
     label: CONFIG.BDH.characteristics[ck].label,
     value: actor.system.characteristics[ck].total,
     selected: ck === skillCfg.characteristic
   }));
-  const label = game.i18n.localize(skillCfg.label);
+  const label = `${game.i18n.localize(skillCfg.label)}${suffix}`;
   const choice = await promptTest({ title: label, characteristics });
   if (!choice) return null;
   const chosen = choice.characteristicKey ?? skillCfg.characteristic;
-  const base = skillTotal(actor.system.characteristics[chosen].total, skill.rank);
+  const base = skillTotal(actor.system.characteristics[chosen].total, rank);
   const short = CONFIG.BDH.characteristics[chosen].short;
   return performTest(actor, { label: `${label} (${short})`, base, modifier: choice.modifier });
 }
