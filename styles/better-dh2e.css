@@ -192,3 +192,11 @@
 .better-dh2e .bdh-fat-btn { flex:0 0 auto; width:20px; height:18px; line-height:1; background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:3px; cursor:pointer; color:var(--bdh-maroon); }
 .better-dh2e .bdh-fat-max, .better-dh2e .bdh-fate-max { width:48px; }
 .better-dh2e .bdh-ro { font-weight:bold; }
+
+/* Specialist skill groups */
+.better-dh2e .skill-group { break-inside:avoid; margin:2px 0 4px; }
+.better-dh2e .skill-group-head { display:flex; align-items:center; gap:6px; font-weight:bold; color:var(--bdh-maroon); font-size:12px; border-bottom:1px solid #c9b896; }
+.better-dh2e .skill-group-head .bdh-add { margin-left:auto; }
+.better-dh2e .skill.specialty { padding-left:12px; }
+.better-dh2e .skill.specialty .snm.bdh-edit { width:45%; }
+.better-dh2e .skill.specialty input.snm { font-size:12px; }
