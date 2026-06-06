@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -36,6 +36,8 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "concussiveTest") await rollConcussiveTest(message);
       else if (btn.dataset.bdh === "flameTest") await rollFlameTest(message);
       else if (btn.dataset.bdh === "hallucinogenicTest") await rollHallucinogenicTest(message);
+      else if (btn.dataset.bdh === "overheatDrop") await rollOverheatDrop(message);
+      else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
     });
   });
 }
@@ -236,6 +238,49 @@ async function applyDamage(message) {
   });
 }
 
+async function rollOverheatDrop(message) {
+  const f = message.flags[NS];
+  const attacker = await fromUuid(f.actorUuid);
+  const weapon = attacker?.items.get(f.weaponId);
+  if (!weapon) return;
+  await weapon.update({ "system.equipped": false });
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: attacker }),
+    content: `<div class="bdh-card"><div class="bdh-card-line">${attacker.name} drops ${weapon.name} — overheat avoided.</div></div>`
+  });
+}
+
+async function rollOverheatDamage(message) {
+  const f = message.flags[NS];
+  const attacker = await fromUuid(f.actorUuid);
+  const weapon = attacker?.items.get(f.weaponId);
+  if (!weapon) return;
+  const hand = await DialogV2.prompt({
+    window: { title: "Overheat — which hand?" },
+    content: `<div class="form-group"><label>Hand</label><select name="hand"><option value="rightArm">Right Arm</option><option value="leftArm">Left Arm</option></select></div>`,
+    ok: { label: "Roll Damage", callback: (event, button) => button.form.elements.hand.value },
+    rejectClose: false
+  });
+  if (!hand) return;
+  const roll = await new Roll(weapon.system.damage).evaluate();
+  const rf = roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 10));
+  const hits = [{ location: hand, label: BDH.hitLocationLabels[hand], total: roll.total, rf, breakdown: formatRoll(roll) }];
+  const cardData = {
+    weaponName: `${weapon.name} (Overheat)`, damageType: weapon.system.damageType, penetration: 0, hits,
+    targetName: attacker.name, canApply: game.user.isGM,
+    shocking: false, concussive: null, flame: false, hallucinogenic: null, damageNotes: ""
+  };
+  const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
+  const messageData = {
+    speaker: ChatMessage.getSpeaker({ actor: attacker }), rolls: [roll], content,
+    flags: { [NS]: { type: "damage", targetUuid: attacker.uuid, targetName: attacker.name, penetration: 0,
+      damageType: weapon.system.damageType, qualities: [],
+      hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf })) } }
+  };
+  ChatMessage.applyRollMode(messageData, "roll");
+  await ChatMessage.create(messageData);
+}
+
 /**
  * Full to-hit roll for a weapon: dialog (Aim / Attack Type / Range / Called-Shot) →
  * 1d100 vs WS or BS → DoS → hits + locations + jam → attack chat card.
@@ -385,6 +430,7 @@ export async function rollAttack(actor, weaponId) {
     rangeLabel,
     hits,
     jammed,
+    overheats: jammed && hasOverheats(weapon.system.qualities),
     targetName: targetToken?.name ?? null,
     hasHits: nHits > 0,
     qualityLabels,
