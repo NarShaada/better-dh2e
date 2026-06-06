@@ -34,16 +34,26 @@
     <div class="char-row">
       {{#each characteristics as |c|}}
         <div class="char {{#if c.isInfluence}}inf{{/if}}" data-characteristic="{{c.key}}">
-          <div class="bonus">{{c.bonus}}</div>
-          <div class="box rollable" data-action="rollCharacteristic" data-characteristic="{{c.key}}"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
+          {{#if isCustom}}
+            <input class="bonus bdh-edit" type="number" name="system.characteristics.{{c.key}}.unnatural" value="{{c.unnatural}}" title="Unnatural bonus"/>
+          {{else}}
+            <div class="bonus">{{c.bonus}}</div>
+          {{/if}}
+          {{#if isCustom}}
+            <div class="box"><input class="val bdh-edit" type="number" name="system.characteristics.{{c.key}}.base" value="{{c.base}}"/><div class="nm">{{c.short}}</div></div>
+          {{else}}
+            <div class="box rollable" data-action="rollCharacteristic" data-characteristic="{{c.key}}"><div class="val">{{c.value}}</div><div class="nm">{{c.short}}</div></div>
+          {{/if}}
         </div>
       {{/each}}
     </div>
 
     <div class="fatigue">
       <span class="lbl">Fatigue</span>
+      <button type="button" class="bdh-fat-btn" data-action="adjustFatigue" data-delta="-1" title="−1">−</button>
       <span class="bar"><i style="width:{{fatiguePct}}%"></i></span>
-      <span class="v">{{system.fatigue.value}} / {{system.fatigue.max}}</span>
+      <button type="button" class="bdh-fat-btn" data-action="adjustFatigue" data-delta="1" title="+1">＋</button>
+      <span class="v">{{system.fatigue.value}} / {{#if isCustom}}<input class="bdh-edit bdh-fat-max" type="number" name="system.fatigue.maxOverride" value="{{system.fatigue.maxOverride}}" placeholder="{{system.fatigue.max}}" min="0"/>{{else}}{{system.fatigue.max}}{{/if}}</span>
     </div>
 
     <nav class="tabs secondary" data-group="secondary">
@@ -62,7 +72,11 @@
             <a class="bdh-fav {{#if s.favourite}}on{{/if}}" data-action="toggleSkillFavourite" title="Favourite">★</a>
             <span class="snm">{{localize s.label}}</span>
             <span class="tier">{{#each s.dots as |d|}}<i class="{{#if d}}on{{/if}}"></i>{{/each}}</span>
-            <span class="sval">{{s.total}}</span>
+            {{#if isCustom}}
+              <select class="sval bdh-edit" name="system.skills.{{s.key}}.rank">{{selectOptions ../rankChoices selected=s.rank}}</select>
+            {{else}}
+              <span class="sval">{{s.total}}</span>
+            {{/if}}
           </div>
         {{/each}}
       </div>
