@@ -58,7 +58,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   static async #onCreateItem(event, target) {
     const type = target.dataset.type;
     const name = `New ${game.i18n.localize(`TYPES.Item.${type}`)}`;
-    const [created] = await this.actor.createEmbeddedDocuments("Item", [{ name, type }]);
+    const data = { name, type };
+    // Talents created in Custom advancement are free/owned; created in Simple they await a Buy.
+    if (type === "talent") data.system = { purchased: this._advancementMode === "custom" };
+    const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
     created?.sheet.render(true);
   }
 
@@ -221,7 +224,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (cost == null) return;
     const label = game.i18n.localize(CONFIG.BDH.characteristics[key].label);
     const upd = this.#chargeXP({ [`system.characteristics.${key}.advance`]: (owned + 1) * 5 },
-      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost, ref: key, specialtyId: "", toRank: "" });
+      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost, ref: key, specialtyId: "", toRank: String(owned + 1) });
     if (upd) await this.actor.update(upd);
   }
 
@@ -280,7 +283,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const extra = {};
     if (entry.type === "characteristic") {
       const cur = sys.characteristics[entry.ref]?.advance ?? 0;
-      if (cur < 5) { ui.notifications.warn("Nothing to refund for that characteristic."); return; }
+      if (cur < 5 || cur / 5 !== Number(entry.toRank)) { ui.notifications.warn("Refund this characteristic's later advances first."); return; }
       extra[`system.characteristics.${entry.ref}.advance`] = cur - 5;
     } else if (entry.type === "skill") {
       if (sys.skills[entry.ref]?.rank !== entry.toRank) { ui.notifications.warn("Refund this skill's later advances first."); return; }

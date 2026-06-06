@@ -216,7 +216,7 @@
             {{#if t.purchased}}<span class="bdh-cost-done">{{t.cost}} xp ✓</span>
             {{else if t.valid}}<button type="button" class="bdh-buy" data-action="buyTalent">Buy {{t.cost}}</button>
             {{else}}<span class="bdh-warn">set tier + 2 aptitudes</span>{{/if}}
-          {{/if}}
+          {{else}}{{#unless t.purchased}}<span class="bdh-warn">unpaid</span>{{/unless}}{{/if}}
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
         </div>
       {{/each}}
