@@ -115,13 +115,14 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** Action: add a specialty (free in Custom; charges the Known cost in Simple). */
   static async #onAddSpecialty(event, target) {
     const key = target.dataset.skill;
+    const id = foundry.utils.randomID();
     const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
-    list.push({ name: "New Specialty", rank: "known", favourite: false });
+    list.push({ id, name: "New Specialty", rank: "known", favourite: false });
     if (this._advancementMode === "simple") {
       const matches = aptitudeMatches(CONFIG.BDH.skills[key].aptitudes, this.actor.system.aptitudes);
       const cost = skillCost(matches, "untrained");
       const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list },
-        { type: "specialty", label: `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (new)`, detail: "→ Known", cost });
+        { type: "specialty", label: `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (new)`, detail: "→ Known", cost, ref: key, specialtyId: id, toRank: "known" });
       if (upd) await this.actor.update(upd);
       return;
     }
@@ -220,7 +221,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (cost == null) return;
     const label = game.i18n.localize(CONFIG.BDH.characteristics[key].label);
     const upd = this.#chargeXP({ [`system.characteristics.${key}.advance`]: (owned + 1) * 5 },
-      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost });
+      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost, ref: key, specialtyId: "", toRank: "" });
     if (upd) await this.actor.update(upd);
   }
 
@@ -233,7 +234,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const cost = skillCost(matches, rank);
     if (cost == null || !next) return;
     const label = game.i18n.localize(CONFIG.BDH.skills[key].label);
-    const upd = this.#chargeXP({ [`system.skills.${key}.rank`]: next }, { type: "skill", label, detail: `→ ${next}`, cost });
+    const upd = this.#chargeXP({ [`system.skills.${key}.rank`]: next }, { type: "skill", label, detail: `→ ${next}`, cost, ref: key, specialtyId: "", toRank: next });
     if (upd) await this.actor.update(upd);
   }
 
@@ -249,7 +250,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (cost == null || !next) return;
     sp.rank = next;
     const label = `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (${sp.name})`;
-    const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list }, { type: "specialty", label, detail: `→ ${next}`, cost });
+    const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list }, { type: "specialty", label, detail: `→ ${next}`, cost, ref: key, specialtyId: sp.id, toRank: next });
     if (upd) await this.actor.update(upd);
   }
 
@@ -263,7 +264,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       return;
     }
     const cost = talentCost(aptitudeMatches(item.system.aptitudes, this.actor.system.aptitudes), item.system.tier);
-    const upd = this.#chargeXP({}, { type: "talent", label: item.name, detail: `Tier ${item.system.tier}`, cost });
+    const upd = this.#chargeXP({}, { type: "talent", label: item.name, detail: `Tier ${item.system.tier}`, cost, ref: item.id, specialtyId: "", toRank: "" });
     if (!upd) return;
     await item.update({ "system.purchased": true });
     await this.actor.update(upd);
