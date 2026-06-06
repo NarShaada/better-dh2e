@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -290,7 +290,7 @@ export async function rollAttack(actor, weaponId) {
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
-  const aimMod = BDH.aimOptions[choice.aim]?.mod ?? 0;
+  const aimMod = hasInaccurate(weapon.system.qualities) ? 0 : (BDH.aimOptions[choice.aim]?.mod ?? 0);
   const rangeMod = isRanged ? (BDH.rangeOptions[choice.range]?.mod ?? 0) : 0;
   const manual = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
   const aiming = choice.aim !== "none";
@@ -316,6 +316,14 @@ export async function rollAttack(actor, weaponId) {
   // Degrees of success (0 on failure)
   const dos = success ? degrees : 0;
 
+  // Effective penetration (Lance scales with DoS; Melta doubles at close range)
+  const penetration = effectivePenetration(weapon.system.penetration ?? 0, {
+    qualities: weapon.system.qualities,
+    dos,
+    success,
+    closeRange: ["pointBlank", "short"].includes(choice.range)
+  });
+
   // RoF cap
   const rofCap = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : Infinity;
 
@@ -340,7 +348,7 @@ export async function rollAttack(actor, weaponId) {
       actorUuid: actor.uuid,
       weaponId,
       isRanged,
-      penetration: weapon.system.penetration ?? 0,
+      penetration,
       damageType: weapon.system.damageType,
       qualities: weapon.system.qualities ?? [],
       aiming,
