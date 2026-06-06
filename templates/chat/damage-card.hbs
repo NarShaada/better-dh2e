@@ -1,0 +1,5 @@
+<div class="bdh-card bdh-damage-card">
+  <div class="bdh-card-head">{{weaponName}} — Damage ({{damageType}}, Pen {{penetration}})</div>
+  <ol class="bdh-hits">{{#each hits}}<li>{{label}}: <span class="bdh-dmg-break">{{breakdown}}</span> — <b>{{total}}</b>{{#if rf}} <span class="bdh-rf">☠ Righteous Fury!</span>{{/if}}</li>{{/each}}</ol>
+  {{#if canApply}}<div class="bdh-card-actions"><button type="button" data-bdh="applyDamage">Apply Damage → {{targetName}}</button></div>{{/if}}
+</div>

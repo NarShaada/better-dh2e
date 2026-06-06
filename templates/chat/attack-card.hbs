@@ -1,0 +1,23 @@
+{{!-- templates/chat/attack-card.hbs --}}
+<div class="bdh-card bdh-attack-card {{#if success}}ok{{else}}fail{{/if}}">
+  <header class="bdh-card-head">{{weaponName}} — {{#if targetName}}{{targetName}}{{else}}Attack{{/if}}</header>
+  <div class="bdh-card-grid">
+    <span class="k">Target</span><span class="v">{{target}}</span>
+    <span class="k">Modifier</span><span class="v">{{modifierLabel}}</span>
+    <span class="k">Rolled</span><span class="v"><b>{{roll}}</b></span>
+  </div>
+  <div class="bdh-card-line">{{attackTypeLabel}} · {{aimLabel}}{{#if rangeLabel}} · {{rangeLabel}}{{/if}}</div>
+  <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
+    {{#if success}}Success ({{degrees}} DoS){{else}}Failure ({{degrees}} DoF){{/if}}
+  </div>
+  {{#if jammed}}<div class="bdh-card-line fail">&#9888; Weapon jammed!</div>{{/if}}
+  {{#if hasHits}}
+    <ol class="bdh-hits">
+      {{#each hits}}<li>{{label}}</li>{{/each}}
+    </ol>
+    <div class="bdh-card-actions">
+      <button type="button" data-bdh="rollDamage">Roll Damage</button>
+      <button type="button" data-bdh="evade">Evade</button>
+    </div>
+  {{/if}}
+</div>

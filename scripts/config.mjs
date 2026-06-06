@@ -117,3 +117,27 @@ BDH.qualities = {
   unwieldy:   { label: "Unwieldy", takesValue: false },
   flexible:   { label: "Flexible", takesValue: false }
 };
+
+/** Aim bonuses. */
+BDH.aimOptions = { none: { label: "None", mod: 0 }, half: { label: "Half Aim +10", mod: 10 }, full: { label: "Full Aim +20", mod: 20 } };
+
+/** Range bands (ranged only). */
+BDH.rangeOptions = {
+  pointBlank: { label: "Point-Blank +30", mod: 30 }, short: { label: "Short +10", mod: 10 },
+  normal: { label: "Normal", mod: 0 }, long: { label: "Long −10", mod: -10 }, extreme: { label: "Extreme −30", mod: -30 }
+};
+
+/** Attack types. `scope`: any|melee|ranged. `hits`: single, or multi with `dosPer`. `rof`: which weapon RoF caps multi-hits (null = uncapped, melee). */
+BDH.attackTypes = {
+  standard:   { label: "Standard",        mod: 10,  scope: "any",    hits: { mode: "single" } },
+  calledShot: { label: "Called Shot",     mod: -20, scope: "any",    hits: { mode: "single" }, calledShot: true },
+  allOut:     { label: "All-Out Attack",  mod: 30,  scope: "melee",  hits: { mode: "single" } },
+  charge:     { label: "Charge",          mod: 10,  scope: "melee",  hits: { mode: "single" } },
+  semiAuto:   { label: "Semi-Auto Burst", mod: 0,   scope: "ranged", hits: { mode: "multi", dosPer: 2 }, rof: "short" },
+  fullAuto:   { label: "Full-Auto Burst", mod: -10, scope: "ranged", hits: { mode: "multi", dosPer: 1 }, rof: "long" },
+  swift:      { label: "Swift Attack",    mod: 0,   scope: "melee",  hits: { mode: "multi", dosPer: 2 }, rof: null },
+  lightning:  { label: "Lightning Attack",mod: -10, scope: "melee",  hits: { mode: "multi", dosPer: 1 }, rof: null }
+};
+
+/** Hit-location display labels. */
+BDH.hitLocationLabels = { head: "Head", rightArm: "Right Arm", leftArm: "Left Arm", body: "Body", rightLeg: "Right Leg", leftLeg: "Left Leg" };

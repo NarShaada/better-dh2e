@@ -1,6 +1,7 @@
 // scripts/sheets/actor-sheet.mjs
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
-import { rollCharacteristic, rollSkill, rollWeaponAttack } from "../rolls/roll-test.mjs";
+import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
+import { rollAttack } from "../rolls/attack.mjs";
 import { corruptionTrack, insanityTrack, nextTestAt } from "../helpers/affliction-data.mjs";
 import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
@@ -166,10 +167,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await item.update({ "system.equipped": next });
   }
 
-  /** Action: basic attack test for an equipped weapon. */
+  /** Action: full attack roll (dialog → resolution → attack card) for an equipped weapon. */
   static async #onRollAttack(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
-    if (id) await rollWeaponAttack(this.actor, id);
+    if (id) await rollAttack(this.actor, id);
   }
 
   /** Action: add a blank lasting injury. */
