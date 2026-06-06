@@ -115,7 +115,10 @@ BDH.qualities = {
   reliable:   { label: "Reliable", takesValue: false },
   unreliable: { label: "Unreliable", takesValue: false },
   unwieldy:   { label: "Unwieldy", takesValue: false },
-  flexible:   { label: "Flexible", takesValue: false }
+  flexible:   { label: "Flexible", takesValue: false },
+  balanced:   { label: "Balanced", takesValue: false },
+  unbalanced: { label: "Unbalanced", takesValue: false },
+  shocking:   { label: "Shocking", takesValue: false },
 };
 
 /** Aim bonuses. */
