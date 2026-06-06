@@ -134,6 +134,7 @@ BDH.qualities = {
   indirect:   { label: "Indirect", takesValue: true, noteOn: "attack" },
   lance:      { label: "Lance", takesValue: false, automation: "full" },
   melta:      { label: "Melta", takesValue: false, automation: "full" },
+  overheats:  { label: "Overheats", takesValue: false, automation: "full" },
 };
 
 /** Aim bonuses. */

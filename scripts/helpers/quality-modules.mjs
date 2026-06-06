@@ -65,6 +65,7 @@ export function hasFlexible(qualities) { return has(qualities, "flexible"); }
 export function hasGraviton(qualities) { return has(qualities, "graviton"); }
 
 export function hasInaccurate(qualities) { return has(qualities, "inaccurate"); }
+export function hasOverheats(qualities) { return has(qualities, "overheats"); }
 
 /** Penetration after Lance (×DoS on a hit) and Melta (×2 at Point-Blank/Short range). */
 export function effectivePenetration(basePen, { qualities, dos, success, closeRange }) {
