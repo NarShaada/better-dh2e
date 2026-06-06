@@ -75,6 +75,7 @@ export function hasGraviton(qualities) { return has(qualities, "graviton"); }
 
 export function hasInaccurate(qualities) { return has(qualities, "inaccurate"); }
 export function hasOverheats(qualities) { return has(qualities, "overheats"); }
+export function hasMaximal(qualities) { return has(qualities, "maximal"); }
 
 /** Penetration after Lance (×DoS on a hit), Razor Sharp (×2 at 3+ DoS on a hit), and Melta (×2 at Point-Blank/Short range). */
 export function effectivePenetration(basePen, { qualities, dos, success, closeRange }) {

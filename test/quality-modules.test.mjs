@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -151,5 +151,11 @@ describe("effectivePenetration with Razor Sharp", () => {
     expect(effectivePenetration(4, { qualities: Q("razorSharp"), dos: 3, success: true, closeRange: false })).toBe(8);
     expect(effectivePenetration(4, { qualities: Q("razorSharp"), dos: 2, success: true, closeRange: false })).toBe(4);
     expect(effectivePenetration(4, { qualities: Q("razorSharp"), dos: 5, success: false, closeRange: false })).toBe(4);
+  });
+});
+describe("hasMaximal", () => {
+  it("detects Maximal", () => {
+    expect(hasMaximal(Q("maximal"))).toBe(true);
+    expect(hasMaximal(Q())).toBe(false);
   });
 });
