@@ -94,6 +94,20 @@
         {{#if psyIsBlast}}<label>Blast Radius (m)</label><input type="number" name="system.blastRadius" value="{{system.blastRadius}}" min="0"/>{{/if}}
       {{/if}}
     </div>
+    <div class="bdh-list-section">
+      <div class="bdh-list-head">Qualities</div>
+      {{#if psyIsAttack}}
+        {{#each qualityList as |q|}}
+          <div class="bdh-list-row"><span>{{q.display}}{{#if q.autoFull}} <span class="bdh-auto" title="Fully automated">⚙</span>{{else if q.autoPartial}} <span class="bdh-auto partial" title="Mostly automated — some manual input (e.g. consult a table)">⚙</span>{{/if}}</span>
+            <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
+        {{/each}}
+        <div class="bdh-add-row">
+          <select class="bdh-quality-key">{{selectOptions qualityChoices}}</select>
+          <input class="bdh-quality-value" type="number" placeholder="X"/>
+          <button type="button" data-action="addQuality">＋ Add</button>
+        </div>
+      {{/if}}
+    </div>
   {{/if}}
 
   {{#if isWeapon}}

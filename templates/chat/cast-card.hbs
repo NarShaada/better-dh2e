@@ -1,0 +1,38 @@
+{{!-- templates/chat/cast-card.hbs --}}
+<div class="bdh-card bdh-cast-card {{#if success}}ok{{else}}fail{{/if}}">
+  <header class="bdh-card-head">
+    {{casterName}} {{#if success}}casts{{else}}fails to cast{{/if}} <b>{{powerName}}</b>
+  </header>
+  <div class="bdh-card-grid">
+    <span class="k">Target</span><span class="v">{{target}}</span>
+    <span class="k">Modifier</span><span class="v">{{modifierLabel}}</span>
+    <span class="k">Rolled</span><span class="v"><b>{{roll}}</b></span>
+  </div>
+  <div class="bdh-card-line">{{powerTypeLabel}} · {{focusLabel}} · {{prLabel}}</div>
+  <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
+    {{#if success}}Success ({{degrees}} DoS){{else}}Failure ({{degrees}} DoF){{/if}}
+  </div>
+  {{#if phenTriggered}}
+    <div class="bdh-phenomena">
+      Psychic Phenomena: d100 {{phenRoll}}{{#if phenMod}} {{phenSign}}{{phenMod}}{{/if}} = <b>{{phenTotal}}</b>
+      {{#if perilRoll}} — <b>Perils of the Warp!</b> d100 {{perilRoll}}{{/if}}
+    </div>
+  {{/if}}
+  {{#if daemonicNote}}<div class="bdh-note">{{daemonicNote}}</div>{{/if}}
+  {{#if opposed}}
+    <div class="bdh-card-actions"><button type="button" data-bdh="castResist">Resist</button></div>
+  {{/if}}
+  {{!-- isAttack region: hits + Evade/Roll Damage buttons (routes through attack pipeline) --}}
+  {{#if isAttack}}
+    {{#if qualityLabels}}<div class="bdh-card-line bdh-quals">Qualities: {{qualityLabels}}</div>{{/if}}
+    {{#if hits.length}}
+      <ol class="bdh-hits">
+        {{#each hits}}<li>{{label}}</li>{{/each}}
+      </ol>
+      <div class="bdh-card-actions">
+        <button type="button" data-bdh="rollDamage">Roll Damage</button>
+        <button type="button" data-bdh="evade">Evade</button>
+      </div>
+    {{/if}}
+  {{/if}}
+</div>

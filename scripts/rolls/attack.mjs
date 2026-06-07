@@ -8,6 +8,7 @@ import { BDH } from "../config.mjs";
 import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
+import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -54,6 +55,7 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "toxicTest") await rollToxicTest(message);
       else if (btn.dataset.bdh === "overheatDrop") await rollOverheatDrop(message);
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
+      else if (btn.dataset.bdh === "castResist") await rollCastResist(message);
     });
   });
 }
@@ -90,6 +92,20 @@ async function rollShockTest(message) {
   const choice = await promptTest({ title: label });
   if (!choice) return null;
   return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+}
+async function rollCastResist(message) {
+  const f = message.flags[NS];
+  if (!f?.opposed) return;
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to resist the power."); return; }
+  const tgt = resolveFocusTarget(defender.system, f.opposedBy);
+  const oppLabel = game.i18n.localize(
+    CONFIG.BDH.characteristics[f.opposedBy]?.label ?? CONFIG.BDH.skills[f.opposedBy]?.label ?? f.opposedBy
+  );
+  const label = `${oppLabel} (Resist ${f.powerName} — caster ${f.casterDoS ?? 0} DoS)`;
+  const choice = await promptTest({ title: label });
+  if (!choice) return null;
+  return performTest(defender, { label, base: tgt.total, modifier: choice.modifier });
 }
 async function rollConcussiveTest(message) {
   const f = message.flags[NS];
@@ -142,18 +158,20 @@ async function rollToxicTest(message) {
 async function rollDamage(message) {
   const f = message.flags[NS];
   const actor = await fromUuid(f.actorUuid);
-  const weapon = actor?.items.get(f.weaponId);
-  if (!weapon) return;
-  const baseFormula = weapon.system.damage;            // e.g. "1d10+3"
+  const psychic = !!f.psychic;
+  const weapon = psychic ? null : actor?.items.get(f.weaponId);
+  if (!psychic && !weapon) return;
+  const baseFormula = psychic ? (f.damage || "0") : weapon.system.damage;   // e.g. "1d10+3" or PR-substituted formula
+  const weaponDisplayName = f.weaponName ?? weapon?.name;
   const mod = await DialogV2.prompt({
-    window: { title: `${weapon.name} — Damage` },
+    window: { title: `${weaponDisplayName} — Damage` },
     content: `<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
     ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object.mod },
     rejectClose: false
   });
   if (mod == null) return;
   const trimmed = String(mod).trim();
-  const qualities = f.qualities ?? [];
+  const qualities = psychic ? (f.qualities ?? []) : (f.qualities ?? weapon.system.qualities ?? []);
   const dos = f.dos ?? 0;
   const rfThreshold = vengefulValue(qualities) || 10;
   const primitiveX = primitiveValue(qualities);
@@ -165,9 +183,10 @@ async function rollDamage(message) {
     for (const die of roll.dice) for (const r of die.results) if (r.active) d += transform(r.result) - r.result;
     return d;
   };
-  const craftDmg = !f.isRanged ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
+  // Melee-only bonuses: psychic powers skip craftsmanship and Strength bonus.
+  const craftDmg = (!psychic && !f.isRanged) ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
   // Melee weapons add the attacker's Strength Bonus (already includes unnatural Strength) to each hit.
-  const strBonus = !f.isRanged ? (actor.system.characteristics.strength?.bonus ?? 0) : 0;
+  const strBonus = (!psychic && !f.isRanged) ? (actor.system.characteristics.strength?.bonus ?? 0) : 0;
   let weaponBase = baseFormula;
   if (strBonus) weaponBase = `${weaponBase} + ${strBonus}`;
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
@@ -210,7 +229,7 @@ async function rollDamage(message) {
     const breakdown = formatRoll(wRoll, sr, dos, transform) + (bonusBreak ? `+${bonusBreak.replace(/^\+/, "")}` : "");
     return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown };
   });
-  const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
+  const cardData = { weaponName: weaponDisplayName, damageType: f.damageType, penetration: f.penetration, hits,
     targetName: f.targetName, canApply: !!f.targetUuid, shocking: hasShocking(qualities),
     concussive: concussiveValue(qualities) || null,
     flame: hasFlame(qualities),
