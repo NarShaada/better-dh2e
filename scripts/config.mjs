@@ -42,7 +42,7 @@ BDH.skills = {
   charm:          { label: "BDH.Skill.Charm",          characteristic: "fellowship",   aptitudes: ["Fellowship", "Social"],      specialist: false },
   command:        { label: "BDH.Skill.Command",        characteristic: "fellowship",   aptitudes: ["Fellowship", "Leadership"],  specialist: false },
   commerce:       { label: "BDH.Skill.Commerce",       characteristic: "intelligence", aptitudes: ["Intelligence", "Knowledge"], specialist: false },
-  commonLore:     { label: "BDH.Skill.CommonLore",     characteristic: "intelligence", aptitudes: ["Intelligence", "Knowledge"], specialist: true },
+  commonLore:     { label: "BDH.Skill.CommonLore",     characteristic: "intelligence", aptitudes: ["Intelligence", "General"], specialist: true },
   deceive:        { label: "BDH.Skill.Deceive",        characteristic: "fellowship",   aptitudes: ["Fellowship", "Social"],      specialist: false },
   dodge:          { label: "BDH.Skill.Dodge",          characteristic: "agility",      aptitudes: ["Agility", "Defence"],        specialist: false },
   forbiddenLore:  { label: "BDH.Skill.ForbiddenLore",  characteristic: "intelligence", aptitudes: ["Intelligence", "Knowledge"], specialist: true },
