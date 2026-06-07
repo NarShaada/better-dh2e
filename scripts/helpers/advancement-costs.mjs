@@ -27,3 +27,8 @@ export function talentCost(matches, tier) {
   const table = BDH.xpCosts.talent[matches];
   return tier >= 1 && tier <= table.length ? table[tier - 1] : null;
 }
+
+/** XP cost to reach a given psy rating level (200 per level: 1st=200, 2nd=400, ...). */
+export function psyRatingCost(newLevel) {
+  return 200 * newLevel;
+}

@@ -7,7 +7,7 @@ import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
-import { aptitudeMatches, characteristicCost, skillCost, talentCost, RANK_ORDER } from "../helpers/advancement-costs.mjs";
+import { aptitudeMatches, characteristicCost, skillCost, talentCost, psyRatingCost, RANK_ORDER } from "../helpers/advancement-costs.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -245,6 +245,17 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (upd) await this.actor.update(upd);
   }
 
+  /** Action: buy the next psy rating (Simple) — 200 × new level; first rating is Custom-only. */
+  static async #onBuyPsyRating(event, target) {
+    const pr = this.actor.system.psyRating ?? 0;
+    if (pr < 1) return;
+    const next = pr + 1;
+    const cost = psyRatingCost(next);
+    const upd = this.#chargeXP({ "system.psyRating": next },
+      { type: "psyRating", label: "Psy Rating", detail: `→ ${next}`, cost, ref: "", specialtyId: "", toRank: String(next) });
+    if (upd) await this.actor.update(upd);
+  }
+
   /** Action: advance a standard skill to the next rank (Simple). */
   static async #onBuySkill(event, target) {
     const key = target.dataset.skill;
@@ -317,6 +328,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         list[sidx].rank = RANK_ORDER[RANK_ORDER.indexOf(entry.toRank) - 1];
       }
       extra[`system.skills.${entry.ref}.specialties`] = list;
+    } else if (entry.type === "psyRating") {
+      const cur = sys.psyRating ?? 0;
+      if (cur !== Number(entry.toRank)) { ui.notifications.warn("Refund later Psy Rating advances first."); return; }
+      extra["system.psyRating"] = cur - 1;
     } else if (entry.type === "talent") {
       const item = this.actor.items.get(entry.ref);
       if (item) await item.update({ "system.purchased": false });
@@ -360,6 +375,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       buySkill: DarkHeresyActorSheet.#onBuySkill,
       buySpecialty: DarkHeresyActorSheet.#onBuySpecialty,
       buyTalent: DarkHeresyActorSheet.#onBuyTalent,
+      buyPsyRating: DarkHeresyActorSheet.#onBuyPsyRating,
       refund: DarkHeresyActorSheet.#onRefund
     }
   };
@@ -499,6 +515,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.advancementMode = this._advancementMode;
     context.isCustom = this._advancementMode === "custom";
     context.isSimple = this._advancementMode === "simple";
+    const pr = this.document.system.psyRating ?? 0;
+    context.showPsyker = pr > 0;
+    context.psykerClassChoices = CONFIG.BDH.psykerClasses;
+    context.psykerClassLabel = CONFIG.BDH.psykerClasses[this.document.system.psykerClass] ?? "—";
+    context.canBuyPsyRating = context.isSimple && pr >= 1;
+    context.psyRatingNextCost = psyRatingCost(pr + 1);
     context.isNpc = this.document.type === "npc";
     context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
     context.experience = {

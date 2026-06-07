@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aptitudeMatches, characteristicCost, skillCost, talentCost, RANK_ORDER } from "../scripts/helpers/advancement-costs.mjs";
+import { aptitudeMatches, characteristicCost, skillCost, talentCost, psyRatingCost, RANK_ORDER } from "../scripts/helpers/advancement-costs.mjs";
 
 describe("aptitudeMatches", () => {
   it("counts how many advance aptitudes the character has (0/1/2)", () => {
@@ -28,5 +28,13 @@ describe("talentCost", () => {
   it("prices by tier and match count", () => {
     expect(talentCost(2, 1)).toBe(200);
     expect(talentCost(0, 3)).toBe(1200);
+  });
+});
+describe("psyRatingCost", () => {
+  it("is 200 × the new level", () => {
+    expect(psyRatingCost(1)).toBe(200);
+    expect(psyRatingCost(2)).toBe(400);
+    expect(psyRatingCost(3)).toBe(600);
+    expect(psyRatingCost(5)).toBe(1000);
   });
 });

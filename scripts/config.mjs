@@ -86,6 +86,9 @@ BDH.aptitudes = [
 BDH.actorTypes = ["acolyte", "npc"];
 BDH.itemTypes  = ["weapon", "weaponMod", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"];
 
+/** Psyker class (key -> label). */
+BDH.psykerClasses = { bound: "Bound", unbound: "Unbound", daemonic: "Daemonic" };
+
 /** Weapon class (key -> label). */
 BDH.weaponClasses = { melee: "Melee", thrown: "Thrown", pistol: "Pistol", basic: "Basic", heavy: "Heavy" };
 
