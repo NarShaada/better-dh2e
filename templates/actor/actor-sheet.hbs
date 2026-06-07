@@ -387,6 +387,7 @@
       <div class="bdh-section-head">Psychic Powers <button type="button" class="bdh-add" data-action="createItem" data-type="psychicPower">＋</button></div>
       {{#each psychicPowers as |p|}}
         <div class="bdh-item-row" data-item-id="{{p.id}}">
+          {{#if @root.castable}}<a class="bdh-cast" data-action="castPower" data-item-id="{{p.id}}" title="Cast">✦ Cast</a>{{/if}}
           <span class="bdh-name" data-action="editItem">{{p.name}}</span>
           <span class="bdh-desc-line">{{p.summary}}</span>
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>

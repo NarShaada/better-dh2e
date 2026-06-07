@@ -2,6 +2,7 @@
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
 import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
 import { rollAttack } from "../rolls/attack.mjs";
+import { rollManifest } from "../rolls/manifest.mjs";
 import { corruptionTrack, insanityTrack, nextTestAt } from "../helpers/affliction-data.mjs";
 import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
@@ -172,6 +173,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   static async #onRollAttack(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
     if (id) await rollAttack(this.actor, id);
+  }
+
+  /** Action: cast a psychic power (manifest flow → cast card). */
+  static async #onCastPower(event, target) {
+    const power = this.actor.items.get(target.dataset.itemId);
+    if (power) await rollManifest(this.actor, power.id);
   }
 
   /** Action: reload a weapon — refill its clip to max. */
@@ -394,7 +401,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       buyPsyRating: DarkHeresyActorSheet.#onBuyPsyRating,
       refund: DarkHeresyActorSheet.#onRefund,
       addAptitude: DarkHeresyActorSheet.#onAddAptitude,
-      removeAptitude: DarkHeresyActorSheet.#onRemoveAptitude
+      removeAptitude: DarkHeresyActorSheet.#onRemoveAptitude,
+      castPower: DarkHeresyActorSheet.#onCastPower
     }
   };
 
@@ -535,6 +543,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.cybernetics = items.filter((i) => i.type === "cybernetic").map((c) => ({
       id: c.id, name: c.name, desc: firstLine(c.system.description), installed: c.system.installed
     }));
+    context.castable = (this.document.system.psyRating ?? 0) >= 1;
     context.psychicPowers = items.filter((i) => i.type === "psychicPower").map((p) => {
       const s = p.system;
       const focusLabel = (CONFIG.BDH.characteristics[s.focusTest] && game.i18n.localize(CONFIG.BDH.characteristics[s.focusTest].label))

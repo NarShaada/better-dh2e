@@ -1,0 +1,25 @@
+{{!-- templates/chat/cast-card.hbs --}}
+<div class="bdh-card bdh-cast-card {{#if success}}ok{{else}}fail{{/if}}">
+  <header class="bdh-card-head">
+    {{casterName}} {{#if success}}casts{{else}}fails to cast{{/if}} <b>{{powerName}}</b>
+    {{#if stateLabel}}at {{stateLabel}}PR {{effPR}}{{else}}at PR {{effPR}}{{/if}}
+  </header>
+  <div class="bdh-card-grid">
+    <span class="k">Focus Test</span><span class="v">{{focusLabel}}</span>
+    <span class="k">Target</span><span class="v">{{target}}</span>
+    <span class="k">Rolled</span><span class="v"><b>{{roll}}</b></span>
+  </div>
+  <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
+    {{#if success}}Success ({{degrees}} DoS){{else}}Failed{{/if}}
+  </div>
+  {{#if phenTriggered}}
+    <div class="bdh-phenomena">
+      Psychic Phenomena: d100 {{phenRoll}}{{#if phenMod}} {{phenSign}}{{phenMod}}{{/if}} = <b>{{phenTotal}}</b>
+      {{#if perilRoll}} — <b>Perils of the Warp!</b> d100 {{perilRoll}} (GM consult the table){{/if}}
+    </div>
+  {{/if}}
+  {{#if daemonicNote}}<div class="bdh-note">{{daemonicNote}}</div>{{/if}}
+  {{#if effectText}}<div class="bdh-effect">{{{effectText}}}</div>{{/if}}
+  {{!-- isAttack region: hits + Evade/Roll Damage buttons added in Task 4 --}}
+  {{#if isAttack}}{{/if}}
+</div>

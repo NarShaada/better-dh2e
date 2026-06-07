@@ -260,3 +260,10 @@
 /* Encumbrance (Gear tab) */
 .better-dh2e .bdh-over { color:#a01818; }
 .better-dh2e .bdh-enc-aux { color:var(--bdh-brown); font-size:11px; margin-left:8px; }
+
+/* Psychic cast card */
+.better-dh2e .bdh-cast { cursor:pointer; color:var(--bdh-maroon); font-weight:bold; margin-left:6px; }
+.better-dh2e .bdh-cast:hover { text-decoration:underline; }
+.bdh-phenomena { margin-top:4px; color:#7a1fa0; }
+.bdh-note { font-style:italic; color:#6b4a2b; }
+.bdh-effect { margin-top:4px; }
