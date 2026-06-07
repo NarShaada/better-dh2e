@@ -160,7 +160,11 @@ async function rollDamage(message) {
     return d;
   };
   const craftDmg = !f.isRanged ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
-  let weaponBase = craftDmg ? `${baseFormula} + ${craftDmg}` : baseFormula;
+  // Melee weapons add the attacker's Strength Bonus (already includes unnatural Strength) to each hit.
+  const strBonus = !f.isRanged ? (actor.system.characteristics.strength?.bonus ?? 0) : 0;
+  let weaponBase = baseFormula;
+  if (strBonus) weaponBase = `${weaponBase} + ${strBonus}`;
+  if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
   if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
   if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
   const rolls = [];

@@ -161,7 +161,7 @@ BDH.attackTypes = {
   standard:   { label: "Standard",        mod: 10,  scope: "any",    hits: { mode: "single" } },
   calledShot: { label: "Called Shot",     mod: -20, scope: "any",    hits: { mode: "single" }, calledShot: true },
   allOut:     { label: "All-Out Attack",  mod: 30,  scope: "melee",  hits: { mode: "single" } },
-  charge:     { label: "Charge",          mod: 10,  scope: "melee",  hits: { mode: "single" } },
+  charge:     { label: "Charge",          mod: 20,  scope: "melee",  hits: { mode: "single" } },
   semiAuto:   { label: "Semi-Auto Burst", mod: 0,   scope: "ranged", hits: { mode: "multi", dosPer: 2 }, rof: "short" },
   fullAuto:   { label: "Full-Auto Burst", mod: -10, scope: "ranged", hits: { mode: "multi", dosPer: 1 }, rof: "long" },
   swift:      { label: "Swift Attack",    mod: 0,   scope: "melee",  hits: { mode: "multi", dosPer: 2 }, rof: null },
