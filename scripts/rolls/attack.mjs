@@ -8,6 +8,7 @@ import { BDH } from "../config.mjs";
 import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
+import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -54,6 +55,7 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "toxicTest") await rollToxicTest(message);
       else if (btn.dataset.bdh === "overheatDrop") await rollOverheatDrop(message);
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
+      else if (btn.dataset.bdh === "castResist") await rollCastResist(message);
     });
   });
 }
@@ -90,6 +92,20 @@ async function rollShockTest(message) {
   const choice = await promptTest({ title: label });
   if (!choice) return null;
   return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+}
+async function rollCastResist(message) {
+  const f = message.flags[NS];
+  if (!f?.opposed) return;
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to resist the power."); return; }
+  const tgt = resolveFocusTarget(defender.system, f.opposedBy);
+  const oppLabel = game.i18n.localize(
+    CONFIG.BDH.characteristics[f.opposedBy]?.label ?? CONFIG.BDH.skills[f.opposedBy]?.label ?? f.opposedBy
+  );
+  const label = `${oppLabel} (Resist ${f.powerName} — caster ${f.casterDoS ?? 0} DoS)`;
+  const choice = await promptTest({ title: label });
+  if (!choice) return null;
+  return performTest(defender, { label, base: tgt.total, modifier: choice.modifier });
 }
 async function rollConcussiveTest(message) {
   const f = message.flags[NS];

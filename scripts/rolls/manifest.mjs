@@ -75,23 +75,30 @@ export async function rollManifest(actor, powerId) {
   const dos = success ? degrees : 0;
   const doubles = isDoubles(roll.total);
 
-  // Phenomena
+  // Phenomena (keep the Roll objects so the dice sound/animation plays)
   const phenTriggered = phenomenaTriggers(psykerClass, state, doubles);
   let phenRoll = null, phenMod = 0, phenTotal = null, perilRoll = null;
+  const extraRolls = [];
   if (phenTriggered) {
-    phenRoll = (await new Roll("1d100").evaluate()).total;
+    const pr = await new Roll("1d100").evaluate(); extraRolls.push(pr);
+    phenRoll = pr.total;
     phenMod = phenomenaModifier(psykerClass, state, pushPts);
     phenTotal = phenRoll + phenMod;
-    if (phenTotal >= 75) perilRoll = (await new Roll("1d100").evaluate()).total;
+    if (phenTotal >= 75) { const per = await new Roll("1d100").evaluate(); extraRolls.push(per); perilRoll = per.total; }
   }
 
+  // Target token (psychic powers may target; used for attack hits + opposed resist)
+  const targetToken = game.user.targets.first() ?? null;
+
   // Labels
-  const stateLabel = state === "normal" ? "" : state === "fettered" ? "Fettered " : "Pushed ";
   const focusLabel = game.i18n.localize(
     CONFIG.BDH.characteristics[focus.key]?.label
     ?? CONFIG.BDH.skills[focus.key]?.label
     ?? focus.key
   );
+  const powerTypeLabel = CONFIG.BDH.psychicTypes[s.type] ?? s.type;
+  const prLabel = state === "normal" ? `PR ${effPR}` : state === "fettered" ? `Fettered PR ${effPR}` : `Pushed PR ${effPR}`;
+  const modifierLabel = `${modifier >= 0 ? "+" : ""}${modifier}`;
   const daemonicNote = (psykerClass === "daemonic" && phenTriggered)
     ? "Daemonic — unaffected by its own phenomena." : "";
 
@@ -120,7 +127,6 @@ export async function rollManifest(actor, powerId) {
     const locs = success ? locationSequence(firstLoc, nHits) : [];
     hits = locs.map((loc, i) => ({ index: i, location: loc, label: CONFIG.BDH.hitLocationLabels[loc] }));
 
-    const targetToken = game.user.targets.first() ?? null;
     qualityLabels = qualities.map((q) => `${CONFIG.BDH.qualities[q.key]?.label ?? q.key}${q.value ? ` (${q.value})` : ""}`).join(", ");
     attackDamageType = s.damageType;
 
@@ -136,11 +142,12 @@ export async function rollManifest(actor, powerId) {
     casterName: actor.name,
     powerName: power.name,
     success,
-    stateLabel,
-    effPR,
-    focusLabel,
-    roll: roll.total,
     target,
+    modifierLabel,
+    roll: roll.total,
+    powerTypeLabel,
+    focusLabel,
+    prLabel,
     degrees,
     phenTriggered,
     phenRoll,
@@ -149,21 +156,32 @@ export async function rollManifest(actor, powerId) {
     phenTotal,
     perilRoll,
     daemonicNote,
-    effectText: s.description ?? "",
+    opposed: s.opposed && success,
     isAttack,
     hits,
     qualityLabels,
-    damageType: attackDamageType,
   };
 
   const content = await renderTemplate(CARD, cardData);
+
+  // Opposed powers (typically Effect) carry resist data so the target can roll an opposing test.
+  const opposedFlags = (s.opposed && success) ? {
+    opposed: true, opposedBy: s.opposedBy, casterDoS: dos,
+    targetUuid: targetToken?.actor?.uuid ?? null, targetName: targetToken?.name ?? null,
+    casterName: actor.name, powerName: power.name,
+  } : {};
+
   const messageFlags = attackFlags
-    ? { [NS]: attackFlags }
-    : { [NS]: { type: "cast" } };
-  await ChatMessage.create({
+    ? { [NS]: { ...attackFlags, ...opposedFlags } }
+    : { [NS]: { type: "cast", ...opposedFlags } };
+
+  const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }),
+    rolls: [roll, ...extraRolls],
     content,
     flags: messageFlags,
-  });
+  };
+  ChatMessage.applyRollMode(messageData, "roll");
+  await ChatMessage.create(messageData);
   return true;
 }
