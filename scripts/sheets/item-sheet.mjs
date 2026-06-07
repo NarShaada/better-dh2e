@@ -1,6 +1,7 @@
 // scripts/sheets/item-sheet.mjs
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
+import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -62,10 +63,27 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.isArmour = t === "armour";
     context.isWeapon = t === "weapon";
     context.isWeaponMod = t === "weaponMod";
+    context.isPsychicPower = t === "psychicPower";
     context.craftChoices = BDH.craftsmanship;
     context.availChoices = BDH.availability;
     context.tierChoices = { 1: "Tier 1", 2: "Tier 2", 3: "Tier 3" };
     context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
+
+    if (context.isPsychicPower) {
+      const s = this.document.system;
+      context.disciplines = BDH.disciplines;
+      context.psychicTypes = BDH.psychicTypes;
+      context.psychicActions = BDH.psychicActions;
+      context.damageTypes = BDH.damageTypes;
+      context.charChoices = Object.fromEntries(Object.entries(BDH.characteristics).map(([k, c]) => [k, game.i18n.localize(c.label)]));
+      context.focusOptions = [
+        ...Object.entries(BDH.characteristics).map(([k, c]) => ({ key: k, label: game.i18n.localize(c.label) })),
+        ...Object.entries(BDH.skills).map(([k, sk]) => ({ key: k, label: game.i18n.localize(sk.label) })),
+      ];
+      context.psyIsAttack = isPsychicAttack(s.type);
+      context.psyIsBlast = s.type === "blast";
+      context.psyOpposed = s.opposed;
+    }
 
     if (context.isWeapon) {
       const flags = weaponClassFlags(system.weaponClass);

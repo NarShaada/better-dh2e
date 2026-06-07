@@ -67,6 +67,30 @@
     </div>
   {{/if}}
 
+  {{#if isPsychicPower}}
+    <div class="bdh-fields">
+      <label>Discipline</label><select name="system.discipline">{{selectOptions disciplines selected=system.discipline}}</select>
+      <label>Type</label><select name="system.type">{{selectOptions psychicTypes selected=system.type}}</select>
+      <label>Action</label><select name="system.action">{{selectOptions psychicActions selected=system.action}}</select>
+      <label>Focus Test</label><input type="text" name="system.focusTest" value="{{system.focusTest}}" list="bdh-focus-opts"/>
+      <datalist id="bdh-focus-opts">{{#each focusOptions}}<option value="{{this.key}}">{{this.label}}</option>{{/each}}</datalist>
+      <label>Focus Modifier</label><input type="number" name="system.focusModifier" value="{{system.focusModifier}}"/>
+      <label>Opposed</label><input type="checkbox" name="system.opposed" {{checked system.opposed}}/>
+      {{#if psyOpposed}}<label>Opposed By</label><select name="system.opposedBy">{{selectOptions charChoices selected=system.opposedBy}}</select>{{/if}}
+      <label>Range</label><input type="text" name="system.range" value="{{system.range}}"/>
+      <label>Duration</label><input type="text" name="system.duration" value="{{system.duration}}"/>
+      <label>Sustained</label><input type="checkbox" name="system.sustained" {{checked system.sustained}}/>
+      <label>Prerequisite</label><input type="text" name="system.prerequisite" value="{{system.prerequisite}}"/>
+      <label>XP Cost</label><input type="number" name="system.cost" value="{{system.cost}}" min="0"/>
+      {{#if psyIsAttack}}
+        <label>Damage</label><input type="text" name="system.damage" value="{{system.damage}}"/>
+        <label>Damage Type</label><select name="system.damageType">{{selectOptions damageTypes selected=system.damageType}}</select>
+        <label>Penetration</label><input type="text" name="system.penetration" value="{{system.penetration}}"/>
+        {{#if psyIsBlast}}<label>Blast Radius (m)</label><input type="number" name="system.blastRadius" value="{{system.blastRadius}}" min="0"/>{{/if}}
+      {{/if}}
+    </div>
+  {{/if}}
+
   {{#if isWeapon}}
     <div class="bdh-fields">
       <label>Class</label><select name="system.weaponClass">{{selectOptions weaponClasses selected=system.weaponClass}}</select>

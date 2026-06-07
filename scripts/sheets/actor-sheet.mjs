@@ -509,9 +509,19 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.cybernetics = items.filter((i) => i.type === "cybernetic").map((c) => ({
       id: c.id, name: c.name, desc: firstLine(c.system.description), installed: c.system.installed
     }));
-    context.psychicPowers = items.filter((i) => i.type === "psychicPower").map((p) => ({
-      id: p.id, name: p.name, desc: firstLine(p.system.description)
-    }));
+    context.psychicPowers = items.filter((i) => i.type === "psychicPower").map((p) => {
+      const s = p.system;
+      const focusLabel = (CONFIG.BDH.characteristics[s.focusTest] && game.i18n.localize(CONFIG.BDH.characteristics[s.focusTest].label))
+        ?? (CONFIG.BDH.skills[s.focusTest] && game.i18n.localize(CONFIG.BDH.skills[s.focusTest].label)) ?? s.focusTest;
+      const bits = [
+        CONFIG.BDH.psychicTypes[s.type] ?? s.type,
+        CONFIG.BDH.disciplines[s.discipline] ?? s.discipline,
+        `${focusLabel}${s.focusModifier ? ` ${s.focusModifier > 0 ? "+" : ""}${s.focusModifier}` : ""}${s.opposed ? " (opposed)" : ""}`,
+        CONFIG.BDH.psychicActions[s.action] ?? s.action,
+        s.sustained ? "Sustained" : null,
+      ].filter(Boolean);
+      return { id: p.id, name: p.name, summary: bits.join(" · "), desc: firstLine(s.description) };
+    });
     context.advancementMode = this._advancementMode;
     context.isCustom = this._advancementMode === "custom";
     context.isSimple = this._advancementMode === "simple";
