@@ -35,6 +35,12 @@ const CARD = "systems/better-dh2e/templates/chat/attack-card.hbs";
 export function bindCardButtons(message, html) {
   const flags = message.flags?.[NS];
   if (!flags) return;
+  // Apply Damage is only usable by an owner of the target (GM owns everything) — hide it for everyone else.
+  const applyBtn = html.querySelector('[data-bdh="applyDamage"]');
+  if (applyBtn) {
+    const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
+    if (!target?.isOwner) applyBtn.remove();
+  }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (btn.dataset.bdh === "rollDamage") await rollDamage(message);
@@ -205,7 +211,7 @@ async function rollDamage(message) {
     return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown };
   });
   const cardData = { weaponName: weapon.name, damageType: f.damageType, penetration: f.penetration, hits,
-    targetName: f.targetName, canApply: game.user.isGM && !!f.targetUuid, shocking: hasShocking(qualities),
+    targetName: f.targetName, canApply: !!f.targetUuid, shocking: hasShocking(qualities),
     concussive: concussiveValue(qualities) || null,
     flame: hasFlame(qualities),
     hallucinogenic: hallucinogenicValue(qualities) || null,
@@ -322,7 +328,7 @@ async function rollOverheatDamage(message) {
   const hits = [{ location: hand, label: BDH.hitLocationLabels[hand], total: roll.total, rf, breakdown: formatRoll(roll) }];
   const cardData = {
     weaponName: `${weapon.name} (Overheat)`, damageType: weapon.system.damageType, penetration: 0, hits,
-    targetName: attacker.name, canApply: game.user.isGM,
+    targetName: attacker.name, canApply: true,
     shocking: false, concussive: null, flame: false, hallucinogenic: null, damageNotes: ""
   };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
