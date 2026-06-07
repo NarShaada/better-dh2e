@@ -20,6 +20,17 @@
   {{/if}}
   {{#if daemonicNote}}<div class="bdh-note">{{daemonicNote}}</div>{{/if}}
   {{#if effectText}}<div class="bdh-effect">{{{effectText}}}</div>{{/if}}
-  {{!-- isAttack region: hits + Evade/Roll Damage buttons added in Task 4 --}}
-  {{#if isAttack}}{{/if}}
+  {{!-- isAttack region: hits + Evade/Roll Damage buttons (routes through attack pipeline) --}}
+  {{#if isAttack}}
+    {{#if qualityLabels}}<div class="bdh-card-line bdh-quals">Qualities: {{qualityLabels}}</div>{{/if}}
+    {{#if hits.length}}
+      <ol class="bdh-hits">
+        {{#each hits}}<li>{{label}}</li>{{/each}}
+      </ol>
+      <div class="bdh-card-actions">
+        <button type="button" data-bdh="rollDamage">Roll Damage</button>
+        <button type="button" data-bdh="evade">Evade</button>
+      </div>
+    {{/if}}
+  {{/if}}
 </div>

@@ -3,8 +3,11 @@
 import { evaluateTest } from "./test-logic.mjs";
 import {
   maxPush, manifestState, fetterPushModifier, isDoubles,
-  phenomenaTriggers, phenomenaModifier, resolveFocusTarget
+  phenomenaTriggers, phenomenaModifier, resolveFocusTarget, substitutePR
 } from "../helpers/psychic-manifest.mjs";
+import { isPsychicAttack } from "../helpers/psychic-data.mjs";
+import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
+import { effectivePenetration } from "../helpers/quality-modules.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -92,6 +95,43 @@ export async function rollManifest(actor, powerId) {
   const daemonicNote = (psykerClass === "daemonic" && phenTriggered)
     ? "Daemonic — unaffected by its own phenomena." : "";
 
+  // --- Attack-type branch (Bolt / Barrage / Storm / Blast) ---
+  let attackFlags = null;
+  let isAttack = false;
+  let hits = [];
+  let qualityLabels = "";
+  let attackDamageType = null;
+
+  if (isPsychicAttack(s.type)) {
+    isAttack = true;
+    const MAP = { bolt: "standard", barrage: "semiAuto", storm: "fullAuto", blast: "standard" };
+    const at = CONFIG.BDH.attackTypes[MAP[s.type]];
+    const rofCap = (s.type === "barrage" || s.type === "storm") ? effPR : Infinity;
+    const nHits = success ? computeHits(at, dos, rofCap) : 0;
+
+    const qualities = [...(s.qualities ?? [])];
+    if (s.type === "blast" && (s.blastRadius ?? 0) > 0) qualities.push({ key: "blast", value: s.blastRadius });
+
+    const penBase = Number((await new Roll(substitutePR(String(s.penetration || "0"), effPR) || "0").evaluate()).total) || 0;
+    const penetration = effectivePenetration(penBase, { qualities, dos, success, closeRange: false });
+    const damage = substitutePR(s.damage || "", effPR);
+
+    const firstLoc = hitLocation(roll.total);
+    const locs = success ? locationSequence(firstLoc, nHits) : [];
+    hits = locs.map((loc, i) => ({ index: i, location: loc, label: CONFIG.BDH.hitLocationLabels[loc] }));
+
+    const targetToken = game.user.targets.first() ?? null;
+    qualityLabels = qualities.map((q) => `${CONFIG.BDH.qualities[q.key]?.label ?? q.key}${q.value ? ` (${q.value})` : ""}`).join(", ");
+    attackDamageType = s.damageType;
+
+    attackFlags = {
+      type: "attack", psychic: true, actorUuid: actor.uuid, weaponName: power.name,
+      damage, penetration, damageType: s.damageType, qualities,
+      isRanged: true, dos, hits, success, jammed: false, scatterDmg: 0, maximal: false,
+      targetUuid: targetToken?.actor?.uuid ?? null, targetName: targetToken?.name ?? null,
+    };
+  }
+
   const cardData = {
     casterName: actor.name,
     powerName: power.name,
@@ -110,14 +150,20 @@ export async function rollManifest(actor, powerId) {
     perilRoll,
     daemonicNote,
     effectText: s.description ?? "",
-    isAttack: false,
+    isAttack,
+    hits,
+    qualityLabels,
+    damageType: attackDamageType,
   };
 
   const content = await renderTemplate(CARD, cardData);
+  const messageFlags = attackFlags
+    ? { [NS]: attackFlags }
+    : { [NS]: { type: "cast" } };
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content,
-    flags: { [NS]: { type: "cast" } }
+    flags: messageFlags,
   });
   return true;
 }
