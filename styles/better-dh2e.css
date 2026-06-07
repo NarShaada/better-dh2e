@@ -246,3 +246,7 @@
 
 /* Non-automated weapon-quality note on a chat card (just the name+value, in red) */
 .better-dh2e .bdh-qnote, .chat-message .bdh-qnote { color:#a02020; font-weight:600; }
+
+.better-dh2e .bdh-psy-class { display:flex; align-items:center; gap:8px; margin:6px 0; }
+.better-dh2e .bdh-psy-class label { font-variant:small-caps; color:var(--bdh-maroon); }
+.better-dh2e .bdh-pr-val { font-weight:700; }
