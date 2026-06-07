@@ -22,6 +22,10 @@ export class PsychicPowerModel extends BaseItemModel {
       damageType:    new fields.StringField({ required: true, choices: Object.keys(BDH.damageTypes), initial: "energy" }),
       penetration:   new fields.StringField({ required: true, initial: "0" }),
       blastRadius:   new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      qualities: new fields.ArrayField(new fields.SchemaField({
+        key:   new fields.StringField({ required: true }),
+        value: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })
+      }), { initial: [] }),
       cost:          new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
     };
   }

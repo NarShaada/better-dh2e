@@ -102,6 +102,16 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.psyIsAttack = isPsychicAttack(s.type);
       context.psyIsBlast = s.type === "blast";
       context.psyOpposed = s.opposed;
+      if (context.psyIsAttack) {
+        context.qualityChoices = Object.fromEntries(Object.entries(BDH.qualities).map(([k, v]) => [k, v.label]));
+        context.qualityList = (s.qualities ?? []).map((q, i) => {
+          const cfg = BDH.qualities[q.key];
+          const label = cfg?.label ?? q.key;
+          const automation = cfg?.automation;
+          const display = cfg?.takesValue && q.value ? `${label} (${q.value})` : label;
+          return { index: i, key: q.key, display, autoFull: automation === "full", autoPartial: automation === "partial" };
+        });
+      }
     }
 
     if (context.isWeapon) {
