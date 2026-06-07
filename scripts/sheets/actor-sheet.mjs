@@ -301,6 +301,21 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update(upd);
   }
 
+  /** Action: add the picked aptitude to the actor (Custom mode). */
+  static async #onAddAptitude(event, target) {
+    const pick = target.closest(".bdh-apt-add")?.querySelector(".bdh-apt-pick")?.value;
+    if (!pick) return;
+    const list = this.actor.system.aptitudes ?? [];
+    if (list.includes(pick)) return;
+    await this.actor.update({ "system.aptitudes": [...list, pick] });
+  }
+
+  /** Action: remove an aptitude from the actor. */
+  static async #onRemoveAptitude(event, target) {
+    const apt = target.dataset.aptitude;
+    await this.actor.update({ "system.aptitudes": (this.actor.system.aptitudes ?? []).filter((a) => a !== apt) });
+  }
+
   /** Action: refund an advancement-log entry (Simple). Any order for chars/talents; stepped advances newest-first per target. */
   static async #onRefund(event, target) {
     const idx = Number(target.dataset.logIndex);
@@ -376,7 +391,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       buySpecialty: DarkHeresyActorSheet.#onBuySpecialty,
       buyTalent: DarkHeresyActorSheet.#onBuyTalent,
       buyPsyRating: DarkHeresyActorSheet.#onBuyPsyRating,
-      refund: DarkHeresyActorSheet.#onRefund
+      refund: DarkHeresyActorSheet.#onRefund,
+      addAptitude: DarkHeresyActorSheet.#onAddAptitude,
+      removeAptitude: DarkHeresyActorSheet.#onRemoveAptitude
     }
   };
 
@@ -485,6 +502,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
     context.favTraits = items.filter((i) => i.type === "trait" && i.system.favourite)
       .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
+    context.hasTalents = items.some((i) => i.type === "talent");
+    context.hasTraits = items.some((i) => i.type === "trait");
     const favSkills = [];
     for (const [key, s] of Object.entries(sys.skills)) {
       if (BDH.skills[key].specialist) {
@@ -532,7 +551,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.canBuyPsyRating = context.isSimple && pr >= 1;
     context.psyRatingNextCost = psyRatingCost(pr + 1);
     context.isNpc = this.document.type === "npc";
-    context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
+    context.availableAptitudes = BDH.aptitudes.filter((a) => !(this.document.system.aptitudes ?? []).includes(a));
     context.experience = {
       total: sys.experience.total, spent: sys.experience.spent,
       free: sys.experience.total - sys.experience.spent

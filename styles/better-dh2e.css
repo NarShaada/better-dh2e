@@ -250,3 +250,9 @@
 .better-dh2e .bdh-psy-class { display:flex; align-items:center; gap:8px; margin:6px 0; }
 .better-dh2e .bdh-psy-class label { font-variant:small-caps; color:var(--bdh-maroon); }
 .better-dh2e .bdh-pr-val { font-weight:700; }
+
+/* Aptitude chips + add control (actor advancement + talent sheet) */
+.better-dh2e .bdh-apt-list { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+.better-dh2e .bdh-apt-chip { background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:10px; padding:1px 8px; font-size:12px; }
+.better-dh2e .bdh-apt-chip a { color:var(--bdh-maroon); cursor:pointer; margin-left:4px; }
+.better-dh2e .bdh-apt-add { display:flex; gap:6px; align-items:center; }

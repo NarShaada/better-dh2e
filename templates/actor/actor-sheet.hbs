@@ -142,6 +142,7 @@
             {{/each}}
             {{#unless combatWeapons.length}}<div class="bdh-empty">No equipped weapons — equip them on the Gear tab.</div>{{/unless}}
           </div>
+          {{#if hasTalents}}
           <div class="bdh-section">
             <div class="bdh-section-head">★ Favourite Talents</div>
             {{#each favTalents as |t|}}
@@ -149,6 +150,8 @@
             {{/each}}
             {{#unless favTalents.length}}<div class="bdh-empty">Star talents on the Abilities tab.</div>{{/unless}}
           </div>
+          {{/if}}
+          {{#if hasTraits}}
           <div class="bdh-section">
             <div class="bdh-section-head">★ Favourite Traits</div>
             {{#each favTraits as |t|}}
@@ -156,6 +159,7 @@
             {{/each}}
             {{#unless favTraits.length}}<div class="bdh-empty">Star traits on the Abilities tab.</div>{{/unless}}
           </div>
+          {{/if}}
           <div class="bdh-section">
             <div class="bdh-section-head">★ Favourite Skills</div>
             {{#each favSkills as |s|}}
@@ -406,7 +410,16 @@
     </div>
     <div class="bdh-section">
       <div class="bdh-section-head">Aptitudes <span class="bdh-hint2">the character's fixed aptitudes</span></div>
-      <select class="bdh-apt-select" name="system.aptitudes" multiple size="10">{{selectOptions aptitudeChoices selected=system.aptitudes}}</select>
+      <div class="bdh-apt-list">
+        {{#each system.aptitudes as |a|}}<span class="bdh-apt-chip">{{a}}{{#if @root.isCustom}} <a data-action="removeAptitude" data-aptitude="{{a}}" title="Remove">✕</a>{{/if}}</span>{{/each}}
+        {{#unless system.aptitudes.length}}<span class="bdh-empty">None.</span>{{/unless}}
+      </div>
+      {{#if isCustom}}
+        <div class="bdh-apt-add">
+          <select class="bdh-apt-pick">{{#each availableAptitudes}}<option value="{{this}}">{{this}}</option>{{/each}}</select>
+          <button type="button" data-action="addAptitude">Add</button>
+        </div>
+      {{/if}}
     </div>
     {{#unless isNpc}}<div class="bdh-section">
       <div class="bdh-section-head">Advancement Log</div>

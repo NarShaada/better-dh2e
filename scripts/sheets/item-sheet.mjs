@@ -34,6 +34,21 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     await this.document.update({ "system.mods": mods });
   }
 
+  /** Action: add the picked aptitude to the talent item. */
+  static async #onAddAptitude(event, target) {
+    const pick = target.closest(".bdh-apt-add")?.querySelector(".bdh-apt-pick")?.value;
+    if (!pick) return;
+    const list = this.document.system.aptitudes ?? [];
+    if (list.includes(pick)) return;
+    await this.document.update({ "system.aptitudes": [...list, pick] });
+  }
+
+  /** Action: remove an aptitude from the talent item. */
+  static async #onRemoveAptitude(event, target) {
+    const apt = target.dataset.aptitude;
+    await this.document.update({ "system.aptitudes": (this.document.system.aptitudes ?? []).filter((a) => a !== apt) });
+  }
+
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "item"],
     position: { width: 640, height: 560 },
@@ -42,7 +57,9 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     actions: {
       addQuality: DarkHeresyItemSheet.#onAddQuality,
       removeQuality: DarkHeresyItemSheet.#onRemoveQuality,
-      removeMod: DarkHeresyItemSheet.#onRemoveMod
+      removeMod: DarkHeresyItemSheet.#onRemoveMod,
+      addAptitude: DarkHeresyItemSheet.#onAddAptitude,
+      removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude
     }
   };
 
@@ -67,7 +84,9 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.craftChoices = BDH.craftsmanship;
     context.availChoices = BDH.availability;
     context.tierChoices = { 1: "Tier 1", 2: "Tier 2", 3: "Tier 3" };
-    context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
+    if (context.isTalent) {
+      context.availableAptitudes = BDH.aptitudes.filter((a) => !(system.aptitudes ?? []).includes(a));
+    }
 
     if (context.isPsychicPower) {
       const s = this.document.system;
