@@ -80,6 +80,7 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       corruption: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       insanity: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       psyRating: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      psykerClass: new fields.StringField({ required: true, choices: Object.keys(BDH.psykerClasses), initial: "bound" }),
       experience: new fields.SchemaField({
         total: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         spent: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
