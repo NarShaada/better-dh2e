@@ -85,6 +85,10 @@ export function scatterDamage(qualities, range) {
 export function snareValue(qualities) { return qualityValue(qualities, "snare"); }
 export function hasStorm(qualities) { return has(qualities, "storm"); }
 
+export function toxicValue(qualities) { return qualityValue(qualities, "toxic"); }
+export function vengefulValue(qualities) { return qualityValue(qualities, "vengeful"); }
+export function hasUnwieldy(qualities) { return has(qualities, "unwieldy"); }
+
 export function hasFlame(qualities) { return has(qualities, "flame"); }
 export function hasFlexible(qualities) { return has(qualities, "flexible"); }
 export function hasGraviton(qualities) { return has(qualities, "graviton"); }
