@@ -551,7 +551,6 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.canBuyPsyRating = context.isSimple && pr >= 1;
     context.psyRatingNextCost = psyRatingCost(pr + 1);
     context.isNpc = this.document.type === "npc";
-    context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
     context.availableAptitudes = BDH.aptitudes.filter((a) => !(this.document.system.aptitudes ?? []).includes(a));
     context.experience = {
       total: sys.experience.total, spent: sys.experience.spent,

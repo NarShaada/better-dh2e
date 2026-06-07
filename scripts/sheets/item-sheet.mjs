@@ -84,7 +84,6 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.craftChoices = BDH.craftsmanship;
     context.availChoices = BDH.availability;
     context.tierChoices = { 1: "Tier 1", 2: "Tier 2", 3: "Tier 3" };
-    context.aptitudeChoices = Object.fromEntries(BDH.aptitudes.map((a) => [a, a]));
     if (context.isTalent) {
       context.availableAptitudes = BDH.aptitudes.filter((a) => !(system.aptitudes ?? []).includes(a));
     }
