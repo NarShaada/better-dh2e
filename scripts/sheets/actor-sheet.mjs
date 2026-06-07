@@ -485,6 +485,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
     context.favTraits = items.filter((i) => i.type === "trait" && i.system.favourite)
       .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
+    context.hasTalents = items.some((i) => i.type === "talent");
+    context.hasTraits = items.some((i) => i.type === "trait");
     const favSkills = [];
     for (const [key, s] of Object.entries(sys.skills)) {
       if (BDH.skills[key].specialist) {

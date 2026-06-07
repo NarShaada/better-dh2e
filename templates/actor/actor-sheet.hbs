@@ -142,6 +142,7 @@
             {{/each}}
             {{#unless combatWeapons.length}}<div class="bdh-empty">No equipped weapons — equip them on the Gear tab.</div>{{/unless}}
           </div>
+          {{#if hasTalents}}
           <div class="bdh-section">
             <div class="bdh-section-head">★ Favourite Talents</div>
             {{#each favTalents as |t|}}
@@ -149,6 +150,8 @@
             {{/each}}
             {{#unless favTalents.length}}<div class="bdh-empty">Star talents on the Abilities tab.</div>{{/unless}}
           </div>
+          {{/if}}
+          {{#if hasTraits}}
           <div class="bdh-section">
             <div class="bdh-section-head">★ Favourite Traits</div>
             {{#each favTraits as |t|}}
@@ -156,6 +159,7 @@
             {{/each}}
             {{#unless favTraits.length}}<div class="bdh-empty">Star traits on the Abilities tab.</div>{{/unless}}
           </div>
+          {{/if}}
           <div class="bdh-section">
             <div class="bdh-section-head">★ Favourite Skills</div>
             {{#each favSkills as |s|}}
