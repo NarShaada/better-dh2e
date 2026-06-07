@@ -241,7 +241,7 @@
     </div>
   </section>
   <section class="tab {{tabs.gear.cssClass}}" data-group="primary" data-tab="gear">
-    <div class="bdh-gear-bar">Weight carried: <b>{{carriedWeight}}</b></div>
+    <div class="bdh-gear-bar">Weight carried: <b class="{{#if overEncumbered}}bdh-over{{/if}}">{{carriedWeight}}</b> / {{carryLimit}} kg <span class="bdh-enc-aux">Lift {{liftLimit}} · Push {{pushLimit}}</span></div>
 
     <div class="bdh-section">
       <div class="bdh-section-head">⚔ Weapons <button type="button" class="bdh-add" data-action="createItem" data-type="weapon">＋</button></div>

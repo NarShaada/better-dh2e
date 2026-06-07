@@ -256,3 +256,7 @@
 .better-dh2e .bdh-apt-chip { background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:10px; padding:1px 8px; font-size:12px; }
 .better-dh2e .bdh-apt-chip a { color:var(--bdh-maroon); cursor:pointer; margin-left:4px; }
 .better-dh2e .bdh-apt-add { display:flex; gap:6px; align-items:center; }
+
+/* Encumbrance (Gear tab) */
+.better-dh2e .bdh-over { color:#a01818; }
+.better-dh2e .bdh-enc-aux { color:var(--bdh-brown); font-size:11px; margin-left:8px; }
