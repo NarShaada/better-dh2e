@@ -160,6 +160,15 @@
             {{#unless favTraits.length}}<div class="bdh-empty">Star traits on the Abilities tab.</div>{{/unless}}
           </div>
           {{/if}}
+          {{#if hasPowers}}
+          <div class="bdh-section">
+            <div class="bdh-section-head">★ Favourite Powers</div>
+            {{#each favPowers as |p|}}
+              <div class="bdh-item-row" data-item-id="{{p.id}}">{{#if p.purchased}}{{#if @root.castable}}<a class="bdh-cast" data-action="castPower" data-item-id="{{p.id}}" title="Cast">✦ Cast</a>{{/if}}{{/if}}<span class="bdh-name" data-action="editItem">{{p.name}}</span><span class="bdh-desc-line">{{p.desc}}</span></div>
+            {{/each}}
+            {{#unless favPowers.length}}<div class="bdh-empty">Star powers on the Psychic tab.</div>{{/unless}}
+          </div>
+          {{/if}}
           <div class="bdh-section">
             <div class="bdh-section-head">★ Favourite Skills</div>
             {{#each favSkills as |s|}}
@@ -384,16 +393,21 @@
       </div>
     {{/if}}
     <div class="bdh-section">
-      <div class="bdh-section-head">Psychic Powers <button type="button" class="bdh-add" data-action="createItem" data-type="psychicPower">＋</button></div>
+      <div class="bdh-section-head">Psychic Powers {{#if isCustom}}<button type="button" class="bdh-add" data-action="createItem" data-type="psychicPower">＋</button>{{/if}}{{#if isSimple}}<button type="button" class="bdh-add" data-action="createItem" data-type="psychicPower">＋</button>{{/if}}</div>
       {{#each psychicPowers as |p|}}
         <div class="bdh-item-row" data-item-id="{{p.id}}">
-          {{#if @root.castable}}<a class="bdh-cast" data-action="castPower" data-item-id="{{p.id}}" title="Cast">✦ Cast</a>{{/if}}
+          <a class="bdh-fav {{#if p.favourite}}on{{/if}}" data-action="toggleFavourite" title="Favourite">★</a>
+          {{#if p.purchased}}{{#if @root.castable}}<a class="bdh-cast" data-action="castPower" data-item-id="{{p.id}}" title="Cast">✦ Cast</a>{{/if}}{{/if}}
           <span class="bdh-name" data-action="editItem">{{p.name}}</span>
           <span class="bdh-desc-line">{{p.summary}}</span>
+          {{#if @root.isSimple}}
+            {{#if p.purchased}}<span class="bdh-cost-done">{{p.cost}} xp ✓</span>
+            {{else}}<button type="button" class="bdh-buy" data-action="buyPower" data-item-id="{{p.id}}">Buy {{p.cost}}</button>{{/if}}
+          {{else}}{{#unless p.purchased}}<span class="bdh-warn">unpaid</span>{{/unless}}{{/if}}
           <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
         </div>
       {{/each}}
-      {{#unless psychicPowers.length}}<div class="bdh-empty">No powers — drag one in or press ＋.</div>{{/unless}}
+      {{#unless psychicPowers.length}}<div class="bdh-empty">No powers — add one in Custom or Simple.</div>{{/unless}}
     </div>
   </section>
   <section class="tab {{tabs.advancement.cssClass}}" data-group="primary" data-tab="advancement">

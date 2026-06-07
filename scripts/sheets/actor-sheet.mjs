@@ -72,7 +72,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const name = `New ${game.i18n.localize(`TYPES.Item.${type}`)}`;
     const data = { name, type };
     // Talents created in Custom advancement are free/owned; created in Simple they await a Buy.
-    if (type === "talent") data.system = { purchased: this._advancementMode === "custom" };
+    if (type === "talent" || type === "psychicPower") data.system = { purchased: this._advancementMode === "custom" };
     const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
     created?.sheet.render(true);
   }
@@ -178,7 +178,24 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** Action: cast a psychic power (manifest flow → cast card). */
   static async #onCastPower(event, target) {
     const power = this.actor.items.get(target.dataset.itemId);
-    if (power) await rollManifest(this.actor, power.id);
+    if (!power) return;
+    if (!power.system.purchased) {   // unpaid powers (added in Simple, not yet bought) can't be cast in any mode
+      ui.notifications.warn("Buy this power before casting it.");
+      return;
+    }
+    await rollManifest(this.actor, power.id);
+  }
+
+  /** Action: buy a psychic power (Simple) — charge its XP cost once, then it can be cast. */
+  static async #onBuyPower(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId ?? target.dataset.itemId;
+    const item = this.actor.items.get(id);
+    if (!item || item.system.purchased) return;
+    const cost = item.system.cost ?? 0;
+    const upd = this.#chargeXP({}, { type: "power", label: item.name, detail: "Psychic power", cost, ref: item.id, specialtyId: "", toRank: "" });
+    if (!upd) return;
+    await item.update({ "system.purchased": true });
+    await this.actor.update(upd);
   }
 
   /** Action: reload a weapon — refill its clip to max. */
@@ -355,7 +372,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       const cur = sys.psyRating ?? 0;
       if (cur !== Number(entry.toRank)) { ui.notifications.warn("Refund later Psy Rating advances first."); return; }
       extra["system.psyRating"] = cur - 1;
-    } else if (entry.type === "talent") {
+    } else if (entry.type === "talent" || entry.type === "power") {
       const item = this.actor.items.get(entry.ref);
       if (item) await item.update({ "system.purchased": false });
     }
@@ -398,6 +415,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       buySkill: DarkHeresyActorSheet.#onBuySkill,
       buySpecialty: DarkHeresyActorSheet.#onBuySpecialty,
       buyTalent: DarkHeresyActorSheet.#onBuyTalent,
+      buyPower: DarkHeresyActorSheet.#onBuyPower,
       buyPsyRating: DarkHeresyActorSheet.#onBuyPsyRating,
       refund: DarkHeresyActorSheet.#onRefund,
       addAptitude: DarkHeresyActorSheet.#onAddAptitude,
@@ -519,6 +537,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       .map((t) => ({ id: t.id, name: t.name, desc: firstLine(t.system.description) }));
     context.hasTalents = items.some((i) => i.type === "talent");
     context.hasTraits = items.some((i) => i.type === "trait");
+    context.favPowers = items.filter((i) => i.type === "psychicPower" && i.system.favourite)
+      .map((p) => ({ id: p.id, name: p.name, desc: firstLine(p.system.description), purchased: p.system.purchased ?? false }));
+    context.hasPowers = items.some((i) => i.type === "psychicPower");
     const favSkills = [];
     for (const [key, s] of Object.entries(sys.skills)) {
       if (BDH.skills[key].specialist) {
@@ -555,7 +576,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         CONFIG.BDH.psychicActions[s.action] ?? s.action,
         s.sustained ? "Sustained" : null,
       ].filter(Boolean);
-      return { id: p.id, name: p.name, summary: bits.join(" · "), desc: firstLine(s.description) };
+      return {
+        id: p.id, name: p.name, summary: bits.join(" · "), desc: firstLine(s.description),
+        favourite: s.favourite ?? false, purchased: s.purchased ?? false, cost: s.cost ?? 0,
+      };
     });
     context.advancementMode = this._advancementMode;
     context.isCustom = this._advancementMode === "custom";

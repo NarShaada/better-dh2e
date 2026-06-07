@@ -241,6 +241,7 @@ function mapItem(old, ctx = null) {
     case "psychicPower":
       return { ...base, type: "psychicPower", system: {
         description: joinDesc(stripHtml(s.description), stripHtml(s.shortDescription)),
+        purchased: true,   // already-owned powers come in paid so they stay castable in Simple mode
       }};
     case "trait":   // native dark-heresy trait -> our trait
       return { ...base, type: "trait", system: {

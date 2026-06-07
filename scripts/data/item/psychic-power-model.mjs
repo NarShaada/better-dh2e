@@ -27,6 +27,8 @@ export class PsychicPowerModel extends BaseItemModel {
         value: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })
       }), { initial: [] }),
       cost:          new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      favourite:     new fields.BooleanField({ required: true, initial: false }),
+      purchased:     new fields.BooleanField({ required: true, initial: false }),
     };
   }
 }
