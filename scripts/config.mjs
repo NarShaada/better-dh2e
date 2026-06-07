@@ -173,3 +173,10 @@ BDH.attackTypes = {
 
 /** Hit-location display labels. */
 BDH.hitLocationLabels = { head: "Head", rightArm: "Right Arm", leftArm: "Left Arm", body: "Body", rightLeg: "Right Leg", leftLeg: "Left Leg" };
+
+/** Psychic disciplines (key -> label). */
+BDH.disciplines = { biomancy: "Biomancy", divination: "Divination", pyromancy: "Pyromancy", telekinesis: "Telekinesis", telepathy: "Telepathy", minor: "Minor / Other" };
+/** Psychic power resolution type (key -> label). bolt/barrage/storm/blast are attacks (see isPsychicAttack). */
+BDH.psychicTypes = { effect: "Effect", bolt: "Psychic Bolt", barrage: "Psychic Barrage", storm: "Psychic Storm", blast: "Psychic Blast" };
+/** Action to manifest (key -> label). */
+BDH.psychicActions = { free: "Free", half: "Half", full: "Full", reaction: "Reaction" };
