@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -210,30 +210,33 @@ async function rollEvade(message) {
   // Defender: the bound target if available, else the user's controlled token, else their assigned character.
   const defender = (await fromUuid(f.targetUuid)) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
   if (!defender) { ui.notifications.warn("Select a token to evade with."); return; }
+  const meleeWeapons = defender.items.filter((i) => i.type === "weapon" && i.system.weaponClass === "melee" && i.system.equipped);
+  const parryWeapons = meleeWeapons.filter((i) => !hasUnwieldy(i.system.qualities));
+  const onlyUnwieldy = meleeWeapons.length > 0 && parryWeapons.length === 0;   // holding only Unwieldy melee
   const flexible = hasFlexible(f.qualities);
-  const parryOption = flexible ? "" : `<option value="parry">Parry</option>`;
-  const flexibleNote = flexible
+  const noParry = flexible || onlyUnwieldy;
+  const parryOption = noParry ? "" : `<option value="parry">Parry</option>`;
+  const parryNote = flexible
     ? `<div class="form-group"><p class="hint">This weapon is Flexible — it cannot be parried.</p></div>`
+    : onlyUnwieldy
+    ? `<div class="form-group"><p class="hint">Your only melee weapon is Unwieldy — it cannot parry.</p></div>`
     : "";
   const choice = await DialogV2.prompt({
     window: { title: "Evade" },
-    content: `${flexibleNote}<div class="form-group"><label>Reaction</label><select name="reaction"><option value="dodge">Dodge</option>${parryOption}</select></div>
+    content: `${parryNote}<div class="form-group"><label>Reaction</label><select name="reaction"><option value="dodge">Dodge</option>${parryOption}</select></div>
               <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>`,
     ok: { label: "React", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
     rejectClose: false
   });
   if (!choice) return;
   const modifier = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
-  // Defensive guard: block Parry if the incoming weapon is Flexible (covers any path that still surfaces Parry).
-  if (flexible && choice.reaction === "parry") {
-    ui.notifications.warn("A Flexible weapon cannot be parried.");
+  // Defensive guard: block Parry if the incoming weapon is Flexible or the defender's only melee weapons are Unwieldy.
+  if (noParry && choice.reaction === "parry") {
+    ui.notifications.warn(flexible ? "A Flexible weapon cannot be parried." : "An Unwieldy weapon cannot parry.");
     return null;
   }
   if (choice.reaction === "parry") {
-    const meleeWeapons = defender.items
-      .filter((i) => i.type === "weapon" && i.system.weaponClass === "melee" && i.system.equipped)
-      .map((i) => ({ qualities: i.system.qualities, craftsmanship: i.system.craftsmanship }));
-    const pmod = parryModifier(meleeWeapons);
+    const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: i.system.qualities, craftsmanship: i.system.craftsmanship })));
     const base = defender.system.characteristics.weaponSkill.total;
     const label = pmod ? `Parry (WS, weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry (WS)";
     return performTest(defender, { label, base, modifier: modifier + pmod });
@@ -333,7 +336,8 @@ export async function rollAttack(actor, weaponId) {
 
   // Build option HTML for selects
   const typeOpts = Object.entries(BDH.attackTypes)
-    .filter(([, t]) => t.scope === "any" || t.scope === (isMelee ? "melee" : "ranged"))
+    .filter(([k, t]) => (t.scope === "any" || t.scope === (isMelee ? "melee" : "ranged"))
+      && !(k === "lightning" && hasUnwieldy(weapon.system.qualities)))
     .map(([k, t]) => `<option value="${k}">${t.label}</option>`)
     .join("");
 
