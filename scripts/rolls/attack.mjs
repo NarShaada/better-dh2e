@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue } from "../helpers/quality-modules.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 
@@ -45,6 +45,7 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "flameTest") await rollFlameTest(message);
       else if (btn.dataset.bdh === "hallucinogenicTest") await rollHallucinogenicTest(message);
       else if (btn.dataset.bdh === "snareTest") await rollSnareTest(message);
+      else if (btn.dataset.bdh === "toxicTest") await rollToxicTest(message);
       else if (btn.dataset.bdh === "overheatDrop") await rollOverheatDrop(message);
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
     });
@@ -122,6 +123,16 @@ async function rollSnareTest(message) {
   if (!choice) return null;
   return performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
 }
+async function rollToxicTest(message) {
+  const f = message.flags[NS];
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const x = toxicValue(f.qualities);
+  const label = `Toughness (Toxic ${x})`;
+  const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
+  if (!choice) return null;
+  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+}
 async function rollDamage(message) {
   const f = message.flags[NS];
   const actor = await fromUuid(f.actorUuid);
@@ -138,6 +149,7 @@ async function rollDamage(message) {
   const trimmed = String(mod).trim();
   const qualities = f.qualities ?? [];
   const dos = f.dos ?? 0;
+  const rfThreshold = vengefulValue(qualities) || 10;
   const primitiveX = primitiveValue(qualities);
   const provenX = provenValue(qualities);
   const transform = (v) => transformDamageDie(v, { primitiveX, provenX });
@@ -157,7 +169,7 @@ async function rollDamage(message) {
     // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
     const weaponFormula = weaponDamageFormula(qualities, weaponBase);
     const wRoll = await new Roll(weaponFormula).evaluate();
-    const rf = wRoll.dice.some((d) => d.faces === 10 && d.results.some((res) => res.active && res.result === 10));
+    const rf = wRoll.dice.some((d) => d.faces === 10 && d.results.some((res) => res.active && res.result >= rfThreshold));
     rolls.push(wRoll);
     // Bonus damage — non-RF; first hit only: the input modifier + Accurate's DoS dice.
     const bonusParts = [];
@@ -194,6 +206,7 @@ async function rollDamage(message) {
     flame: hasFlame(qualities),
     hallucinogenic: hallucinogenicValue(qualities) || null,
     snare: snareValue(qualities) || null,
+    toxic: toxicValue(qualities) || null,
     damageNotes: qualityNotes(qualities, "damage") };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
