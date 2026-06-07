@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, snareValue, hasStorm } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -184,5 +184,15 @@ describe("snareValue / hasStorm", () => {
     expect(snareValue(Q())).toBe(0);
     expect(hasStorm(Q("storm"))).toBe(true);
     expect(hasStorm(Q())).toBe(false);
+  });
+});
+describe("toxicValue / vengefulValue / hasUnwieldy", () => {
+  it("read X / detect Unwieldy", () => {
+    expect(toxicValue([{ key: "toxic", value: "3" }])).toBe(3);
+    expect(toxicValue(Q())).toBe(0);
+    expect(vengefulValue([{ key: "vengeful", value: "9" }])).toBe(9);
+    expect(vengefulValue(Q())).toBe(0);
+    expect(hasUnwieldy(Q("unwieldy"))).toBe(true);
+    expect(hasUnwieldy(Q())).toBe(false);
   });
 });

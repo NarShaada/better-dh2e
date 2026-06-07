@@ -113,10 +113,10 @@ BDH.qualities = {
   felling:    { label: "Felling", takesValue: true, automation: "full" },
   accurate:   { label: "Accurate", takesValue: false, automation: "full" },
   storm:      { label: "Storm", takesValue: false, automation: "full" },
-  twinLinked: { label: "Twin-Linked", takesValue: false },
+  twinLinked: { label: "Twin-Linked", takesValue: false, noteOn: "attack" },
   reliable:   { label: "Reliable", takesValue: false, automation: "full" },
   unreliable: { label: "Unreliable", takesValue: false, automation: "full" },
-  unwieldy:   { label: "Unwieldy", takesValue: false },
+  unwieldy:   { label: "Unwieldy", takesValue: false, automation: "full" },
   flexible:   { label: "Flexible", takesValue: false, automation: "full" },
   balanced:   { label: "Balanced", takesValue: false, automation: "full" },
   unbalanced: { label: "Unbalanced", takesValue: false, automation: "full" },
@@ -143,6 +143,8 @@ BDH.qualities = {
   smoke:      { label: "Smoke", takesValue: true, noteOn: "attack" },
   snare:      { label: "Snare", takesValue: true, automation: "full" },
   spray:      { label: "Spray", takesValue: false, noteOn: "attack" },
+  toxic:      { label: "Toxic", takesValue: true, automation: "partial" },
+  vengeful:   { label: "Vengeful", takesValue: true, automation: "full" },
 };
 
 /** Aim bonuses. */
