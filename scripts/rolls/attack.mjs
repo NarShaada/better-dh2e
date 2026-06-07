@@ -384,13 +384,22 @@ export async function rollAttack(actor, weaponId) {
     <div class="form-group"><label>Aim</label><select name="aim">${aimOpts}</select></div>
     <div class="form-group"><label>Attack Type</label><select name="attackType">${typeOpts}</select></div>
     ${isRanged ? `<div class="form-group"><label>Range</label><select name="range">${rangeOpts}</select></div>` : ""}
-    <div class="form-group"><label>Called-Shot Location</label><select name="calledShotLocation">${locOpts}</select></div>
+    <div class="form-group" id="bdh-cs-row" style="display:none"><label>Called-Shot Location</label><select name="calledShotLocation">${locOpts}</select></div>
     ${maximalRow}`;
 
   const choice = await DialogV2.prompt({
     window: { title: `${weapon.name} — Attack (${charShort})` },
     content: dialogContent,
     rejectClose: false,
+    render: (event, dialog) => {
+      const root = dialog.element;
+      const sel = root.querySelector('[name="attackType"]');
+      const row = root.querySelector('#bdh-cs-row');
+      if (!sel || !row) return;
+      const toggle = () => { row.style.display = sel.value === "calledShot" ? "" : "none"; };
+      sel.addEventListener("change", toggle);
+      toggle();
+    },
     ok: {
       label: "Attack",
       callback: (event, button) => new foundry.applications.ux.FormDataExtended(button.form).object
