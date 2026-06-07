@@ -360,7 +360,25 @@
     </div>
   </section>
   <section class="tab {{tabs.psychic.cssClass}}" data-group="primary" data-tab="psychic">
-    <div class="bdh-psy-bar"><label>Psy Rating</label><input type="number" name="system.psyRating" value="{{system.psyRating}}" min="0"/></div>
+    <div class="bdh-psy-bar">
+      <label>Psy Rating</label>
+      {{#if isCustom}}
+        <input type="number" name="system.psyRating" value="{{system.psyRating}}" min="0"/>
+      {{else}}
+        <span class="bdh-pr-val">{{system.psyRating}}</span>
+        {{#if canBuyPsyRating}}<button type="button" class="bdh-buy" data-action="buyPsyRating">＋ {{psyRatingNextCost}}</button>{{/if}}
+      {{/if}}
+    </div>
+    {{#if showPsyker}}
+      <div class="bdh-psy-class">
+        <label>Psyker Class</label>
+        {{#if isCustom}}
+          <select class="bdh-edit" name="system.psykerClass">{{selectOptions psykerClassChoices selected=system.psykerClass}}</select>
+        {{else}}
+          <span>{{psykerClassLabel}}</span>
+        {{/if}}
+      </div>
+    {{/if}}
     <div class="bdh-section">
       <div class="bdh-section-head">Psychic Powers <button type="button" class="bdh-add" data-action="createItem" data-type="psychicPower">＋</button></div>
       {{#each psychicPowers as |p|}}
