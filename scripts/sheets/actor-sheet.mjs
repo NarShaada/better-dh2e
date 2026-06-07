@@ -8,6 +8,7 @@ import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
 import { aptitudeMatches, characteristicCost, skillCost, talentCost, psyRatingCost, RANK_ORDER } from "../helpers/advancement-costs.mjs";
+import { carryLimits } from "../helpers/encumbrance-data.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -481,6 +482,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       if (i.type === "weapon" || i.type === "armour" || i.type === "forceField") return sum + w;
       return sum;
     }, 0);
+    const encSum = (this.document.system.characteristics.strength.bonus ?? 0) + (this.document.system.characteristics.toughness.bonus ?? 0);
+    const limits = carryLimits(encSum);
+    context.carryLimit = limits.carry;
+    context.liftLimit = limits.lift;
+    context.pushLimit = limits.push;
+    context.overEncumbered = context.carriedWeight > limits.carry;
     const sys = this.document.system;
     const tb = sys.characteristics.toughness.bonus;
     const equippedArmour = items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
