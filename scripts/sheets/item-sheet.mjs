@@ -77,9 +77,13 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.reloadChoices = BDH.reload;
       context.qualityChoices = Object.fromEntries(Object.entries(BDH.qualities).map(([k, v]) => [k, v.label]));
       context.qualityList = system.qualities.map((q, i) => {
-        const label = BDH.qualities[q.key]?.label ?? q.key;
-        const automation = BDH.qualities[q.key]?.automation;
-        return { index: i, key: q.key, display: q.value != null ? `${label} (${q.value})` : label, autoFull: automation === "full", autoPartial: automation === "partial" };
+        const cfg = BDH.qualities[q.key];
+        const label = cfg?.label ?? q.key;
+        const automation = cfg?.automation;
+        // Show the (value) only for qualities that actually take one (and have a truthy value) —
+        // matches the chat cards and avoids "Reliable (0)" on value-less qualities.
+        const display = cfg?.takesValue && q.value ? `${label} (${q.value})` : label;
+        return { index: i, key: q.key, display, autoFull: automation === "full", autoPartial: automation === "partial" };
       });
       context.modList = system.mods.map((m, i) => ({ index: i, ...m }));
     }

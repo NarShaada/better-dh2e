@@ -242,6 +242,16 @@ function mapItem(old, ctx = null) {
       return { ...base, type: "psychicPower", system: {
         description: joinDesc(stripHtml(s.description), stripHtml(s.shortDescription)),
       }};
+    case "trait":   // native dark-heresy trait -> our trait
+      return { ...base, type: "trait", system: {
+        favourite: false, description: joinDesc(stripHtml(s.description), s.benefit),
+      }};
+    case "tool":    // dark-heresy tool -> our gear
+      return { ...base, type: "gear", system: {
+        craftsmanship: craft(s.craftsmanship), availability: avail(s.availability),
+        weight: num(s.weight), quantity: 1,
+        description: joinDesc(s.description, s.shortDescription),
+      }};
     default:
       unknownFallbacks.push({ name: old.name, oldType: t });
       return { ...base, type: "gear", system: {
@@ -535,11 +545,11 @@ for (const dir of ["effects", "items"]) {
 
 function mapItemTypeName(t) {
   switch (t) {
-    case "drug": case "ammunition": return "gear";
+    case "drug": case "ammunition": case "tool": return "gear";
     case "weaponModification": return "weaponMod";
     case "specialAbility": return "trait";
     case "talent": case "gear": case "weapon": case "armour":
-    case "cybernetic": case "psychicPower": return t;
+    case "cybernetic": case "psychicPower": case "trait": return t;
     default: return "gear";
   }
 }
