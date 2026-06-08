@@ -1,7 +1,7 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
-import { canReroll, rerollFromFate } from "./rolls/fate.mjs";
+import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
@@ -70,5 +70,11 @@ Hooks.on("getChatMessageContextOptions", (html, options) => {
     icon: '<i class="fas fa-dice-d10"></i>',
     condition: (li) => canReroll(game.messages.get(idOf(li))),
     callback: (li) => { const m = game.messages.get(idOf(li)); if (m) rerollFromFate(m); }
+  });
+  options.push({
+    name: "Spend Fate: +1 DoS",
+    icon: '<i class="fas fa-plus-circle"></i>',
+    condition: (li) => canAddDoS(game.messages.get(idOf(li))),
+    callback: (li) => { const m = game.messages.get(idOf(li)); if (m) addDoSFromFate(m); }
   });
 });

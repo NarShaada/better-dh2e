@@ -36,3 +36,36 @@ export async function rerollFromFate(message) {
     if (power) await resolveManifest(actor, power, { effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName });
   }
 }
+
+/** May the current user spend Fate to add +1 DoS? (success + owns + ≥1 Fate + not already boosted) */
+export function canAddDoS(message) {
+  const rr = message?.flags?.[NS]?.reroll;
+  if (!rr || !rr.success || (rr.dosBonus ?? 0) !== 0) return false;
+  const actor = fromUuidSync(rr.actorUuid);
+  return !!actor?.isOwner && (actor.system?.fate?.value ?? 0) >= 1;
+}
+
+/** Spend 1 Fate → re-resolve the SAME roll with +1 DoS (non-stackable). */
+export async function addDoSFromFate(message) {
+  const rr = message?.flags?.[NS]?.reroll;
+  if (!rr || !rr.success || (rr.dosBonus ?? 0) !== 0) return;
+  const actor = await fromUuid(rr.actorUuid);
+  if (!actor?.isOwner) { ui.notifications.warn("You don't own this character."); return; }
+  const fate = actor.system.fate?.value ?? 0;
+  if (fate < 1) { ui.notifications.warn("No Fate points to spend."); return; }
+  await actor.update({ "system.fate.value": fate - 1 });
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${actor.name} spends a Fate point (+1 DoS).</header></div>`
+  });
+  const boost = { fixedRoll: rr.roll, dosBonus: 1 };
+  if (rr.kind === "test") {
+    await performTest(actor, { label: rr.label, base: rr.base, modifier: rr.modifier, ...boost });
+  } else if (rr.kind === "attack") {
+    const weapon = actor.items.get(rr.weaponId);
+    if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });
+  } else if (rr.kind === "cast") {
+    const power = actor.items.get(rr.powerId);
+    if (power) await resolveManifest(actor, power, { effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });
+  }
+}
