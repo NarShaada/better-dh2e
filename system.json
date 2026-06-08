@@ -2,7 +2,7 @@
   "id": "better-dh2e",
   "title": "Better Dark Heresy 2E",
   "description": "A fresh, Foundry-v13-native unofficial system for Dark Heresy 2nd Edition. Ships content-free.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "compatibility": { "minimum": "13", "verified": "14.363" },
   "authors": [{ "name": "NarShaada", "url": "https://github.com/NarShaada" }],
   "esmodules": ["scripts/better-dh2e.mjs"],
