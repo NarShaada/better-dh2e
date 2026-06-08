@@ -22,6 +22,11 @@ https://github.com/NarShaada/better-dh2e/releases/latest/download/system.json
 
 ## Release notes
 
+### v0.1.6 — Psychic power advancement & favourites
+
+- **Power purchasing** follows the same rules as talents: the **＋ add** button is available only in **Custom** or **Simple** mode. A power added in **Custom** is owned outright; a power added in **Simple** is **unpaid** — it sits on the sheet as "unpaid" and **can't be cast** until you **Buy** it (deducting its XP cost, logged to the refundable advancement ledger). Migrated worlds bring existing powers in already paid.
+- **Favourite powers** — star a power (max 3, like talents/traits/skills); favourites surface in a **★ Favourite Powers** section on the Combat sub-tab, with a **Cast** button for quick manifesting.
+
 ### v0.1.5 — Psychic powers
 
 The psychic subsystem lands, alongside the encumbrance rules and the fixes/errata surfaced by playtesting.
