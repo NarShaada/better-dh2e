@@ -16,3 +16,6 @@ npm-debug.log*
 
 # Build artifact (uploaded as a release asset, not committed)
 better-dh2e.zip
+
+# Dev plans/specs — not part of the shipped system
+docs/
