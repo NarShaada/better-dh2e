@@ -30,6 +30,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** Action: toggle an advancement mode (press again to return to play mode). */
   static #onSetMode(event, target) {
     const m = target.dataset.mode;
+    if (m === "custom" && !game.user.isGM && game.settings.get("better-dh2e", "lockCustomMode")) {
+      ui.notifications.warn("Custom mode is locked to the GM.");
+      return;
+    }
     if (m === "simple" && this.actor.type === "npc") return; // NPCs don't earn XP — Custom only.
     this._advancementMode = this._advancementMode === m ? "none" : m;
     this.render();
@@ -621,6 +625,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         favourite: s.favourite ?? false, purchased: s.purchased ?? false, cost: s.cost ?? 0,
       };
     });
+    context.canUseCustom = game.user.isGM || !game.settings.get("better-dh2e", "lockCustomMode");
+    if (!context.canUseCustom && this._advancementMode === "custom") this._advancementMode = "none";
     context.advancementMode = this._advancementMode;
     context.isCustom = this._advancementMode === "custom";
     context.isSimple = this._advancementMode === "simple";

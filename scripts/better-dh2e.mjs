@@ -58,6 +58,16 @@ Hooks.once("init", () => {
     label: "Better DH2e Item Sheet"
   });
 
+  game.settings.register("better-dh2e", "lockCustomMode", {
+    name: "Lock Custom mode to the GM",
+    hint: "When enabled, only the GM can use Custom (free-edit) advancement. Players are limited to Simple mode (proper XP costs). Have players build characters in Custom first, then enable this to avoid XP-counting errors. The GM keeps Custom everywhere.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
+  });
+
   console.log("Better DH2e | Initialized");
 });
 
