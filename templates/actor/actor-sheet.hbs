@@ -19,7 +19,7 @@
     </div>
     <div class="fate">
       <div class="lbl">Fate</div>
-      <div class="v">{{system.fate.value}} / {{#if isCustom}}<input class="bdh-edit bdh-fate-max" type="number" name="system.fate.max" value="{{system.fate.max}}" min="0"/>{{else}}{{system.fate.max}}{{/if}}</div>
+      <div class="v">{{#if isPlay}}<a class="bdh-fate-spend" data-action="spendFate" title="Spend a Fate point">{{system.fate.value}}</a>{{else}}{{system.fate.value}}{{/if}} / {{#if isCustom}}<input class="bdh-edit bdh-fate-max" type="number" name="system.fate.max" value="{{system.fate.max}}" min="0"/>{{else}}{{system.fate.max}}{{/if}}</div>
       <div class="fate-adj"><button type="button" data-action="adjustFate" data-delta="-1" title="−1">−</button><button type="button" data-action="adjustFate" data-delta="1" title="+1">＋</button></div>
     </div>
   </header>

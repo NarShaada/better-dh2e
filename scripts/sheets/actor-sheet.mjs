@@ -50,6 +50,45 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update({ "system.fate.value": next });
   }
 
+  /** Action: spend a Fate point (Play mode) — recover 1d5 wounds or clear all fatigue. */
+  static async #onSpendFate(event, target) {
+    const sys = this.actor.system;
+    if ((sys.fate?.value ?? 0) < 1) { ui.notifications.warn("No Fate points to spend."); return; }
+    const hasCrit = (sys.wounds?.critical ?? 0) >= 1;
+    const choice = await foundry.applications.api.DialogV2.wait({
+      window: { title: "Spend a Fate Point" },
+      content: `<p>You have <b>${sys.fate.value}</b> Fate.</p>`
+        + (hasCrit ? `<p class="bdh-warn">Can't recover wounds while you have a critical injury.</p>` : ``),
+      buttons: [
+        { action: "wounds", label: "Recover 1d5 Wounds" },
+        { action: "fatigue", label: "Remove All Fatigue" }
+      ],
+      rejectClose: false
+    }).catch(() => null);
+    if (!choice) return;
+
+    const fate = this.actor.system.fate?.value ?? 0;
+    if (fate < 1) { ui.notifications.warn("No Fate points to spend."); return; }
+    const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+
+    if (choice === "wounds") {
+      if ((this.actor.system.wounds?.critical ?? 0) >= 1) {
+        ui.notifications.warn("Can't recover wounds while you have a critical injury.");
+        return;
+      }
+      const roll = await new Roll("1d5").evaluate();
+      const cur = this.actor.system.wounds?.value ?? 0;
+      const healed = Math.min(cur, roll.total);
+      await this.actor.update({ "system.fate.value": fate - 1, "system.wounds.value": cur - healed });
+      const messageData = { speaker, content: `<div class="bdh-card"><header class="bdh-card-head">${this.actor.name} spends a Fate point — recovers ${healed} wound${healed === 1 ? "" : "s"} (1d5: ${roll.total}).</header></div>`, rolls: [roll] };
+      ChatMessage.applyRollMode(messageData, "roll");
+      await ChatMessage.create(messageData);
+    } else if (choice === "fatigue") {
+      await this.actor.update({ "system.fate.value": fate - 1, "system.fatigue.value": 0 });
+      await ChatMessage.create({ speaker, content: `<div class="bdh-card"><header class="bdh-card-head">${this.actor.name} spends a Fate point — removes all fatigue.</header></div>` });
+    }
+  }
+
   /** Action: roll the clicked characteristic. */
   static async #onRollCharacteristic(event, target) {
     await rollCharacteristic(this.document, target.dataset.characteristic);
@@ -409,6 +448,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       setMode: DarkHeresyActorSheet.#onSetMode,
       adjustFatigue: DarkHeresyActorSheet.#onAdjustFatigue,
       adjustFate: DarkHeresyActorSheet.#onAdjustFate,
+      spendFate: DarkHeresyActorSheet.#onSpendFate,
       addSpecialty: DarkHeresyActorSheet.#onAddSpecialty,
       removeSpecialty: DarkHeresyActorSheet.#onRemoveSpecialty,
       buyCharacteristic: DarkHeresyActorSheet.#onBuyCharacteristic,
@@ -584,6 +624,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.advancementMode = this._advancementMode;
     context.isCustom = this._advancementMode === "custom";
     context.isSimple = this._advancementMode === "simple";
+    context.isPlay = !context.isCustom && !context.isSimple;
     const pr = this.document.system.psyRating ?? 0;
     context.showPsyker = pr > 0;
     context.psykerClassChoices = CONFIG.BDH.psykerClasses;
