@@ -486,7 +486,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
   const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (storm ? 2 : 1);
-  if (usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
+  // Only gate on ammo when we'd actually consume it — a Fate reroll re-resolves the same (already-fired) shot.
+  if (consumeAmmo && usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
     ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
     return null;
   }
