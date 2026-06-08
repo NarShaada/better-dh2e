@@ -445,8 +445,31 @@ export async function rollAttack(actor, weaponId) {
     }
   });
   if (!choice) return null;
-  const maximal = isRanged && !!choice.maximal;
+  return resolveAttack(actor, weapon, choice, { consumeAmmo: true });
+}
+
+/**
+ * Resolution body for an attack: 1d100 → DoS → hits/locations/jam → attack chat card.
+ * Separated from rollAttack so Fate rerolls can invoke it without re-showing the dialog.
+ * @param {Actor} actor
+ * @param {Item} weapon
+ * @param {object} choice   — the FormData object from the attack dialog
+ * @param {object} [opts]
+ * @param {boolean} [opts.consumeAmmo=true]  — set false to skip the clip deduction (Fate reroll)
+ * @param {string|null} [opts.targetUuid]    — override live targets (Fate reroll re-targets original)
+ * @param {string|null} [opts.targetName]    — override live target name
+ * @returns {Promise<ChatMessage|null>}
+ */
+export async function resolveAttack(actor, weapon, choice, opts = {}) {
+  const { consumeAmmo = true } = opts;
+
+  // Recompute setup-scope locals (needed whether called from rollAttack or a reroll)
+  const isMelee = weapon.system.weaponClass === "melee";
+  const isRanged = !isMelee;
+  const charKey = isMelee ? "weaponSkill" : "ballisticSkill";
+  const charShort = BDH.characteristics[charKey].short;
   const storm = hasStorm(weapon.system.qualities);
+  const maximal = isRanged && !!choice.maximal;
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
@@ -463,7 +486,8 @@ export async function rollAttack(actor, weaponId) {
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
   const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (storm ? 2 : 1);
-  if (usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
+  // Only gate on ammo when we'd actually consume it — a Fate reroll re-resolves the same (already-fired) shot.
+  if (consumeAmmo && usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
     ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
     return null;
   }
@@ -500,8 +524,10 @@ export async function rollAttack(actor, weaponId) {
   // Scatter flat damage modifier (range-based; 0 for melee or no Scatter quality)
   const scatterDmg = scatterDamage(weapon.system.qualities, choice.range);
 
-  // Target token (if any)
-  const targetToken = game.user.targets.first() ?? null;
+  // Target token — opts override takes precedence (Fate reroll), else read live targets
+  const liveTarget = opts.targetUuid ? null : (game.user.targets.first() ?? null);
+  const targetUuid = opts.targetUuid ?? liveTarget?.actor?.uuid ?? null;
+  const targetName = opts.targetName ?? liveTarget?.name ?? null;
 
   // Build hits array for the card and flags
   const hits = locs.map((loc, i) => ({ index: i, location: loc, label: BDH.hitLocationLabels[loc] }));
@@ -511,7 +537,7 @@ export async function rollAttack(actor, weaponId) {
     [NS]: {
       type: "attack",
       actorUuid: actor.uuid,
-      weaponId,
+      weaponId: weapon.id,
       isRanged,
       maximal,
       penetration,
@@ -519,12 +545,13 @@ export async function rollAttack(actor, weaponId) {
       qualities: weapon.system.qualities ?? [],
       aiming,
       dos,
-      targetUuid: targetToken?.actor?.uuid ?? null,
-      targetName: targetToken?.name ?? null,
+      targetUuid,
+      targetName,
       hits,
       success,
       jammed,
-      scatterDmg
+      scatterDmg,
+      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName }
     }
   };
 
@@ -553,7 +580,7 @@ export async function rollAttack(actor, weaponId) {
     hits,
     jammed,
     overheats: jammed && hasOverheats(weapon.system.qualities),
-    targetName: targetToken?.name ?? null,
+    targetName,
     hasHits: nHits > 0,
     qualityLabels,
     attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal })
@@ -569,8 +596,8 @@ export async function rollAttack(actor, weaponId) {
   ChatMessage.applyRollMode(messageData, "roll");
   const msg = await ChatMessage.create(messageData);
   // Force field: a hit target with an equipped field auto-tests it.
-  if (success && targetToken?.actor) await rollForceField(targetToken.actor);
-  // Deduct rounds after the message is created (jam still consumes)
-  if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - rounds });
+  if (success && liveTarget?.actor) await rollForceField(liveTarget.actor);
+  // Deduct rounds after the message is created (jam still consumes); skip on rerolls
+  if (consumeAmmo && usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - rounds });
   return msg;
 }

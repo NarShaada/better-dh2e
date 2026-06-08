@@ -1,6 +1,7 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
+import { canReroll, rerollFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
@@ -61,3 +62,13 @@ Hooks.once("init", () => {
 });
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));
+
+Hooks.on("getChatMessageContextOptions", (html, options) => {
+  const idOf = (li) => li?.dataset?.messageId ?? li?.getAttribute?.("data-message-id") ?? li?.[0]?.dataset?.messageId;
+  options.push({
+    name: "Spend Fate: Reroll",
+    icon: '<i class="fas fa-dice-d10"></i>',
+    condition: (li) => canReroll(game.messages.get(idOf(li))),
+    callback: (li) => { const m = game.messages.get(idOf(li)); if (m) rerollFromFate(m); }
+  });
+});

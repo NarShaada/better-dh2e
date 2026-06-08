@@ -3,6 +3,8 @@
 import { parseModifier, evaluateTest } from "./test-logic.mjs";
 import { skillTotal } from "../helpers/derived.mjs";
 
+const NS = "better-dh2e";
+
 const { DialogV2 } = foundry.applications.api;
 const { renderTemplate } = foundry.applications.handlebars;
 
@@ -44,7 +46,12 @@ export async function performTest(actor, { label, base, modifier }) {
   const result = evaluateTest({ base, modifier: parseModifier(modifier), roll: roll.total });
   const modifierLabel = `${result.modifier >= 0 ? "+" : ""}${result.modifier}`;
   const content = await renderTemplate(CARD, { label, ...result, modifierLabel });
-  const messageData = { speaker: ChatMessage.getSpeaker({ actor }), content, rolls: [roll] };
+  const messageData = {
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content,
+    rolls: [roll],
+    flags: { [NS]: { reroll: { kind: "test", actorUuid: actor.uuid, base, modifier, label } } }
+  };
   // Respect the GM's current roll mode (public / private GM / blind / self); "roll" resolves the core setting.
   ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
