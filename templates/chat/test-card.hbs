@@ -11,5 +11,6 @@
   </div>
   <div class="bdh-card-degrees">
     {{degrees}} {{#if success}}{{localize "BDH.Roll.DoS"}}{{else}}{{localize "BDH.Roll.DoF"}}{{/if}}
+    {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS · Fate</span>{{/if}}
   </div>
 </div>

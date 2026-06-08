@@ -41,18 +41,19 @@ export async function promptTest({ title, characteristics = null, defaultModifie
 }
 
 /** Roll d100 against base+modifier and post the chat card. */
-export async function performTest(actor, { label, base, modifier }) {
-  const roll = await new Roll("1d100").evaluate();
+export async function performTest(actor, { label, base, modifier, fixedRoll = null, dosBonus = 0 }) {
+  const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
   const result = evaluateTest({ base, modifier: parseModifier(modifier), roll: roll.total });
+  const dos = result.success ? result.degrees + dosBonus : 0;
   const modifierLabel = `${result.modifier >= 0 ? "+" : ""}${result.modifier}`;
-  const content = await renderTemplate(CARD, { label, ...result, modifierLabel });
+  // Show the boosted DoS on success; keep the raw degrees-of-failure on a miss.
+  const content = await renderTemplate(CARD, { label, ...result, degrees: result.success ? dos : result.degrees, modifierLabel, dosBonus });
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }),
     content,
-    rolls: [roll],
-    flags: { [NS]: { reroll: { kind: "test", actorUuid: actor.uuid, base, modifier, label } } }
+    flags: { [NS]: { reroll: { kind: "test", actorUuid: actor.uuid, base, modifier, label, roll: roll.total, success: result.success, dosBonus } } }
   };
-  // Respect the GM's current roll mode (public / private GM / blind / self); "roll" resolves the core setting.
+  if (fixedRoll == null) messageData.rolls = [roll];
   ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
   return result;

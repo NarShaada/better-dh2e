@@ -11,6 +11,7 @@
   <div class="bdh-card-line">{{powerTypeLabel}} · {{focusLabel}} · {{prLabel}}</div>
   <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
     {{#if success}}Success ({{degrees}} DoS){{else}}Failure ({{degrees}} DoF){{/if}}
+    {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS · Fate</span>{{/if}}
   </div>
   {{#if phenTriggered}}
     <div class="bdh-phenomena">
