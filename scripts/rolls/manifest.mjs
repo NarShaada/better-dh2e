@@ -59,11 +59,27 @@ export async function rollManifest(actor, powerId) {
   });
   if (!choice) return null;
 
-  // Compute state + modifiers
   const effPR = Number(choice.effPR);
+  const circ = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
+  return resolveManifest(actor, power, { effPR, circ });
+}
+
+/**
+ * Resolution half of a psychic manifest cast — rolls the focus d100, resolves phenomena/perils,
+ * builds the cast card, and creates the ChatMessage. Called by rollManifest and by fate.mjs rerolls.
+ * @param {Actor} actor
+ * @param {Item}  power   — the psychicPower Item (already looked up)
+ * @param {{ effPR: number, circ?: number, targetUuid?: string|null, targetName?: string|null }} opts
+ * @returns {Promise<true|null>}
+ */
+export async function resolveManifest(actor, power, opts) {
+  const { effPR, circ = 0, targetUuid: optsTargetUuid, targetName: optsTargetName } = opts;
+  const s = power.system;
+
+  const normalPR = actor.system.psyRating ?? 0;
+  const psykerClass = actor.system.psykerClass;
   const state = manifestState(effPR, normalPR);
   const pushPts = Math.max(0, effPR - normalPR);
-  const circ = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
 
   const focus = resolveFocusTarget(actor.system, s.focusTest);
   const focusMod = (s.focusModifier ?? 0) + fetterPushModifier(effPR, normalPR) + circ;
@@ -87,8 +103,10 @@ export async function rollManifest(actor, powerId) {
     if (phenTotal >= 75) { const per = await new Roll("1d100").evaluate(); extraRolls.push(per); perilRoll = per.total; }
   }
 
-  // Target token (psychic powers may target; used for attack hits + opposed resist)
-  const targetToken = game.user.targets.first() ?? null;
+  // Target token — opts override lets a reroll re-target the original
+  const liveTarget = optsTargetUuid ? null : (game.user.targets.first() ?? null);
+  const targetUuid = optsTargetUuid ?? liveTarget?.actor?.uuid ?? null;
+  const targetName = optsTargetName ?? liveTarget?.name ?? null;
 
   // Labels
   const focusLabel = game.i18n.localize(
@@ -101,6 +119,9 @@ export async function rollManifest(actor, powerId) {
   const modifierLabel = `${modifier >= 0 ? "+" : ""}${modifier}`;
   const daemonicNote = (psykerClass === "daemonic" && phenTriggered)
     ? "Daemonic — unaffected by its own phenomena." : "";
+
+  // Reroll payload — stored on both flag shapes so the new card is itself rerollable
+  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, effPR, circ, targetUuid, targetName };
 
   // --- Attack-type branch (Bolt / Barrage / Storm / Blast) ---
   let attackFlags = null;
@@ -134,7 +155,7 @@ export async function rollManifest(actor, powerId) {
       type: "attack", psychic: true, actorUuid: actor.uuid, weaponName: power.name,
       damage, penetration, damageType: s.damageType, qualities,
       isRanged: true, dos, hits, success, jammed: false, scatterDmg: 0, maximal: false,
-      targetUuid: targetToken?.actor?.uuid ?? null, targetName: targetToken?.name ?? null,
+      targetUuid, targetName,
     };
   }
 
@@ -167,13 +188,13 @@ export async function rollManifest(actor, powerId) {
   // Opposed powers (typically Effect) carry resist data so the target can roll an opposing test.
   const opposedFlags = (s.opposed && success) ? {
     opposed: true, opposedBy: s.opposedBy, casterDoS: dos,
-    targetUuid: targetToken?.actor?.uuid ?? null, targetName: targetToken?.name ?? null,
+    targetUuid, targetName,
     casterName: actor.name, powerName: power.name,
   } : {};
 
   const messageFlags = attackFlags
-    ? { [NS]: { ...attackFlags, ...opposedFlags } }
-    : { [NS]: { type: "cast", ...opposedFlags } };
+    ? { [NS]: { ...attackFlags, ...opposedFlags, reroll } }
+    : { [NS]: { type: "cast", ...opposedFlags, reroll } };
 
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }),
