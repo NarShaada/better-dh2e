@@ -414,7 +414,7 @@
     <div class="bdh-adv-ctl">
       <div class="bdh-adv-modes">
         {{#unless isNpc}}<button type="button" class="bdh-mode {{#if isSimple}}on{{/if}}" data-action="setMode" data-mode="simple">Simple</button>{{/unless}}
-        <button type="button" class="bdh-mode {{#if isCustom}}on{{/if}}" data-action="setMode" data-mode="custom">Custom</button>
+        {{#if canUseCustom}}<button type="button" class="bdh-mode {{#if isCustom}}on{{/if}}" data-action="setMode" data-mode="custom">Custom</button>{{/if}}
         <span class="bdh-mode-hint">{{#if isCustom}}Custom: edit freely across the sheet.{{else if isSimple}}Simple: buy advances — each charges Free XP and is logged below.{{else}}Pick a mode to edit; press again to return to play.{{/if}}</span>
       </div>
       {{#unless isNpc}}<div class="bdh-xp">
