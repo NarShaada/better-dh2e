@@ -461,7 +461,7 @@ export async function rollAttack(actor, weaponId) {
  * @returns {Promise<ChatMessage|null>}
  */
 export async function resolveAttack(actor, weapon, choice, opts = {}) {
-  const { consumeAmmo = true } = opts;
+  const { consumeAmmo = true, fixedRoll = null, dosBonus = 0 } = opts;
 
   // Recompute setup-scope locals (needed whether called from rollAttack or a reroll)
   const isMelee = weapon.system.weaponClass === "melee";
@@ -493,13 +493,13 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   }
 
   // Roll and evaluate
-  const roll = await new Roll("1d100").evaluate();
+  const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
   const result = evaluateTest({ base, modifier: rawModifier, roll: roll.total });
   // evaluateTest returns: { base, modifier (clamped), target, roll, success, degrees }
   const { success, degrees, target, modifier } = result;
 
   // Degrees of success (0 on failure)
-  const dos = success ? degrees : 0;
+  const dos = success ? degrees + dosBonus : 0;
 
   // Effective penetration (Lance scales with DoS; Melta doubles at close range)
   const penetration = effectivePenetration((weapon.system.penetration ?? 0) + (maximal ? 2 : 0), {
@@ -551,7 +551,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       success,
       jammed,
       scatterDmg,
-      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName }
+      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName, roll: roll.total, success, dosBonus }
     }
   };
 
@@ -583,16 +583,17 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     targetName,
     hasHits: nHits > 0,
     qualityLabels,
-    attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal })
+    attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal }),
+    dosBonus
   });
 
   // Create chat message (apply current roll mode)
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }),
-    rolls: [roll],
     content,
     flags
   };
+  if (fixedRoll == null) messageData.rolls = [roll];
   ChatMessage.applyRollMode(messageData, "roll");
   const msg = await ChatMessage.create(messageData);
   // Force field: a hit target with an equipped field auto-tests it.

@@ -73,7 +73,7 @@ export async function rollManifest(actor, powerId) {
  * @returns {Promise<true|null>}
  */
 export async function resolveManifest(actor, power, opts) {
-  const { effPR, circ = 0, targetUuid: optsTargetUuid, targetName: optsTargetName } = opts;
+  const { effPR, circ = 0, fixedRoll = null, dosBonus = 0, targetUuid: optsTargetUuid, targetName: optsTargetName } = opts;
   const s = power.system;
 
   const normalPR = actor.system.psyRating ?? 0;
@@ -85,22 +85,25 @@ export async function resolveManifest(actor, power, opts) {
   const focusMod = (s.focusModifier ?? 0) + fetterPushModifier(effPR, normalPR) + circ;
 
   // Roll + evaluate
-  const roll = await new Roll("1d100").evaluate();
+  const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
   const result = evaluateTest({ base: focus.total, modifier: focusMod, roll: roll.total });
   const { success, degrees, target, modifier } = result;
-  const dos = success ? degrees : 0;
+  const dos = success ? degrees + dosBonus : 0;
   const doubles = isDoubles(roll.total);
 
   // Phenomena (keep the Roll objects so the dice sound/animation plays)
-  const phenTriggered = phenomenaTriggers(psykerClass, state, doubles);
-  let phenRoll = null, phenMod = 0, phenTotal = null, perilRoll = null;
+  // Gate on fixedRoll == null — a +DoS re-resolution must NOT roll fresh phenomena.
+  let phenTriggered = false, phenRoll = null, phenMod = 0, phenTotal = null, perilRoll = null;
   const extraRolls = [];
-  if (phenTriggered) {
-    const pr = await new Roll("1d100").evaluate(); extraRolls.push(pr);
-    phenRoll = pr.total;
-    phenMod = phenomenaModifier(psykerClass, state, pushPts);
-    phenTotal = phenRoll + phenMod;
-    if (phenTotal >= 75) { const per = await new Roll("1d100").evaluate(); extraRolls.push(per); perilRoll = per.total; }
+  if (fixedRoll == null) {
+    phenTriggered = phenomenaTriggers(psykerClass, state, doubles);
+    if (phenTriggered) {
+      const pr = await new Roll("1d100").evaluate(); extraRolls.push(pr);
+      phenRoll = pr.total;
+      phenMod = phenomenaModifier(psykerClass, state, pushPts);
+      phenTotal = phenRoll + phenMod;
+      if (phenTotal >= 75) { const per = await new Roll("1d100").evaluate(); extraRolls.push(per); perilRoll = per.total; }
+    }
   }
 
   // Target token — opts override lets a reroll re-target the original
@@ -121,7 +124,7 @@ export async function resolveManifest(actor, power, opts) {
     ? "Daemonic — unaffected by its own phenomena." : "";
 
   // Reroll payload — stored on both flag shapes so the new card is itself rerollable
-  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, effPR, circ, targetUuid, targetName };
+  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, effPR, circ, targetUuid, targetName, roll: roll.total, success, dosBonus };
 
   // --- Attack-type branch (Bolt / Barrage / Storm / Blast) ---
   let attackFlags = null;
@@ -181,6 +184,7 @@ export async function resolveManifest(actor, power, opts) {
     isAttack,
     hits,
     qualityLabels,
+    dosBonus,
   };
 
   const content = await renderTemplate(CARD, cardData);
@@ -198,10 +202,10 @@ export async function resolveManifest(actor, power, opts) {
 
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }),
-    rolls: [roll, ...extraRolls],
     content,
     flags: messageFlags,
   };
+  if (fixedRoll == null) messageData.rolls = [roll, ...extraRolls];
   ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
   return true;
