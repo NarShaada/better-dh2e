@@ -9,6 +9,7 @@ import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier,
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
+import { forceFieldResult } from "../helpers/force-field-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -361,6 +362,25 @@ async function rollOverheatDamage(message) {
   await ChatMessage.create(messageData);
 }
 
+/** Auto-roll an equipped force field for a hit target. No-op if the target has no equipped field. */
+async function rollForceField(actor) {
+  const field = actor?.items.find((i) => i.type === "forceField" && i.system.equipped);
+  if (!field) return;
+  const roll = await new Roll("1d100").evaluate();
+  const res = forceFieldResult(roll.total, field.system.protectionRating, field.system.overload);
+  const content = await renderTemplate("systems/better-dh2e/templates/chat/forcefield-card.hbs", {
+    fieldName: field.name,
+    protection: field.system.protectionRating,
+    overloadRating: field.system.overload,
+    roll: roll.total,
+    success: res.success,
+    overloaded: res.overload,
+  });
+  const messageData = { speaker: ChatMessage.getSpeaker({ actor }), content, rolls: [roll] };
+  ChatMessage.applyRollMode(messageData, "roll");
+  await ChatMessage.create(messageData);
+}
+
 /**
  * Full to-hit roll for a weapon: dialog (Aim / Attack Type / Range / Called-Shot) →
  * 1d100 vs WS or BS → DoS → hits + locations + jam → attack chat card.
@@ -548,6 +568,8 @@ export async function rollAttack(actor, weaponId) {
   };
   ChatMessage.applyRollMode(messageData, "roll");
   const msg = await ChatMessage.create(messageData);
+  // Force field: a hit target with an equipped field auto-tests it.
+  if (success && targetToken?.actor) await rollForceField(targetToken.actor);
   // Deduct rounds after the message is created (jam still consumes)
   if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - rounds });
   return msg;

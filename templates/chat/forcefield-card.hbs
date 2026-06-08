@@ -1,0 +1,13 @@
+{{!-- templates/chat/forcefield-card.hbs --}}
+<div class="bdh-card {{#if success}}ok{{else}}fail{{/if}}">
+  <header class="bdh-card-head">{{fieldName}} — Force Field</header>
+  <div class="bdh-card-grid">
+    <span class="k">Target</span><span class="v">{{protection}}</span>
+    <span class="k">Overload</span><span class="v">{{overloadRating}}</span>
+    <span class="k">Result</span><span class="v"><b>{{roll}}</b></span>
+  </div>
+  <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
+    {{#if success}}Success{{else}}Failure{{/if}}
+  </div>
+  {{#if overloaded}}<div class="bdh-phenomena">⚡ Overload!</div>{{/if}}
+</div>
