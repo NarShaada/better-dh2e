@@ -172,7 +172,7 @@ export async function resolveManifest(actor, power, opts) {
     powerTypeLabel,
     focusLabel,
     prLabel,
-    degrees,
+    degrees: success ? dos : degrees,
     phenTriggered,
     phenRoll,
     phenMod,

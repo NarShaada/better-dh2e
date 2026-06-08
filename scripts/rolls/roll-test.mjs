@@ -46,13 +46,15 @@ export async function performTest(actor, { label, base, modifier, fixedRoll = nu
   const result = evaluateTest({ base, modifier: parseModifier(modifier), roll: roll.total });
   const dos = result.success ? result.degrees + dosBonus : 0;
   const modifierLabel = `${result.modifier >= 0 ? "+" : ""}${result.modifier}`;
-  const content = await renderTemplate(CARD, { label, ...result, degrees: dos, modifierLabel, dosBonus });
+  // Show the boosted DoS on success; keep the raw degrees-of-failure on a miss.
+  const content = await renderTemplate(CARD, { label, ...result, degrees: result.success ? dos : result.degrees, modifierLabel, dosBonus });
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }),
     content,
     flags: { [NS]: { reroll: { kind: "test", actorUuid: actor.uuid, base, modifier, label, roll: roll.total, success: result.success, dosBonus } } }
   };
-  if (fixedRoll == null) { messageData.rolls = [roll]; ChatMessage.applyRollMode(messageData, "roll"); }
+  if (fixedRoll == null) messageData.rolls = [roll];
+  ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
   return result;
 }

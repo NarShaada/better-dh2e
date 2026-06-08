@@ -573,7 +573,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     modifierLabel,
     roll: roll.total,
     success,
-    degrees,
+    degrees: success ? dos : degrees,
     attackTypeLabel: at.label,
     aimLabel,
     rangeLabel,
