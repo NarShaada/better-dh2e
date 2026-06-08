@@ -267,4 +267,7 @@
 .bdh-phenomena { margin-top:4px; color:#7a1fa0; }
 .bdh-note { font-style:italic; color:#6b4a2b; }
 .bdh-effect { margin-top:4px; }
+
+/* Fate spend affordance (Play mode) */
+.better-dh2e .bdh-fate-spend { cursor:pointer; text-decoration:underline dotted; }
 .bdh-fate-note { color:#b8860b; font-size:11px; margin-left:6px; }
