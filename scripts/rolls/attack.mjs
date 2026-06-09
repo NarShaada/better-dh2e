@@ -40,11 +40,13 @@ const CARD = "systems/better-dh2e/templates/chat/attack-card.hbs";
 export function bindCardButtons(message, html) {
   const flags = message.flags?.[NS];
   if (!flags) return;
-  // Apply Damage is only usable by an owner of the target (GM owns everything) — hide it for everyone else.
-  const applyBtn = html.querySelector('[data-bdh="applyDamage"]');
-  if (applyBtn) {
-    const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
-    if (!target?.isOwner) applyBtn.remove();
+  // Apply Damage and the condition-applying resist tests (Shocking/Concussive) write to the target —
+  // usable only by an owner of the target (GM owns everything). Hide them for everyone else so a
+  // non-owner click can't half-apply and throw on the permission-gated write.
+  const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
+  if (!target?.isOwner) {
+    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"]')
+      .forEach((b) => b.remove());
   }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
     btn.addEventListener("click", async () => {
