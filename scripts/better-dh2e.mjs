@@ -18,6 +18,7 @@ import { DarkHeresyActor } from "./documents/actor.mjs";
 import { DarkHeresyItem } from "./documents/item.mjs";
 import { DarkHeresyActorSheet } from "./sheets/actor-sheet.mjs";
 import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
+import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -84,6 +85,13 @@ Hooks.once("init", () => {
   console.log("Better DH2e | Initialized");
 });
 
+// Token drag-ruler subclass: shows movement mode (Half/Full/Charge/Run) on the label when battlemap is enabled.
+// Registered at "setup" — CONFIG.Token.rulerClass isn't reliably populated at "init".
+Hooks.once("setup", () => {
+  const Base = CONFIG.Token?.rulerClass ?? foundry.canvas?.placeables?.tokens?.TokenRuler;
+  if (Base) CONFIG.Token.rulerClass = makeDHTokenRuler(Base);
+});
+
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));
 
 Hooks.on("getChatMessageContextOptions", (html, options) => {
@@ -102,31 +110,15 @@ Hooks.on("getChatMessageContextOptions", (html, options) => {
   });
 });
 
-// Battlemap: classify a token move + auto-toggle the Run condition. Runs only on the moving client.
-const _bdhMoveDist = new Map();
-
-Hooks.on("preUpdateToken", (doc, change, options, userId) => {
-  if (userId !== game.user.id || !battlemapEnabled()) return;
-  if (change.x === undefined && change.y === undefined) return;
-  const oldC = doc.object?.center ?? { x: doc.x, y: doc.y };          // pre-update centre
-  const newC = { x: oldC.x + ((change.x ?? doc.x) - doc.x), y: oldC.y + ((change.y ?? doc.y) - doc.y) };
-  try { _bdhMoveDist.set(doc.id, canvas.grid.measurePath([oldC, newC]).distance); } catch (e) { /* non-grid scene */ }
-});
-
-Hooks.on("updateToken", async (doc, change, options, userId) => {
-  if (userId !== game.user.id) return;
-  const dist = _bdhMoveDist.get(doc.id);
-  _bdhMoveDist.delete(doc.id);
-  if (dist == null || dist <= 0) return;
+// Battlemap: keep the Run condition in sync with per-turn movement. Runs once, on the mover's client.
+Hooks.on("moveToken", async (doc, movement, operation, user) => {
+  if ((user?.id ?? user) !== game.user.id || !battlemapEnabled()) return;
+  const total = doc.movement?.history?.distance ?? 0;   // cumulative this turn (0 outside combat → skip)
+  if (total <= 0) return;
   const rates = doc.actor?.system?.movement;
   if (!rates) return;
-  const kind = classifyMovement(dist, rates);
-  const LABEL = { half: "Half Move", full: "Full Move", charge: "Charge", run: "Run", tooFar: "Too Far!" };
-  if (doc.object) {
-    canvas.interface?.createScrollingText?.(doc.object.center, `${LABEL[kind]} (${Math.round(dist)} m)`,
-      { anchor: CONST.TEXT_ANCHOR_POINTS.TOP, fontSize: 22, fill: kind === "tooFar" ? "#a01818" : "#ddd" });
-  }
-  const running = kind === "run";
+  // "run" OR "tooFar" (over-running) both mean the token is running — keep Run on past the max.
+  const running = ["run", "tooFar"].includes(classifyMovement(total, rates));
   const hasRun = doc.actor.statuses?.has?.("run") ?? false;
   if (running && !hasRun) await doc.actor.toggleStatusEffect("run", { active: true });
   else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
