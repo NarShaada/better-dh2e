@@ -12,7 +12,7 @@ import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier } from "../helpers/condition-data.mjs";
-import { applyStunned, applyProne, addFatigue } from "./conditions.mjs";
+import { applyStunned, applyProne, addFatigue, applyToxic } from "./conditions.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -331,6 +331,11 @@ async function applyDamage(message) {
   if (battlemapEnabled() && (f.qualities ?? []).some((q) => q.key === "concussive")
       && maxApplied > (target.system.characteristics.strength.bonus ?? 0)) {
     await applyProne(target);
+  }
+  // Toxic: if any hit dealt >=1 effective damage, apply the Toxic condition at the weapon's potency.
+  const toxPot = toxicValue(f.qualities);
+  if (battlemapEnabled() && toxPot > 0 && maxApplied >= 1) {
+    await applyToxic(target, toxPot, f.damageType ?? "");
   }
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
   await ChatMessage.create({
