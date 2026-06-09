@@ -19,6 +19,7 @@ import { DarkHeresyItem } from "./documents/item.mjs";
 import { DarkHeresyActorSheet } from "./sheets/actor-sheet.mjs";
 import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
 import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
+import { makeDHCombat } from "./documents/combat.mjs";
 import { tickStunned } from "./rolls/conditions.mjs";
 
 Hooks.once("init", () => {
@@ -98,6 +99,7 @@ Hooks.once("init", () => {
 Hooks.once("setup", () => {
   const Base = CONFIG.Token?.rulerClass ?? foundry.canvas?.placeables?.tokens?.TokenRuler;
   if (Base) CONFIG.Token.rulerClass = makeDHTokenRuler(Base);
+  if (CONFIG.Combat?.documentClass) CONFIG.Combat.documentClass = makeDHCombat(CONFIG.Combat.documentClass);
 });
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));

@@ -45,7 +45,7 @@ export function bindCardButtons(message, html) {
   // non-owner click can't half-apply and throw on the permission-gated write.
   const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
   if (!target?.isOwner) {
-    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"]')
+    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"]')
       .forEach((b) => b.remove());
   }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
@@ -62,6 +62,7 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "overheatDrop") await rollOverheatDrop(message);
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
       else if (btn.dataset.bdh === "castResist") await rollCastResist(message);
+      else if (btn.dataset.bdh === "toxicResist") await rollToxicResist(message);
     });
   });
 }
@@ -167,6 +168,32 @@ async function rollToxicTest(message) {
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
   return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+}
+async function rollToxicResist(message) {
+  const f = message.flags[NS];
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const x = f.potency ?? 1;
+  const label = `Toughness (Toxic Resist ${x})`;
+  const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
+  if (!choice) return null;
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) {
+    // Failed resist: deal 1d10 + potency Impact damage (no armour/TB reduction — RAW).
+    const roll = await new Roll(`1d10 + ${x}`).evaluate();
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: defender }),
+      rolls: [roll],
+      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} — Toxic Damage (${roll.total})</header>`
+        + `<div class="bdh-card-line">Failed resist: ${roll.total} ${f.damageType || "Impact"} damage (ignores armour/TB).</div></div>`
+    });
+    const wounds = defender.system.wounds;
+    const newVal = Math.max(0, wounds.value - roll.total);
+    const overflow = roll.total - wounds.value;
+    const newCrit = overflow > 0 ? (wounds.critical ?? 0) + overflow : (wounds.critical ?? 0);
+    await defender.update({ "system.wounds.value": newVal, "system.wounds.critical": newCrit });
+  }
+  return result;
 }
 async function rollDamage(message) {
   const f = message.flags[NS];
