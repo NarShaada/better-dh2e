@@ -123,3 +123,10 @@ Hooks.on("moveToken", async (doc, movement, operation, user) => {
   if (running && !hasRun) await doc.actor.toggleStatusEffect("run", { active: true });
   else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
 });
+
+// Battlemap: clear the Run condition when the runner's own turn begins.
+Hooks.on("combatTurnChange", async (combat, prior, current) => {
+  if (!battlemapEnabled() || !game.users.activeGM?.isSelf) return;
+  const actor = combat.combatant?.actor;   // the now-active combatant
+  if (actor?.statuses?.has?.("run")) await actor.toggleStatusEffect("run", { active: false });
+});
