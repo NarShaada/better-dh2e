@@ -271,3 +271,6 @@
 /* Fate spend affordance (Play mode) */
 .better-dh2e .bdh-fate-spend { cursor:pointer; text-decoration:underline dotted; }
 .bdh-fate-note { color:#b8860b; font-size:11px; margin-left:6px; }
+
+/* Movement mode tag on the token drag-ruler label (Foundry HUD scope) */
+.bdh-move-mode { color:#d8a657; font-weight:bold; margin-left:3px; }
