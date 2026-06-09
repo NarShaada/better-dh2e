@@ -36,6 +36,12 @@ export async function tickStunned(actor) {
   }
 }
 
+/** Remove the Stunned condition outright (e.g. spent Fate to recover). */
+export async function clearStunned(actor) {
+  const stun = actor?.effects.find((e) => e.statuses?.has?.("stunned"));
+  if (stun) await stun.delete();
+}
+
 /** Knock the actor Prone (idempotent). */
 export async function applyProne(actor) {
   if (!actor || actor.statuses?.has?.("prone")) return;
