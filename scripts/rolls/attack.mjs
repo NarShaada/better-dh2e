@@ -437,11 +437,11 @@ export async function rollAttack(actor, weaponId) {
   const maximalRow = isRanged && hasMaximal(weapon.system.qualities)
     ? `<div class="form-group"><label>Maximal (×3 ammo)</label><input type="checkbox" name="maximal"/></div>` : "";
 
-  let conditionMod = 0;
+  // Target-condition row for the dialog display (the to-hit modifier itself is computed in resolveAttack,
+  // so it stays correct on Fate rerolls too).
   let targetCondRow = "";
   if (battlemapEnabled() && targetTok?.actor) {
     const cmods = targetAttackModifiers(targetTok.actor.statuses, isMelee);
-    conditionMod = cmods.reduce((s, m) => s + m.mod, 0);
     if (cmods.length) {
       const list = cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ");
       targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${list}</span></div>`;
@@ -477,7 +477,7 @@ export async function rollAttack(actor, weaponId) {
     }
   });
   if (!choice) return null;
-  return resolveAttack(actor, weapon, choice, { consumeAmmo: true, conditionMod });
+  return resolveAttack(actor, weapon, choice, { consumeAmmo: true });
 }
 
 /**
@@ -493,7 +493,7 @@ export async function rollAttack(actor, weaponId) {
  * @returns {Promise<ChatMessage|null>}
  */
 export async function resolveAttack(actor, weapon, choice, opts = {}) {
-  const { consumeAmmo = true, fixedRoll = null, dosBonus = 0, conditionMod = 0 } = opts;
+  const { consumeAmmo = true, fixedRoll = null, dosBonus = 0 } = opts;
 
   // Recompute setup-scope locals (needed whether called from rollAttack or a reroll)
   const isMelee = weapon.system.weaponClass === "melee";
@@ -502,6 +502,12 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const charShort = BDH.characteristics[charKey].short;
   const storm = hasStorm(weapon.system.qualities);
   const maximal = isRanged && !!choice.maximal;
+
+  // Target-condition to-hit modifier — resolved here (from the live target or the reroll's stored target)
+  // so it applies on the normal path AND on Fate rerolls.
+  const condTarget = opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null);
+  const conditionMod = (battlemapEnabled() && condTarget)
+    ? targetAttackModifiers(condTarget.statuses, isMelee).reduce((s, m) => s + m.mod, 0) : 0;
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
