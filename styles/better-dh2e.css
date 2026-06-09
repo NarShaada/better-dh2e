@@ -274,3 +274,6 @@
 
 /* Movement mode tag on the token drag-ruler label (Foundry HUD scope) */
 .bdh-move-mode { color:#d8a657; font-weight:bold; margin-left:3px; }
+
+/* Attack dialog — target condition modifier row */
+.better-dh2e .bdh-target-cond { color:#c08a2e; }
