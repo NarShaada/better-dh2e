@@ -79,13 +79,17 @@ Hooks.once("init", () => {
     default: false
   });
 
-  // Token drag-ruler subclass: shows movement mode (Half/Full/Charge/Run) on the label when battlemap is enabled.
-  if (CONFIG.Token?.rulerClass) CONFIG.Token.rulerClass = makeDHTokenRuler(CONFIG.Token.rulerClass);
-
   // Conditions (the first; more arrive with the battlemap condition piece). Always available; auto-applied only when battlemap is on.
   CONFIG.statusEffects.push({ id: "run", name: "Run", img: "icons/svg/wing.svg" });
 
   console.log("Better DH2e | Initialized");
+});
+
+// Token drag-ruler subclass: shows movement mode (Half/Full/Charge/Run) on the label when battlemap is enabled.
+// Registered at "setup" — CONFIG.Token.rulerClass isn't reliably populated at "init".
+Hooks.once("setup", () => {
+  const Base = CONFIG.Token?.rulerClass ?? foundry.canvas?.placeables?.tokens?.TokenRuler;
+  if (Base) CONFIG.Token.rulerClass = makeDHTokenRuler(Base);
 });
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));
@@ -113,7 +117,8 @@ Hooks.on("moveToken", async (doc, movement, operation, user) => {
   if (total <= 0) return;
   const rates = doc.actor?.system?.movement;
   if (!rates) return;
-  const running = classifyMovement(total, rates) === "run";
+  // "run" OR "tooFar" (over-running) both mean the token is running — keep Run on past the max.
+  const running = ["run", "tooFar"].includes(classifyMovement(total, rates));
   const hasRun = doc.actor.statuses?.has?.("run") ?? false;
   if (running && !hasRun) await doc.actor.toggleStatusEffect("run", { active: true });
   else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
