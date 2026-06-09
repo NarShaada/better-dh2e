@@ -79,8 +79,14 @@ Hooks.once("init", () => {
     default: false
   });
 
-  // Conditions (the first; more arrive with the battlemap condition piece). Always available; auto-applied only when battlemap is on.
-  CONFIG.statusEffects.push({ id: "run", name: "Run", img: "icons/svg/wing.svg" });
+  // Conditions — replace Foundry's default set with our DH2e set.
+  // Dead is kept so the combat-tracker "mark defeated" (CONFIG.specialStatusEffects.DEFEATED) still works.
+  CONFIG.statusEffects = [
+    { id: "dead",    name: "Dead",    img: "icons/svg/skull.svg" },
+    { id: "run",     name: "Run",     img: "icons/svg/wing.svg" },
+    { id: "stunned", name: "Stunned", img: "icons/svg/daze.svg" },
+    { id: "prone",   name: "Prone",   img: "icons/svg/falling.svg" },
+  ];
 
   console.log("Better DH2e | Initialized");
 });
