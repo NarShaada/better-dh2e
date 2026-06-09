@@ -11,6 +11,7 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
+import { targetAttackModifiers } from "../helpers/condition-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -408,10 +409,11 @@ export async function rollAttack(actor, weaponId) {
     .map(([k, a]) => `<option value="${k}">${a.label}</option>`)
     .join("");
 
+  const targetTok = game.user.targets.first() ?? null;
+
   let defaultRange = "normal";
   let measuredDistance = null;
   if (isRanged && battlemapEnabled() && (weapon.system.range ?? 0) > 0) {
-    const targetTok = game.user.targets.first();
     const attackerTok = actor.getActiveTokens?.()[0] ?? canvas.tokens?.controlled?.[0] ?? null;
     if (targetTok && attackerTok && targetTok.scene?.id === attackerTok.scene?.id) {
       // v13/v14 grid measurement between token centres.
@@ -434,7 +436,20 @@ export async function rollAttack(actor, weaponId) {
   const charShort = BDH.characteristics[charKey].short;
   const maximalRow = isRanged && hasMaximal(weapon.system.qualities)
     ? `<div class="form-group"><label>Maximal (×3 ammo)</label><input type="checkbox" name="maximal"/></div>` : "";
+
+  // Target-condition row for the dialog display (the to-hit modifier itself is computed in resolveAttack,
+  // so it stays correct on Fate rerolls too).
+  let targetCondRow = "";
+  if (battlemapEnabled() && targetTok?.actor) {
+    const cmods = targetAttackModifiers(targetTok.actor.statuses, isMelee);
+    if (cmods.length) {
+      const list = cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ");
+      targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${list}</span></div>`;
+    }
+  }
+
   const dialogContent = `
+    ${targetCondRow}
     <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>
     <div class="form-group"><label>Aim</label><select name="aim">${aimOpts}</select></div>
     <div class="form-group"><label>Attack Type</label><select name="attackType">${typeOpts}</select></div>
@@ -488,6 +503,12 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const storm = hasStorm(weapon.system.qualities);
   const maximal = isRanged && !!choice.maximal;
 
+  // Target-condition to-hit modifier — resolved here (from the live target or the reroll's stored target)
+  // so it applies on the normal path AND on Fate rerolls.
+  const condTarget = opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null);
+  const conditionMod = (battlemapEnabled() && condTarget)
+    ? targetAttackModifiers(condTarget.statuses, isMelee).reduce((s, m) => s + m.mod, 0) : 0;
+
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
   const aimMod = hasInaccurate(weapon.system.qualities) ? 0 : (BDH.aimOptions[choice.aim]?.mod ?? 0);
@@ -497,7 +518,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const qualMod = qualityToHitMod(weapon.system.qualities, { aiming });
   const craftMod = isMelee ? meleeCraftToHit(weapon.system.craftsmanship) : 0;
   const scatterMod = scatterToHit(weapon.system.qualities, choice.range);
-  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod + scatterMod;
+  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod + scatterMod + conditionMod;
   const base = actor.system.characteristics[charKey].total;
 
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
