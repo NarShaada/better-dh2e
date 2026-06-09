@@ -11,7 +11,8 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { targetAttackModifiers, selfAttackModifiers } from "../helpers/condition-data.mjs";
+import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier } from "../helpers/condition-data.mjs";
+import { applyStunned, applyProne, addFatigue } from "./conditions.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -94,7 +95,12 @@ async function rollShockTest(message) {
   const label = "Toughness (Shocking)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) {
+    await applyStunned(defender, Math.ceil(result.degrees / 2));
+    await addFatigue(defender, 1);
+  }
+  return result;
 }
 async function rollCastResist(message) {
   const f = message.flags[NS];
@@ -118,7 +124,9 @@ async function rollConcussiveTest(message) {
   const label = `Toughness (Concussive ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });   // penalty pre-filled, GM can adjust
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) await applyStunned(defender, result.degrees);
+  return result;
 }
 async function rollFlameTest(message) {
   const defender = await resolveDefender(message.flags[NS]);
@@ -275,6 +283,7 @@ async function rollEvade(message) {
   });
   if (!choice) return;
   const modifier = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
+  const evadeCondMod = battlemapEnabled() ? evadeConditionModifier(defender.statuses) : 0;
   // Defensive guard: block Parry if the incoming weapon is Flexible or the defender's only melee weapons are Unwieldy.
   if (noParry && choice.reaction === "parry") {
     ui.notifications.warn(flexible ? "A Flexible weapon cannot be parried." : "An Unwieldy weapon cannot parry.");
@@ -284,11 +293,11 @@ async function rollEvade(message) {
     const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: i.system.qualities, craftsmanship: i.system.craftsmanship })));
     const base = defender.system.characteristics.weaponSkill.total;
     const label = pmod ? `Parry (WS, weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry (WS)";
-    return performTest(defender, { label, base, modifier: modifier + pmod });
+    return performTest(defender, { label, base, modifier: modifier + pmod + evadeCondMod });
   }
   const dodge = defender.system.skills.dodge;
   const base = defender.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
-  return performTest(defender, { label: "Dodge", base, modifier });
+  return performTest(defender, { label: "Dodge", base, modifier: modifier + evadeCondMod });
 }
 async function applyDamage(message) {
   const f = message.flags[NS];
@@ -304,6 +313,7 @@ async function applyDamage(message) {
   const graviton = hasGraviton(qualities);
   let wounds = sys.wounds.value;
   let totalCrit = 0;
+  let totalApplied = 0;
   const lines = [];
   for (const h of f.hits) {
     const locAp = ap[h.location] ?? 0;
@@ -311,9 +321,14 @@ async function applyDamage(message) {
     const res = applyWounds(wounds, sys.wounds.max, eff);
     wounds = res.wounds;
     totalCrit += res.critical;
+    totalApplied += eff;
     lines.push(`${h.label}: ${h.total} → ${eff} dmg${res.critical ? ` (${res.critical} critical)` : ""}`);
   }
   await target.update({ "system.wounds.value": wounds, "system.wounds.critical": (sys.wounds.critical ?? 0) + totalCrit });
+  if (battlemapEnabled() && (f.qualities ?? []).some((q) => q.key === "concussive")
+      && totalApplied > (target.system.characteristics.strength.bonus ?? 0)) {
+    await applyProne(target);
+  }
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
