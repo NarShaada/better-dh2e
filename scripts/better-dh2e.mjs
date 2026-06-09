@@ -1,5 +1,6 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
+import { rangeBand, battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
@@ -99,4 +100,34 @@ Hooks.on("getChatMessageContextOptions", (html, options) => {
     condition: (li) => canAddDoS(game.messages.get(idOf(li))),
     callback: (li) => { const m = game.messages.get(idOf(li)); if (m) addDoSFromFate(m); }
   });
+});
+
+// Battlemap: classify a token move + auto-toggle the Run condition. Runs only on the moving client.
+const _bdhMoveDist = new Map();
+
+Hooks.on("preUpdateToken", (doc, change, options, userId) => {
+  if (userId !== game.user.id || !battlemapEnabled()) return;
+  if (change.x === undefined && change.y === undefined) return;
+  const oldC = doc.object?.center ?? { x: doc.x, y: doc.y };          // pre-update centre
+  const newC = { x: oldC.x + ((change.x ?? doc.x) - doc.x), y: oldC.y + ((change.y ?? doc.y) - doc.y) };
+  try { _bdhMoveDist.set(doc.id, canvas.grid.measurePath([oldC, newC]).distance); } catch (e) { /* non-grid scene */ }
+});
+
+Hooks.on("updateToken", async (doc, change, options, userId) => {
+  if (userId !== game.user.id) return;
+  const dist = _bdhMoveDist.get(doc.id);
+  _bdhMoveDist.delete(doc.id);
+  if (dist == null || dist <= 0) return;
+  const rates = doc.actor?.system?.movement;
+  if (!rates) return;
+  const kind = classifyMovement(dist, rates);
+  const LABEL = { half: "Half Move", full: "Full Move", charge: "Charge", run: "Run", tooFar: "Too Far!" };
+  if (doc.object) {
+    canvas.interface?.createScrollingText?.(doc.object.center, `${LABEL[kind]} (${Math.round(dist)} m)`,
+      { anchor: CONST.TEXT_ANCHOR_POINTS.TOP, fontSize: 22, fill: kind === "tooFar" ? "#a01818" : "#ddd" });
+  }
+  const running = kind === "run";
+  const hasRun = doc.actor.statuses?.has?.("run") ?? false;
+  if (running && !hasRun) await doc.actor.toggleStatusEffect("run", { active: true });
+  else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
 });
