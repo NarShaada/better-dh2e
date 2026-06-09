@@ -10,6 +10,7 @@ import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../he
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
+import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -407,8 +408,23 @@ export async function rollAttack(actor, weaponId) {
     .map(([k, a]) => `<option value="${k}">${a.label}</option>`)
     .join("");
 
+  let defaultRange = "normal";
+  let measuredDistance = null;
+  if (isRanged && battlemapEnabled() && (weapon.system.range ?? 0) > 0) {
+    const targetTok = game.user.targets.first();
+    const attackerTok = actor.getActiveTokens?.()[0] ?? canvas.tokens?.controlled?.[0] ?? null;
+    if (targetTok && attackerTok && targetTok.scene?.id === attackerTok.scene?.id) {
+      // v13/v14 grid measurement between token centres.
+      const path = canvas.grid.measurePath([attackerTok.center, targetTok.center]);
+      measuredDistance = Math.round(path?.distance ?? path ?? 0);
+      // NOTE (deferred): if the attacker is engaged in melee, Point-Blank should NOT apply.
+      // Requires melee-engagement tracking (Foundry statuses/conditions) — a later battlemap piece.
+      defaultRange = rangeBand(measuredDistance, weapon.system.range);
+    }
+  }
+
   const rangeOpts = Object.entries(BDH.rangeOptions)
-    .map(([k, r]) => `<option value="${k}"${k === "normal" ? " selected" : ""}>${r.label}</option>`)
+    .map(([k, r]) => `<option value="${k}"${k === defaultRange ? " selected" : ""}>${r.label}</option>`)
     .join("");
 
   const locOpts = Object.entries(BDH.hitLocationLabels)
@@ -422,6 +438,7 @@ export async function rollAttack(actor, weaponId) {
     <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>
     <div class="form-group"><label>Aim</label><select name="aim">${aimOpts}</select></div>
     <div class="form-group"><label>Attack Type</label><select name="attackType">${typeOpts}</select></div>
+    ${isRanged && measuredDistance != null ? `<div class="form-group"><label>Range to Target</label><span class="bdh-measured">${measuredDistance} m</span></div>` : ""}
     ${isRanged ? `<div class="form-group"><label>Range</label><select name="range">${rangeOpts}</select></div>` : ""}
     <div class="form-group" id="bdh-cs-row" style="display:none"><label>Called-Shot Location</label><select name="calledShotLocation">${locOpts}</select></div>
     ${maximalRow}`;
