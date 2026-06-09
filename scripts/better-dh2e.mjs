@@ -18,6 +18,7 @@ import { DarkHeresyActor } from "./documents/actor.mjs";
 import { DarkHeresyItem } from "./documents/item.mjs";
 import { DarkHeresyActorSheet } from "./sheets/actor-sheet.mjs";
 import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
+import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -77,6 +78,9 @@ Hooks.once("init", () => {
     type: Boolean,
     default: false
   });
+
+  // Token drag-ruler subclass: shows movement mode (Half/Full/Charge/Run) on the label when battlemap is enabled.
+  if (CONFIG.Token?.rulerClass) CONFIG.Token.rulerClass = makeDHTokenRuler(CONFIG.Token.rulerClass);
 
   // Conditions (the first; more arrive with the battlemap condition piece). Always available; auto-applied only when battlemap is on.
   CONFIG.statusEffects.push({ id: "run", name: "Run", img: "icons/svg/wing.svg" });
