@@ -11,7 +11,7 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { targetAttackModifiers } from "../helpers/condition-data.mjs";
+import { targetAttackModifiers, selfAttackModifiers } from "../helpers/condition-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -437,19 +437,21 @@ export async function rollAttack(actor, weaponId) {
   const maximalRow = isRanged && hasMaximal(weapon.system.qualities)
     ? `<div class="form-group"><label>Maximal (×3 ammo)</label><input type="checkbox" name="maximal"/></div>` : "";
 
-  // Target-condition row for the dialog display (the to-hit modifier itself is computed in resolveAttack,
-  // so it stays correct on Fate rerolls too).
-  let targetCondRow = "";
-  if (battlemapEnabled() && targetTok?.actor) {
-    const cmods = targetAttackModifiers(targetTok.actor.statuses, isMelee);
-    if (cmods.length) {
-      const list = cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ");
-      targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${list}</span></div>`;
+  // Target-condition row and self-condition row for the dialog display (the to-hit modifier itself is
+  // computed in resolveAttack, so it stays correct on Fate rerolls too).
+  let targetCondRow = "", selfCondRow = "";
+  if (battlemapEnabled()) {
+    if (targetTok?.actor) {
+      const cmods = targetAttackModifiers(targetTok.actor.statuses, isMelee, defaultRange);
+      if (cmods.length) targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
     }
+    const smods = selfAttackModifiers(actor.statuses, isMelee);
+    if (smods.length) selfCondRow = `<div class="form-group"><label>You have</label><span class="bdh-self-cond">${smods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
   }
 
   const dialogContent = `
     ${targetCondRow}
+    ${selfCondRow}
     <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>
     <div class="form-group"><label>Aim</label><select name="aim">${aimOpts}</select></div>
     <div class="form-group"><label>Attack Type</label><select name="attackType">${typeOpts}</select></div>
@@ -503,11 +505,14 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const storm = hasStorm(weapon.system.qualities);
   const maximal = isRanged && !!choice.maximal;
 
-  // Target-condition to-hit modifier — resolved here (from the live target or the reroll's stored target)
-  // so it applies on the normal path AND on Fate rerolls.
+  // Target-condition + self-condition to-hit modifiers — resolved here (from the live target or the
+  // reroll's stored target) so they apply on the normal path AND on Fate rerolls.
   const condTarget = opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null);
-  const conditionMod = (battlemapEnabled() && condTarget)
-    ? targetAttackModifiers(condTarget.statuses, isMelee).reduce((s, m) => s + m.mod, 0) : 0;
+  let conditionMod = 0;
+  if (battlemapEnabled()) {
+    if (condTarget) conditionMod += targetAttackModifiers(condTarget.statuses, isMelee, choice.range).reduce((s, m) => s + m.mod, 0);
+    conditionMod += selfAttackModifiers(actor.statuses, isMelee).reduce((s, m) => s + m.mod, 0);
+  }
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
