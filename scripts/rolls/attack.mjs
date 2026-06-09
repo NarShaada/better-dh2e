@@ -179,19 +179,20 @@ async function rollToxicResist(message) {
   if (!choice) return null;
   const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
   if (battlemapEnabled() && result && !result.success) {
-    // Failed resist: deal 1d10 + potency Impact damage (no armour/TB reduction — RAW).
-    const roll = await new Roll(`1d10 + ${x}`).evaluate();
+    // Failed resist: deal 1d10 of the stored damage type, soaked by Toughness Bonus only (no armour).
+    const roll = await new Roll("1d10").evaluate();
+    const tb = defender.system.characteristics.toughness.bonus ?? 0;
+    const dealt = Math.max(0, roll.total - tb);
+    const w = defender.system.wounds;
+    const res = applyWounds(w.value, w.max, dealt);
+    await defender.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+    const type = f.damageType || "Impact";
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: defender }),
       rolls: [roll],
-      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} — Toxic Damage (${roll.total})</header>`
-        + `<div class="bdh-card-line">Failed resist: ${roll.total} ${f.damageType || "Impact"} damage (ignores armour/TB).</div></div>`
+      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type} damage from Toxic</header>`
+        + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>`
     });
-    const wounds = defender.system.wounds;
-    const newVal = Math.max(0, wounds.value - roll.total);
-    const overflow = roll.total - wounds.value;
-    const newCrit = overflow > 0 ? (wounds.critical ?? 0) + overflow : (wounds.critical ?? 0);
-    await defender.update({ "system.wounds.value": newVal, "system.wounds.critical": newCrit });
   }
   return result;
 }
@@ -275,7 +276,7 @@ async function rollDamage(message) {
     flame: hasFlame(qualities),
     hallucinogenic: hallucinogenicValue(qualities) || null,
     snare: snareValue(qualities) || null,
-    toxic: toxicValue(qualities) || null,
+    toxic: battlemapEnabled() ? null : (toxicValue(qualities) || null),
     damageNotes: qualityNotes(qualities, "damage") };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
