@@ -315,7 +315,7 @@ async function applyDamage(message) {
   const graviton = hasGraviton(qualities);
   let wounds = sys.wounds.value;
   let totalCrit = 0;
-  let totalApplied = 0;
+  let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
   const lines = [];
   for (const h of f.hits) {
     const locAp = ap[h.location] ?? 0;
@@ -323,12 +323,13 @@ async function applyDamage(message) {
     const res = applyWounds(wounds, sys.wounds.max, eff);
     wounds = res.wounds;
     totalCrit += res.critical;
-    totalApplied += eff;
+    maxApplied = Math.max(maxApplied, eff);
     lines.push(`${h.label}: ${h.total} → ${eff} dmg${res.critical ? ` (${res.critical} critical)` : ""}`);
   }
   await target.update({ "system.wounds.value": wounds, "system.wounds.critical": (sys.wounds.critical ?? 0) + totalCrit });
+  // Concussive: a single blow exceeding the target's Strength Bonus knocks it Prone.
   if (battlemapEnabled() && (f.qualities ?? []).some((q) => q.key === "concussive")
-      && totalApplied > (target.system.characteristics.strength.bonus ?? 0)) {
+      && maxApplied > (target.system.characteristics.strength.bonus ?? 0)) {
     await applyProne(target);
   }
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
