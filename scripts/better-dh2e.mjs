@@ -77,6 +77,9 @@ Hooks.once("init", () => {
     default: false
   });
 
+  // Conditions (the first; more arrive with the battlemap condition piece). Always available; auto-applied only when battlemap is on.
+  CONFIG.statusEffects.push({ id: "run", name: "Run", img: "icons/svg/wing.svg" });
+
   console.log("Better DH2e | Initialized");
 });
 

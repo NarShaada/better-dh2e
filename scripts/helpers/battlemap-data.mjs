@@ -10,6 +10,15 @@ export function rangeBand(distance, weaponRange) {
   return "extreme";   // ≤3× and beyond → Extreme (out of normal range; GM adjudicates if it can fire)
 }
 
+/** Classify a moved distance (m) against the actor's move rates {half, full, charge, run}. */
+export function classifyMovement(distance, rates) {
+  if (distance <= (rates?.half ?? 0)) return "half";
+  if (distance <= rates.full) return "full";
+  if (distance <= rates.charge) return "charge";
+  if (distance <= rates.run) return "run";
+  return "tooFar";
+}
+
 /** Whether the user has opted into battlemap integration. */
 export function battlemapEnabled() {
   return game.settings.get("better-dh2e", "enableBattlemap");
