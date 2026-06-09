@@ -45,3 +45,10 @@ export function evadeConditionModifier(statuses) {
   for (const id of asIds(statuses)) { const cfg = CONDITION_EVADE_MODS[id]; if (cfg) total += cfg.mod; }
   return total;
 }
+
+/** Most-potent Toxic wins: higher potency carries its own damage type; ties keep the current. */
+export function pickToxic(current, incoming) {
+  if (!current) return incoming;
+  if (!incoming) return current;
+  return incoming.potency > current.potency ? incoming : current;
+}

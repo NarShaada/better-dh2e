@@ -41,3 +41,19 @@ describe("evadeConditionModifier", () => {
     expect(evadeConditionModifier(new Set())).toBe(0);
   });
 });
+
+import { pickToxic } from "../scripts/helpers/condition-data.mjs";
+
+describe("pickToxic (most-potent wins)", () => {
+  it("takes the higher potency and carries its damage type", () => {
+    expect(pickToxic(null, { potency: 2, damageType: "Impact" })).toEqual({ potency: 2, damageType: "Impact" });
+    expect(pickToxic({ potency: 2, damageType: "Impact" }, { potency: 3, damageType: "Energy" }))
+      .toEqual({ potency: 3, damageType: "Energy" });
+    expect(pickToxic({ potency: 3, damageType: "Energy" }, { potency: 2, damageType: "Impact" }))
+      .toEqual({ potency: 3, damageType: "Energy" });
+  });
+  it("keeps the existing on a tie", () => {
+    expect(pickToxic({ potency: 3, damageType: "Energy" }, { potency: 3, damageType: "Impact" }))
+      .toEqual({ potency: 3, damageType: "Energy" });
+  });
+});

@@ -12,7 +12,7 @@ import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier } from "../helpers/condition-data.mjs";
-import { applyStunned, applyProne, addFatigue } from "./conditions.mjs";
+import { applyStunned, applyProne, addFatigue, applyToxic } from "./conditions.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -45,7 +45,7 @@ export function bindCardButtons(message, html) {
   // non-owner click can't half-apply and throw on the permission-gated write.
   const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
   if (!target?.isOwner) {
-    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"]')
+    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"]')
       .forEach((b) => b.remove());
   }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
@@ -62,6 +62,7 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "overheatDrop") await rollOverheatDrop(message);
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
       else if (btn.dataset.bdh === "castResist") await rollCastResist(message);
+      else if (btn.dataset.bdh === "toxicResist") await rollToxicResist(message);
     });
   });
 }
@@ -168,6 +169,33 @@ async function rollToxicTest(message) {
   if (!choice) return null;
   return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
 }
+async function rollToxicResist(message) {
+  const f = message.flags[NS];
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const x = f.potency ?? 1;
+  const label = `Toughness (Toxic Resist ${x})`;
+  const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
+  if (!choice) return null;
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) {
+    // Failed resist: deal 1d10 of the stored damage type, soaked by Toughness Bonus only (no armour).
+    const roll = await new Roll("1d10").evaluate();
+    const tb = defender.system.characteristics.toughness.bonus ?? 0;
+    const dealt = Math.max(0, roll.total - tb);
+    const w = defender.system.wounds;
+    const res = applyWounds(w.value, w.max, dealt);
+    await defender.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+    const type = f.damageType ? `${f.damageType} ` : "";   // omit if unknown rather than mislabel
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: defender }),
+      rolls: [roll],
+      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type}damage from Toxic</header>`
+        + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>`
+    });
+  }
+  return result;
+}
 async function rollDamage(message) {
   const f = message.flags[NS];
   const actor = await fromUuid(f.actorUuid);
@@ -248,7 +276,7 @@ async function rollDamage(message) {
     flame: hasFlame(qualities),
     hallucinogenic: hallucinogenicValue(qualities) || null,
     snare: snareValue(qualities) || null,
-    toxic: toxicValue(qualities) || null,
+    toxic: battlemapEnabled() ? null : (toxicValue(qualities) || null),
     damageNotes: qualityNotes(qualities, "damage") };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
@@ -331,6 +359,11 @@ async function applyDamage(message) {
   if (battlemapEnabled() && (f.qualities ?? []).some((q) => q.key === "concussive")
       && maxApplied > (target.system.characteristics.strength.bonus ?? 0)) {
     await applyProne(target);
+  }
+  // Toxic: if any hit dealt >=1 effective damage, apply the Toxic condition at the weapon's potency.
+  const toxPot = toxicValue(f.qualities);
+  if (battlemapEnabled() && toxPot > 0 && maxApplied >= 1) {
+    await applyToxic(target, toxPot, f.damageType ?? "");
   }
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
   await ChatMessage.create({
