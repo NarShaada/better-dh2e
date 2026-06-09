@@ -19,6 +19,7 @@ import { DarkHeresyItem } from "./documents/item.mjs";
 import { DarkHeresyActorSheet } from "./sheets/actor-sheet.mjs";
 import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
 import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
+import { tickStunned } from "./rolls/conditions.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -79,8 +80,14 @@ Hooks.once("init", () => {
     default: false
   });
 
-  // Conditions (the first; more arrive with the battlemap condition piece). Always available; auto-applied only when battlemap is on.
-  CONFIG.statusEffects.push({ id: "run", name: "Run", img: "icons/svg/wing.svg" });
+  // Conditions — replace Foundry's default set with our DH2e set.
+  // Dead is kept so the combat-tracker "mark defeated" (CONFIG.specialStatusEffects.DEFEATED) still works.
+  CONFIG.statusEffects = [
+    { id: "dead",    name: "Dead",    img: "icons/svg/skull.svg" },
+    { id: "run",     name: "Run",     img: "icons/svg/wing.svg" },
+    { id: "stunned", name: "Stunned", img: "icons/svg/daze.svg" },
+    { id: "prone",   name: "Prone",   img: "icons/svg/falling.svg" },
+  ];
 
   console.log("Better DH2e | Initialized");
 });
@@ -124,9 +131,11 @@ Hooks.on("moveToken", async (doc, movement, operation, user) => {
   else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
 });
 
-// Battlemap: clear the Run condition when the runner's own turn begins.
+// Battlemap: clear the Run condition when the runner's own turn begins; tick Stunned countdown.
 Hooks.on("combatTurnChange", async (combat, prior, current) => {
   if (!battlemapEnabled() || !game.users.activeGM?.isSelf) return;
-  const actor = combat.combatant?.actor;   // the now-active combatant
-  if (actor?.statuses?.has?.("run")) await actor.toggleStatusEffect("run", { active: false });
+  const actor = combat.combatant?.actor;
+  if (!actor) return;
+  if (actor.statuses?.has?.("run")) await actor.toggleStatusEffect("run", { active: false });
+  await tickStunned(actor);
 });

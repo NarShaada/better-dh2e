@@ -2,6 +2,7 @@
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
 import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
 import { rollAttack } from "../rolls/attack.mjs";
+import { clearStunned } from "../rolls/conditions.mjs";
 import { rollManifest } from "../rolls/manifest.mjs";
 import { corruptionTrack, insanityTrack, nextTestAt } from "../helpers/affliction-data.mjs";
 import { rollAfflictionTest } from "../rolls/roll-test.mjs";
@@ -59,13 +60,15 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const sys = this.actor.system;
     if ((sys.fate?.value ?? 0) < 1) { ui.notifications.warn("No Fate points to spend."); return; }
     const hasCrit = (sys.wounds?.critical ?? 0) >= 1;
+    const isStunned = this.actor.statuses?.has?.("stunned") ?? false;
     const choice = await foundry.applications.api.DialogV2.wait({
       window: { title: "Spend a Fate Point" },
       content: `<p>You have <b>${sys.fate.value}</b> Fate.</p>`
         + (hasCrit ? `<p class="bdh-warn">Can't recover wounds while you have a critical injury.</p>` : ``),
       buttons: [
         { action: "wounds", label: "Recover 1d5 Wounds" },
-        { action: "fatigue", label: "Remove All Fatigue" }
+        { action: "fatigue", label: "Remove All Fatigue" },
+        ...(isStunned ? [{ action: "stun", label: "Recover from Stun" }] : [])
       ],
       rejectClose: false
     }).catch(() => null);
@@ -90,6 +93,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     } else if (choice === "fatigue") {
       await this.actor.update({ "system.fate.value": fate - 1, "system.fatigue.value": 0 });
       await ChatMessage.create({ speaker, content: `<div class="bdh-card"><header class="bdh-card-head">${this.actor.name} spends a Fate point — removes all fatigue.</header></div>` });
+    } else if (choice === "stun") {
+      if (!this.actor.statuses?.has?.("stunned")) return;   // no longer stunned
+      await this.actor.update({ "system.fate.value": fate - 1 });
+      await clearStunned(this.actor);
+      await ChatMessage.create({ speaker, content: `<div class="bdh-card"><header class="bdh-card-head">${this.actor.name} spends Fate to recover from Stun.</header></div>` });
     }
   }
 

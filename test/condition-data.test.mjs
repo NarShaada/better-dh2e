@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { targetAttackModifiers, CONDITION_ATTACK_MODS } from "../scripts/helpers/condition-data.mjs";
+import { selfAttackModifiers, evadeConditionModifier } from "../scripts/helpers/condition-data.mjs";
 
 describe("targetAttackModifiers", () => {
   it("Run: melee +20, ranged -20", () => {
@@ -12,5 +13,31 @@ describe("targetAttackModifiers", () => {
   });
   it("accepts an array too", () => {
     expect(targetAttackModifiers(["run"], false)).toEqual([{ id: "run", label: "Run", mod: -20 }]);
+  });
+});
+
+describe("targetAttackModifiers (Stunned + Prone, range-aware)", () => {
+  it("Stunned: +20 melee and ranged", () => {
+    expect(targetAttackModifiers(new Set(["stunned"]), true)).toEqual([{ id: "stunned", label: "Stunned", mod: 20 }]);
+    expect(targetAttackModifiers(new Set(["stunned"]), false)).toEqual([{ id: "stunned", label: "Stunned", mod: 20 }]);
+  });
+  it("Prone: melee +10, ranged -10 except at Point-Blank", () => {
+    expect(targetAttackModifiers(new Set(["prone"]), true)).toEqual([{ id: "prone", label: "Prone", mod: 10 }]);
+    expect(targetAttackModifiers(new Set(["prone"]), false, "normal")).toEqual([{ id: "prone", label: "Prone", mod: -10 }]);
+    expect(targetAttackModifiers(new Set(["prone"]), false, "pointBlank")).toEqual([]);
+  });
+});
+
+describe("selfAttackModifiers", () => {
+  it("Prone attacker: -10 melee, none ranged", () => {
+    expect(selfAttackModifiers(new Set(["prone"]), true)).toEqual([{ id: "prone", label: "Prone", mod: -10 }]);
+    expect(selfAttackModifiers(new Set(["prone"]), false)).toEqual([]);
+  });
+});
+
+describe("evadeConditionModifier", () => {
+  it("Prone evader: -20", () => {
+    expect(evadeConditionModifier(new Set(["prone"]))).toBe(-20);
+    expect(evadeConditionModifier(new Set())).toBe(0);
   });
 });

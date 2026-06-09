@@ -11,7 +11,8 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { targetAttackModifiers } from "../helpers/condition-data.mjs";
+import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier } from "../helpers/condition-data.mjs";
+import { applyStunned, applyProne, addFatigue } from "./conditions.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -39,11 +40,13 @@ const CARD = "systems/better-dh2e/templates/chat/attack-card.hbs";
 export function bindCardButtons(message, html) {
   const flags = message.flags?.[NS];
   if (!flags) return;
-  // Apply Damage is only usable by an owner of the target (GM owns everything) — hide it for everyone else.
-  const applyBtn = html.querySelector('[data-bdh="applyDamage"]');
-  if (applyBtn) {
-    const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
-    if (!target?.isOwner) applyBtn.remove();
+  // Apply Damage and the condition-applying resist tests (Shocking/Concussive) write to the target —
+  // usable only by an owner of the target (GM owns everything). Hide them for everyone else so a
+  // non-owner click can't half-apply and throw on the permission-gated write.
+  const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
+  if (!target?.isOwner) {
+    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"]')
+      .forEach((b) => b.remove());
   }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -94,7 +97,12 @@ async function rollShockTest(message) {
   const label = "Toughness (Shocking)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) {
+    await applyStunned(defender, Math.ceil(result.degrees / 2));
+    await addFatigue(defender, 1);
+  }
+  return result;
 }
 async function rollCastResist(message) {
   const f = message.flags[NS];
@@ -118,7 +126,9 @@ async function rollConcussiveTest(message) {
   const label = `Toughness (Concussive ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });   // penalty pre-filled, GM can adjust
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) await applyStunned(defender, result.degrees);
+  return result;
 }
 async function rollFlameTest(message) {
   const defender = await resolveDefender(message.flags[NS]);
@@ -275,6 +285,7 @@ async function rollEvade(message) {
   });
   if (!choice) return;
   const modifier = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
+  const evadeCondMod = battlemapEnabled() ? evadeConditionModifier(defender.statuses) : 0;
   // Defensive guard: block Parry if the incoming weapon is Flexible or the defender's only melee weapons are Unwieldy.
   if (noParry && choice.reaction === "parry") {
     ui.notifications.warn(flexible ? "A Flexible weapon cannot be parried." : "An Unwieldy weapon cannot parry.");
@@ -284,11 +295,11 @@ async function rollEvade(message) {
     const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: i.system.qualities, craftsmanship: i.system.craftsmanship })));
     const base = defender.system.characteristics.weaponSkill.total;
     const label = pmod ? `Parry (WS, weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry (WS)";
-    return performTest(defender, { label, base, modifier: modifier + pmod });
+    return performTest(defender, { label, base, modifier: modifier + pmod + evadeCondMod });
   }
   const dodge = defender.system.skills.dodge;
   const base = defender.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
-  return performTest(defender, { label: "Dodge", base, modifier });
+  return performTest(defender, { label: "Dodge", base, modifier: modifier + evadeCondMod });
 }
 async function applyDamage(message) {
   const f = message.flags[NS];
@@ -304,6 +315,7 @@ async function applyDamage(message) {
   const graviton = hasGraviton(qualities);
   let wounds = sys.wounds.value;
   let totalCrit = 0;
+  let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
   const lines = [];
   for (const h of f.hits) {
     const locAp = ap[h.location] ?? 0;
@@ -311,9 +323,15 @@ async function applyDamage(message) {
     const res = applyWounds(wounds, sys.wounds.max, eff);
     wounds = res.wounds;
     totalCrit += res.critical;
+    maxApplied = Math.max(maxApplied, eff);
     lines.push(`${h.label}: ${h.total} → ${eff} dmg${res.critical ? ` (${res.critical} critical)` : ""}`);
   }
   await target.update({ "system.wounds.value": wounds, "system.wounds.critical": (sys.wounds.critical ?? 0) + totalCrit });
+  // Concussive: a single blow exceeding the target's Strength Bonus knocks it Prone.
+  if (battlemapEnabled() && (f.qualities ?? []).some((q) => q.key === "concussive")
+      && maxApplied > (target.system.characteristics.strength.bonus ?? 0)) {
+    await applyProne(target);
+  }
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
@@ -437,19 +455,21 @@ export async function rollAttack(actor, weaponId) {
   const maximalRow = isRanged && hasMaximal(weapon.system.qualities)
     ? `<div class="form-group"><label>Maximal (×3 ammo)</label><input type="checkbox" name="maximal"/></div>` : "";
 
-  // Target-condition row for the dialog display (the to-hit modifier itself is computed in resolveAttack,
-  // so it stays correct on Fate rerolls too).
-  let targetCondRow = "";
-  if (battlemapEnabled() && targetTok?.actor) {
-    const cmods = targetAttackModifiers(targetTok.actor.statuses, isMelee);
-    if (cmods.length) {
-      const list = cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ");
-      targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${list}</span></div>`;
+  // Target-condition row and self-condition row for the dialog display (the to-hit modifier itself is
+  // computed in resolveAttack, so it stays correct on Fate rerolls too).
+  let targetCondRow = "", selfCondRow = "";
+  if (battlemapEnabled()) {
+    if (targetTok?.actor) {
+      const cmods = targetAttackModifiers(targetTok.actor.statuses, isMelee, defaultRange);
+      if (cmods.length) targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
     }
+    const smods = selfAttackModifiers(actor.statuses, isMelee);
+    if (smods.length) selfCondRow = `<div class="form-group"><label>You have</label><span class="bdh-self-cond">${smods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
   }
 
   const dialogContent = `
     ${targetCondRow}
+    ${selfCondRow}
     <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>
     <div class="form-group"><label>Aim</label><select name="aim">${aimOpts}</select></div>
     <div class="form-group"><label>Attack Type</label><select name="attackType">${typeOpts}</select></div>
@@ -503,11 +523,14 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const storm = hasStorm(weapon.system.qualities);
   const maximal = isRanged && !!choice.maximal;
 
-  // Target-condition to-hit modifier — resolved here (from the live target or the reroll's stored target)
-  // so it applies on the normal path AND on Fate rerolls.
+  // Target-condition + self-condition to-hit modifiers — resolved here (from the live target or the
+  // reroll's stored target) so they apply on the normal path AND on Fate rerolls.
   const condTarget = opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null);
-  const conditionMod = (battlemapEnabled() && condTarget)
-    ? targetAttackModifiers(condTarget.statuses, isMelee).reduce((s, m) => s + m.mod, 0) : 0;
+  let conditionMod = 0;
+  if (battlemapEnabled()) {
+    if (condTarget) conditionMod += targetAttackModifiers(condTarget.statuses, isMelee, choice.range).reduce((s, m) => s + m.mod, 0);
+    conditionMod += selfAttackModifiers(actor.statuses, isMelee).reduce((s, m) => s + m.mod, 0);
+  }
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
