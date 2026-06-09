@@ -1,4 +1,6 @@
 // scripts/rolls/conditions.mjs — apply/tick DH2e conditions (ActiveEffect-backed).
+import { pickToxic } from "../helpers/condition-data.mjs";
+
 const NS = "better-dh2e";
 
 function stunnedCard(name, rounds) {
@@ -53,4 +55,27 @@ export async function applyProne(actor) {
 export async function addFatigue(actor, n) {
   if (!actor || !n) return;
   await actor.update({ "system.fatigue.value": Math.max(0, (actor.system.fatigue?.value ?? 0) + n) });
+}
+
+/** Apply/refresh the Toxic condition, keeping the most potent {potency, damageType}. */
+export async function applyToxic(actor, potency, damageType) {
+  if (!actor || !(potency > 0)) return;
+  let eff = actor.effects.find((e) => e.statuses?.has?.("toxic"));
+  const cur = eff?.flags?.[NS];
+  const winner = pickToxic(cur?.potency ? { potency: cur.potency, damageType: cur.damageType } : null,
+                           { potency, damageType });
+  if (!eff) {
+    await actor.toggleStatusEffect("toxic", { active: true });   // toggle path → token icon renders
+    eff = actor.effects.find((e) => e.statuses?.has?.("toxic"));
+  }
+  if (eff) await eff.update({ [`flags.${NS}.potency`]: winner.potency, [`flags.${NS}.damageType`]: winner.damageType });
+}
+
+/** Read the Toxic data + clear the condition (one-shot, at end of turn). Returns {potency, damageType} or null. */
+export async function consumeToxic(actor) {
+  const eff = actor?.effects.find((e) => e.statuses?.has?.("toxic"));
+  if (!eff) return null;
+  const data = { potency: eff.flags?.[NS]?.potency ?? 1, damageType: eff.flags?.[NS]?.damageType ?? "" };
+  await eff.delete();
+  return data;
 }
