@@ -186,11 +186,11 @@ async function rollToxicResist(message) {
     const w = defender.system.wounds;
     const res = applyWounds(w.value, w.max, dealt);
     await defender.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
-    const type = f.damageType || "Impact";
+    const type = f.damageType ? `${f.damageType} ` : "";   // omit if unknown rather than mislabel
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: defender }),
       rolls: [roll],
-      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type} damage from Toxic</header>`
+      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type}damage from Toxic</header>`
         + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>`
     });
   }
