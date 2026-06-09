@@ -68,6 +68,15 @@ Hooks.once("init", () => {
     onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
   });
 
+  game.settings.register("better-dh2e", "enableBattlemap", {
+    name: "Enable battlemap integration (Experimental)",
+    hint: "Opt-in token/grid automation — starts with range auto-measurement on attacks; movement, templates, cover, and conditions arrive in later updates. Off = theatre-of-mind play, fully unaffected.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
   console.log("Better DH2e | Initialized");
 });
 
