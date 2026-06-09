@@ -8,18 +8,15 @@ function stunnedCard(name, rounds) {
 /** Apply (or refresh to the higher of) the Stunned condition for `rounds`, with a chat card. */
 export async function applyStunned(actor, rounds) {
   if (!actor || rounds <= 0) return;
-  const existing = actor.effects.find((e) => e.statuses?.has?.("stunned"));
-  const cur = existing?.flags?.[NS]?.rounds ?? 0;
+  let eff = actor.effects.find((e) => e.statuses?.has?.("stunned"));
+  const cur = eff?.flags?.[NS]?.rounds ?? 0;
   const final = Math.max(cur, rounds);
-  if (existing) {
-    if (final !== cur) await existing.update({ [`flags.${NS}.rounds`]: final });
-  } else {
-    const data = foundry.utils.deepClone(CONFIG.statusEffects.find((s) => s.id === "stunned"));
-    await actor.createEmbeddedDocuments("ActiveEffect", [{
-      name: data?.name ?? "Stunned", img: data?.img ?? "icons/svg/daze.svg",
-      statuses: ["stunned"], flags: { [NS]: { rounds: final } },
-    }]);
+  if (!eff) {
+    // Use the same status-toggle path as the token HUD so the token icon renders, then stamp the round counter.
+    await actor.toggleStatusEffect("stunned", { active: true });
+    eff = actor.effects.find((e) => e.statuses?.has?.("stunned"));
   }
+  if (eff && final !== cur) await eff.update({ [`flags.${NS}.rounds`]: final });
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: stunnedCard(actor.name, final) });
 }
 
@@ -42,10 +39,14 @@ export async function clearStunned(actor) {
   if (stun) await stun.delete();
 }
 
-/** Knock the actor Prone (idempotent). */
+/** Knock the actor Prone (idempotent), with a chat card. */
 export async function applyProne(actor) {
   if (!actor || actor.statuses?.has?.("prone")) return;
   await actor.toggleStatusEffect("prone", { active: true });
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${actor.name} falls Prone.</header></div>`,
+  });
 }
 
 /** Add fatigue (current, clamped >=0). */
