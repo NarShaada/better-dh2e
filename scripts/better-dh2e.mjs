@@ -1,6 +1,6 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
-import { rangeBand, battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
+import { battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
