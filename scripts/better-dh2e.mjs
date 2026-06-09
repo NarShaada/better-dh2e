@@ -102,31 +102,14 @@ Hooks.on("getChatMessageContextOptions", (html, options) => {
   });
 });
 
-// Battlemap: classify a token move + auto-toggle the Run condition. Runs only on the moving client.
-const _bdhMoveDist = new Map();
-
-Hooks.on("preUpdateToken", (doc, change, options, userId) => {
-  if (userId !== game.user.id || !battlemapEnabled()) return;
-  if (change.x === undefined && change.y === undefined) return;
-  const oldC = doc.object?.center ?? { x: doc.x, y: doc.y };          // pre-update centre
-  const newC = { x: oldC.x + ((change.x ?? doc.x) - doc.x), y: oldC.y + ((change.y ?? doc.y) - doc.y) };
-  try { _bdhMoveDist.set(doc.id, canvas.grid.measurePath([oldC, newC]).distance); } catch (e) { /* non-grid scene */ }
-});
-
-Hooks.on("updateToken", async (doc, change, options, userId) => {
-  if (userId !== game.user.id) return;
-  const dist = _bdhMoveDist.get(doc.id);
-  _bdhMoveDist.delete(doc.id);
-  if (dist == null || dist <= 0) return;
+// Battlemap: keep the Run condition in sync with per-turn movement. Runs once, on the mover's client.
+Hooks.on("moveToken", async (doc, movement, operation, user) => {
+  if ((user?.id ?? user) !== game.user.id || !battlemapEnabled()) return;
+  const total = doc.movement?.history?.distance ?? 0;   // cumulative this turn (0 outside combat → skip)
+  if (total <= 0) return;
   const rates = doc.actor?.system?.movement;
   if (!rates) return;
-  const kind = classifyMovement(dist, rates);
-  const LABEL = { half: "Half Move", full: "Full Move", charge: "Charge", run: "Run", tooFar: "Too Far!" };
-  if (doc.object) {
-    canvas.interface?.createScrollingText?.(doc.object.center, `${LABEL[kind]} (${Math.round(dist)} m)`,
-      { anchor: CONST.TEXT_ANCHOR_POINTS.TOP, fontSize: 22, fill: kind === "tooFar" ? "#a01818" : "#ddd" });
-  }
-  const running = kind === "run";
+  const running = classifyMovement(total, rates) === "run";
   const hasRun = doc.actor.statuses?.has?.("run") ?? false;
   if (running && !hasRun) await doc.actor.toggleStatusEffect("run", { active: true });
   else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
