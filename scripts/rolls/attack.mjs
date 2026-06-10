@@ -273,13 +273,8 @@ async function rollDamage(message) {
       poolNames: pool.map((t) => t.name).join(", "),
       damageTotal: dmgRoll.total,
       breakdown,
-      // Keep quality-triggered buttons so they still appear on blast cards
-      shocking: hasShocking(qualities),
-      concussive: concussiveValue(qualities) || null,
-      flame: hasFlame(qualities),
-      hallucinogenic: hallucinogenicValue(qualities) || null,
-      snare: snareValue(qualities) || null,
-      toxic: battlemapEnabled() ? null : (toxicValue(qualities) || null),
+      // Per-token quality resist buttons are NOT shown on blast cards — they would test only the primary
+      // target, not the pool (multi-target quality conditions are a deferred slice).
       damageNotes: qualityNotes(qualities, "damage"),
     };
     const content = await renderTemplate(DAMAGE_CARD, cardData);
@@ -799,7 +794,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // Blast(X) — place a circle Region on the target, scatter on miss
   let blastFlags = null, blastCaughtNames = "";
   const blastQuality = (weapon.system.qualities ?? []).find((q) => q.key === "blast");
-  const blastX = blastQuality ? (Number(blastQuality.value) || 0) : 0;
+  const blastX = blastQuality ? (Number(blastQuality.value) || 0) + (maximal ? 2 : 0) : 0;   // Maximal: +2 Blast
   // Resolve target token PLACEABLE (not just actor): liveTarget is already the Token placeable on live path;
   // on Fate-reroll path (opts.targetUuid set, liveTarget null), derive from game.user.targets or the actor.
   const targetToken = liveTarget ?? (opts.targetUuid
