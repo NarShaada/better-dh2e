@@ -12,7 +12,7 @@ import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
-import { applyStunned, applyProne, addFatigue, applyToxic } from "./conditions.mjs";
+import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -139,7 +139,9 @@ async function rollFlameTest(message) {
   const label = "Agility (Flame)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) await applyOnFire(defender);
+  return result;
 }
 async function rollHallucinogenicTest(message) {
   const f = message.flags[NS];
@@ -159,7 +161,9 @@ async function rollSnareTest(message) {
   const label = `Agility (Snare ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) await applyHelpless(defender);
+  return result;
 }
 async function rollToxicTest(message) {
   const f = message.flags[NS];
