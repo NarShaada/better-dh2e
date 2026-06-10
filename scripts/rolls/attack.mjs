@@ -45,7 +45,7 @@ export function bindCardButtons(message, html) {
   // non-owner click can't half-apply and throw on the permission-gated write.
   const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
   if (!target?.isOwner) {
-    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"]')
+    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"]')
       .forEach((b) => b.remove());
   }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
@@ -63,6 +63,8 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
       else if (btn.dataset.bdh === "castResist") await rollCastResist(message);
       else if (btn.dataset.bdh === "toxicResist") await rollToxicResist(message);
+      else if (btn.dataset.bdh === "onFireApply") await applyOnFireDamage(message);
+      else if (btn.dataset.bdh === "onFireWP") await rollOnFireWP(message);
     });
   });
 }
@@ -195,6 +197,29 @@ async function rollToxicResist(message) {
     });
   }
   return result;
+}
+async function applyOnFireDamage(message) {
+  const f = message.flags[NS];
+  const target = await resolveDefender(f);
+  if (!target) { ui.notifications.warn("Select a token to apply fire damage."); return; }
+  const tb = target.system.characteristics.toughness.bonus ?? 0;
+  const dealt = Math.max(0, (f.damage ?? 0) - tb);   // ignore armour, toughness soaks
+  const w = target.system.wounds;
+  const res = applyWounds(w.value, w.max, dealt);
+  await target.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+  await addFatigue(target, 1);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${target.name} takes ${dealt} Energy damage (Body) and 1 Fatigue from fire</header>`
+      + `<div class="bdh-card-line">1d10: ${f.damage} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>` });
+}
+async function rollOnFireWP(message) {
+  const f = message.flags[NS];
+  const target = await resolveDefender(f);
+  if (!target) { ui.notifications.warn("Select a token for the Willpower test."); return; }
+  const label = "Willpower (On Fire)";
+  const choice = await promptTest({ title: label, defaultModifier: "0" });
+  if (!choice) return null;
+  return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier });
 }
 async function rollDamage(message) {
   const f = message.flags[NS];
