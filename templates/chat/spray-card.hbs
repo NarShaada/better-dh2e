@@ -1,0 +1,15 @@
+<div class="bdh-card bdh-spray-card">
+  <div class="bdh-card-head">{{weaponName}} — Spray (cone)</div>
+  {{#if hasCaught}}
+  <div class="bdh-card-line">Caught — each rolls Ag or is hit; uncheck those who pass:</div>
+  <ul class="bdh-spray-list">
+    {{#each caught}}
+    <li><label><input type="checkbox" class="bdh-spray-hit" data-uuid="{{this.uuid}}" checked/> {{this.name}}</label>
+      <button type="button" data-bdh="sprayAgTest" data-uuid="{{this.uuid}}">Ag Test</button></li>
+    {{/each}}
+  </ul>
+  <div class="bdh-card-actions"><button type="button" data-bdh="sprayApply">Roll Damage &amp; Apply to Checked</button></div>
+  {{else}}
+  <div class="bdh-card-line">The spray caught no one.</div>
+  {{/if}}
+</div>

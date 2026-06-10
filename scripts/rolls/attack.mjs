@@ -16,7 +16,7 @@ import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, dou
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
 import { scatterDirection } from "../helpers/scatter.mjs";
-import { createBlastRegion, tokensInRegion, deleteRegionByUuid } from "../canvas/region.mjs";
+import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion } from "../canvas/region.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -47,10 +47,20 @@ export function bindCardButtons(message, html) {
   // Apply Damage and the condition-applying resist tests (Shocking/Concussive) write to the target —
   // usable only by an owner of the target (GM owns everything). Hide them for everyone else so a
   // non-owner click can't half-apply and throw on the permission-gated write.
-  if (flags.blast) {
+  if (flags.kind === "spray") {
+    // Spray Apply writes to MANY actors — GM-only gate. AgTest buttons are open to all.
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="sprayApply"]').forEach((b) => b.remove());
+    }
+  } else if (flags.blast) {
     // Blast Apply writes to MANY actors — GM-only gate (GM owns everything).
     if (!game.user.isGM) {
       html.querySelectorAll('[data-bdh="applyDamage"]').forEach((b) => b.remove());
+    }
+  } else if (flags.kind === "sprayResult") {
+    // Spray quality resist tests — no single target; the GM resolves each per selected hit token.
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="flameTest"],[data-bdh="hallucinogenicTest"],[data-bdh="snareTest"]').forEach((b) => b.remove());
     }
   } else {
     const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
@@ -76,6 +86,8 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "toxicResist") await rollToxicResist(message);
       else if (btn.dataset.bdh === "onFireApply") await applyOnFireDamage(message);
       else if (btn.dataset.bdh === "onFireWP") await rollOnFireWP(message);
+      else if (btn.dataset.bdh === "sprayAgTest") await rollSprayAgTest(message, btn.dataset.uuid);
+      else if (btn.dataset.bdh === "sprayApply") await applySpray(message, html);
     });
   });
 }
@@ -212,6 +224,61 @@ async function rollToxicResist(message) {
     });
   }
   return result;
+}
+async function rollSprayAgTest(message, uuid) {
+  const target = uuid ? await fromUuid(uuid) : null;
+  if (!target) { ui.notifications.warn("Token not found for the Agility test."); return; }
+  const label = `Agility (Spray — ${target.name})`;
+  const choice = await promptTest({ title: label, defaultModifier: "+0" });
+  if (!choice) return null;
+  return performTest(target, { label, base: target.system.characteristics.agility.total, modifier: choice.modifier });
+}
+async function applySpray(message, html) {
+  const f = message.flags[NS];
+  const attacker = await fromUuid(f.actorUuid);
+  const weapon = attacker?.items.get(f.weaponId);
+  if (!weapon) { ui.notifications.warn("Weapon not found."); return; }
+  const checked = [...html.querySelectorAll(".bdh-spray-hit:checked")].map((c) => c.dataset.uuid);
+  const qualities = weapon.system.qualities ?? [];
+  const roll = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+  if (!roll) return;
+  // Penetration like the ranged path (no DoS for spray):
+  const penBase = Number((await safeRoll(String(weapon.system.penetration || "0"), "penetration"))?.total) || 0;
+  const penetration = effectivePenetration(penBase, { qualities, dos: 0, success: true, closeRange: false });
+  // Primitive/Proven clamp each die (same as the normal damage path — weaponDamageFormula only does Tearing).
+  const primitiveX = primitiveValue(qualities), provenX = provenValue(qualities);
+  const transform = (v) => transformDamageDie(v, { primitiveX, provenX });
+  let dieDelta = 0;
+  for (const d of roll.dice) for (const r of d.results) if (r.active) dieDelta += transform(r.result) - r.result;
+  const damageTotal = roll.total + dieDelta;
+  // Jam: natural 9 on ANY active d10 damage die — ignores Reliable/Unreliable.
+  const jammed = roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 9));
+  const lines = [];
+  for (const uuid of checked) {
+    const actor = await fromUuid(uuid);
+    if (!actor) continue;
+    const dealt = await applyHitToToken(actor, {
+      damageTotal, penetration, damageType: f.damageType, qualities, location: "body",
+    });
+    lines.push(`${actor.name}: ${dealt} dmg (Body)`);
+  }
+  await deleteRegionByUuid(f.regionUuid);
+  // Quality effects — select a hit token, then test (GM resolves each, like the normal resist buttons).
+  const resist = [
+    hasShocking(qualities) ? `<div class="bdh-card-line">⚡ Shocking — <button type="button" data-bdh="shockTest">Toughness Test</button></div>` : "",
+    concussiveValue(qualities) ? `<div class="bdh-card-line">⚡ Concussive (${concussiveValue(qualities)}) — <button type="button" data-bdh="concussiveTest">Toughness Test</button></div>` : "",
+    hasFlame(qualities) ? `<div class="bdh-card-line">🔥 Flame — <button type="button" data-bdh="flameTest">Agility Test</button></div>` : "",
+    hallucinogenicValue(qualities) ? `<div class="bdh-card-line">☣ Hallucinogenic (${hallucinogenicValue(qualities)}) — <button type="button" data-bdh="hallucinogenicTest">Toughness Test</button></div>` : "",
+    snareValue(qualities) ? `<div class="bdh-card-line">🕸 Snare (${snareValue(qualities)}) — <button type="button" data-bdh="snareTest">Agility Test</button></div>` : "",
+  ].filter(Boolean).join("");
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker(), rolls: [roll],
+    content: `<div class="bdh-card"><header class="bdh-card-head">${weapon.name} — Spray damage (${damageTotal})</header>`
+      + `<div class="bdh-card-line">${lines.join("<br>") || "No one hit."}</div>`
+      + (jammed ? `<div class="bdh-card-line fail">&#9888; Jammed! (natural 9)</div>` : "")
+      + (resist ? `<div class="bdh-card-line bdh-qnote">Select a hit token, then test:</div>${resist}` : "") + `</div>`,
+    flags: { [NS]: { kind: "sprayResult", qualities, damageType: f.damageType } },
+  });
 }
 async function applyOnFireDamage(message) {
   const f = message.flags[NS];
@@ -586,9 +653,36 @@ async function rollForceField(actor) {
  * @param {string} weaponId
  * @returns {Promise<ChatMessage|null>}
  */
+async function rollSpray(actor, weapon) {
+  const token = actor.getActiveTokens()[0];
+  if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
+  // Minimize open windows (the sheet blocks the map) so the player can see + aim the cone; restore after.
+  const minimized = [];
+  for (const app of foundry.applications.instances.values()) {
+    if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
+  }
+  const length = Number(weapon.system.range) || 10;            // cone length = weapon range (m)
+  const region = await placeConeRegion(token, length, 30);
+  for (const app of minimized) await app.maximize?.();         // restore windows after placement/cancel
+  if (!region) return;                                          // cancelled
+  const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
+  const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name }));
+  if (!rows.length) await deleteRegionByUuid(region.uuid);   // caught no one → no apply step, clean up now
+  const cardData = { weaponName: weapon.name, caught: rows, hasCaught: rows.length > 0, damageType: weapon.system.damageType };
+  const content = await renderTemplate("systems/better-dh2e/templates/chat/spray-card.hbs", cardData);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }), content,
+    flags: { [NS]: { kind: "spray", actorUuid: actor.uuid, weaponId: weapon.id, regionUuid: rows.length ? region.uuid : null,
+      caughtUuids: rows.map((r) => r.uuid), damageType: weapon.system.damageType } },
+  });
+}
+
 export async function rollAttack(actor, weaponId) {
   const weapon = actor.items.get(weaponId);
   if (!weapon) return null;
+
+  const isSpray = (weapon.system.qualities ?? []).some((q) => q.key === "spray");
+  if (battlemapEnabled() && isSpray) return rollSpray(actor, weapon);
 
   const isMelee = weapon.system.weaponClass === "melee";
   const isRanged = !isMelee;
