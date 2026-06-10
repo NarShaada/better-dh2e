@@ -69,3 +69,14 @@ describe("doubleDamageDice", () => {
     expect(doubleDamageDice("1d10+1d5")).toBe("2d10+2d5");
   });
 });
+
+describe("Unaware + Pinned", () => {
+  it("Unaware target: +30 melee and ranged", () => {
+    expect(targetAttackModifiers(new Set(["unaware"]), true)).toEqual([{ id: "unaware", label: "Unaware", mod: 30 }]);
+    expect(targetAttackModifiers(new Set(["unaware"]), false)).toEqual([{ id: "unaware", label: "Unaware", mod: 30 }]);
+  });
+  it("Pinned attacker: -20 ranged only (Ballistic Skill)", () => {
+    expect(selfAttackModifiers(new Set(["pinned"]), false)).toEqual([{ id: "pinned", label: "Pinned", mod: -20 }]);
+    expect(selfAttackModifiers(new Set(["pinned"]), true)).toEqual([]);
+  });
+});

@@ -4,9 +4,11 @@ export const CONDITION_ATTACK_MODS = {
   run:     { label: "Run",     melee: 20, ranged: -20 },
   stunned: { label: "Stunned", melee: 20, ranged: 20 },
   prone:   { label: "Prone",   melee: 10, ranged: -10, rangedNoPenaltyAtPointBlank: true },
+  unaware: { label: "Unaware", melee: 30, ranged: 30 },
 };
 export const CONDITION_SELF_ATTACK_MODS = {
-  prone: { label: "Prone", melee: -10, ranged: 0 },
+  prone:  { label: "Prone",  melee: -10, ranged: 0 },
+  pinned: { label: "Pinned", melee: 0,   ranged: -20 },   // -20 Ballistic Skill (ranged only)
 };
 export const CONDITION_EVADE_MODS = {
   prone: { label: "Prone", mod: -20 },

@@ -90,6 +90,8 @@ Hooks.once("init", () => {
     { id: "toxic",   name: "Toxic",   img: "icons/svg/poison.svg" },
     { id: "onFire",   name: "On Fire",  img: "icons/svg/fire.svg" },
     { id: "helpless", name: "Helpless", img: "icons/svg/paralysis.svg" },
+    { id: "unaware",  name: "Unaware",  img: "icons/svg/blind.svg" },
+    { id: "pinned",   name: "Pinned",   img: "icons/svg/net.svg" },
   ];
 
   console.log("Better DH2e | Initialized");
