@@ -11,8 +11,8 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier } from "../helpers/condition-data.mjs";
-import { applyStunned, applyProne, addFatigue, applyToxic } from "./conditions.mjs";
+import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
+import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -45,7 +45,7 @@ export function bindCardButtons(message, html) {
   // non-owner click can't half-apply and throw on the permission-gated write.
   const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
   if (!target?.isOwner) {
-    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"]')
+    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"]')
       .forEach((b) => b.remove());
   }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
@@ -63,6 +63,8 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
       else if (btn.dataset.bdh === "castResist") await rollCastResist(message);
       else if (btn.dataset.bdh === "toxicResist") await rollToxicResist(message);
+      else if (btn.dataset.bdh === "onFireApply") await applyOnFireDamage(message);
+      else if (btn.dataset.bdh === "onFireWP") await rollOnFireWP(message);
     });
   });
 }
@@ -137,7 +139,9 @@ async function rollFlameTest(message) {
   const label = "Agility (Flame)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) await applyOnFire(defender);
+  return result;
 }
 async function rollHallucinogenicTest(message) {
   const f = message.flags[NS];
@@ -157,7 +161,9 @@ async function rollSnareTest(message) {
   const label = `Agility (Snare ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) await applyHelpless(defender);
+  return result;
 }
 async function rollToxicTest(message) {
   const f = message.flags[NS];
@@ -196,6 +202,29 @@ async function rollToxicResist(message) {
   }
   return result;
 }
+async function applyOnFireDamage(message) {
+  const f = message.flags[NS];
+  const target = await resolveDefender(f);
+  if (!target) { ui.notifications.warn("Select a token to apply fire damage."); return; }
+  const tb = target.system.characteristics.toughness.bonus ?? 0;
+  const dealt = Math.max(0, (f.damage ?? 0) - tb);   // ignore armour, toughness soaks
+  const w = target.system.wounds;
+  const res = applyWounds(w.value, w.max, dealt);
+  await target.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+  await addFatigue(target, 1);
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${target.name} takes ${dealt} Energy damage (Body) and 1 Fatigue from fire</header>`
+      + `<div class="bdh-card-line">1d10: ${f.damage} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>` });
+}
+async function rollOnFireWP(message) {
+  const f = message.flags[NS];
+  const target = await resolveDefender(f);
+  if (!target) { ui.notifications.warn("Select a token for the Willpower test."); return; }
+  const label = "Willpower (On Fire)";
+  const choice = await promptTest({ title: label, defaultModifier: "0" });
+  if (!choice) return null;
+  return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier });
+}
 async function rollDamage(message) {
   const f = message.flags[NS];
   const actor = await fromUuid(f.actorUuid);
@@ -233,6 +262,7 @@ async function rollDamage(message) {
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
   if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
   if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
+  if (f.helpless) weaponBase = doubleDamageDice(weaponBase);   // every die term doubles for Helpless
   const rolls = [];
   const rolled = [];   // per hit: { hit, wRoll, bRoll, rf, baseTotal }
   for (const hit of f.hits) {
@@ -494,7 +524,10 @@ export async function rollAttack(actor, weaponId) {
   if (battlemapEnabled()) {
     if (targetTok?.actor) {
       const cmods = targetAttackModifiers(targetTok.actor.statuses, isMelee, defaultRange);
-      if (cmods.length) targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
+      const parts = cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`);
+      // Helpless isn't a numeric mod (melee auto-hit + doubled dice) — surface it in the row.
+      if (isMelee && targetTok.actor.statuses?.has?.("helpless")) parts.unshift("Helpless (auto-hit, ×2 dice)");
+      if (parts.length) targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${parts.join(", ")}</span></div>`;
     }
     const smods = selfAttackModifiers(actor.statuses, isMelee);
     if (smods.length) selfCondRow = `<div class="form-group"><label>You have</label><span class="bdh-self-cond">${smods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
@@ -590,10 +623,17 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
   const result = evaluateTest({ base, modifier: rawModifier, roll: roll.total });
   // evaluateTest returns: { base, modifier (clamped), target, roll, success, degrees }
-  const { success, degrees, target, modifier } = result;
+  let { success, degrees, target, modifier } = result;
 
   // Degrees of success (0 on failure)
-  const dos = success ? degrees + dosBonus : 0;
+  let dos = success ? degrees + dosBonus : 0;
+
+  // Helpless target: melee attacks auto-succeed with DoS = attacker WS bonus
+  const vsHelpless = isMelee && battlemapEnabled() && (condTarget?.statuses?.has?.("helpless") ?? false);
+  if (vsHelpless) {
+    success = true;
+    dos = actor.system.characteristics.weaponSkill.bonus ?? 0;   // DoS = attacker WS bonus
+  }
 
   // Effective penetration (Lance scales with DoS; Melta doubles at close range)
   const penetration = effectivePenetration((weapon.system.penetration ?? 0) + (maximal ? 2 : 0), {
@@ -645,6 +685,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       success,
       jammed,
       scatterDmg,
+      helpless: vsHelpless,
       reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName, roll: roll.total, success, dosBonus }
     }
   };
@@ -678,7 +719,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     hasHits: nHits > 0,
     qualityLabels,
     attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal }),
-    dosBonus
+    dosBonus,
+    helplessNote: vsHelpless ? "Automatic Hit (Helpless)" : null
   });
 
   // Create chat message (apply current roll mode)

@@ -9,6 +9,7 @@
   <div class="bdh-card-line">{{attackTypeLabel}} · {{aimLabel}}{{#if rangeLabel}} · {{rangeLabel}}{{/if}}</div>
   {{#if qualityLabels}}<div class="bdh-card-line bdh-quals">Qualities: {{qualityLabels}}</div>{{/if}}
   {{#if attackNotes}}<div class="bdh-card-line bdh-qnote">{{attackNotes}}</div>{{/if}}
+  {{#if helplessNote}}<div class="bdh-card-line bdh-qnote">{{helplessNote}}</div>{{/if}}
   <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
     {{#if success}}Success ({{degrees}} DoS){{else}}Failure ({{degrees}} DoF){{/if}}
     {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS · Fate</span>{{/if}}

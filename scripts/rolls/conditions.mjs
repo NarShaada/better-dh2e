@@ -51,6 +51,22 @@ export async function applyProne(actor) {
   });
 }
 
+/** Set the actor On Fire (idempotent), with a chat card. */
+export async function applyOnFire(actor) {
+  if (!actor || actor.statuses?.has?.("onFire")) return;
+  await actor.toggleStatusEffect("onFire", { active: true });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${actor.name} is set On Fire!</header></div>` });
+}
+
+/** Make the actor Helpless (idempotent), with a chat card. */
+export async function applyHelpless(actor) {
+  if (!actor || actor.statuses?.has?.("helpless")) return;
+  await actor.toggleStatusEffect("helpless", { active: true });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${actor.name} is Helpless.</header></div>` });
+}
+
 /** Add fatigue (current, clamped >=0). */
 export async function addFatigue(actor, n) {
   if (!actor || !n) return;
@@ -69,6 +85,18 @@ export async function applyToxic(actor, potency, damageType) {
     eff = actor.effects.find((e) => e.statuses?.has?.("toxic"));
   }
   if (eff) await eff.update({ [`flags.${NS}.potency`]: winner.potency, [`flags.${NS}.damageType`]: winner.damageType });
+}
+
+/** Start-of-turn On Fire: roll 1d10 and post an Apply-Damage + Willpower-Test card. */
+export async function tickOnFire(actor) {
+  if (!actor?.statuses?.has?.("onFire")) return;
+  const roll = await new Roll("1d10").evaluate();
+  // Store the ACTOR uuid (resolveDefender + the handlers expect an actor, matching every other card).
+  const flags = { kind: "onFire", damage: roll.total, targetUuid: actor.uuid, targetName: actor.name };
+  const content = `<div class="bdh-card"><header class="bdh-card-head">${actor.name} is On Fire and takes ${roll.total} damage</header>`
+    + `<div class="bdh-card-actions"><button type="button" data-bdh="onFireApply">Apply Damage</button>`
+    + `<button type="button" data-bdh="onFireWP">Willpower Test</button></div></div>`;
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content, rolls: [roll], flags: { [NS]: flags } });
 }
 
 /** Read the Toxic data + clear the condition (one-shot, at end of turn). Returns {potency, damageType} or null. */
