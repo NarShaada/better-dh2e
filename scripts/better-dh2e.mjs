@@ -20,7 +20,6 @@ import { DarkHeresyActorSheet } from "./sheets/actor-sheet.mjs";
 import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
 import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 import { makeDHCombat } from "./documents/combat.mjs";
-import { tickStunned } from "./rolls/conditions.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -136,11 +135,3 @@ Hooks.on("moveToken", async (doc, movement, operation, user) => {
   else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
 });
 
-// Battlemap: clear the Run condition when the runner's own turn begins; tick Stunned countdown.
-Hooks.on("combatTurnChange", async (combat, prior, current) => {
-  if (!battlemapEnabled() || !game.users.activeGM?.isSelf) return;
-  const actor = combat.combatant?.actor;
-  if (!actor) return;
-  if (actor.statuses?.has?.("run")) await actor.toggleStatusEffect("run", { active: false });
-  await tickStunned(actor);
-});

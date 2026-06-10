@@ -87,6 +87,18 @@ export async function applyToxic(actor, potency, damageType) {
   if (eff) await eff.update({ [`flags.${NS}.potency`]: winner.potency, [`flags.${NS}.damageType`]: winner.damageType });
 }
 
+/** Start-of-turn On Fire: roll 1d10 and post an Apply-Damage + Willpower-Test card. */
+export async function tickOnFire(actor, combatant) {
+  if (!actor?.statuses?.has?.("onFire")) return;
+  const roll = await new Roll("1d10").evaluate();
+  const token = combatant?.token ?? actor.getActiveTokens()[0]?.document ?? null;
+  const flags = { kind: "onFire", damage: roll.total, targetUuid: token?.uuid ?? actor.uuid, targetName: actor.name };
+  const content = `<div class="bdh-card"><header class="bdh-card-head">${actor.name} is On Fire and takes ${roll.total} damage</header>`
+    + `<div class="bdh-card-actions"><button type="button" data-bdh="onFireApply">Apply Damage</button>`
+    + `<button type="button" data-bdh="onFireWP">Willpower Test</button></div></div>`;
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content, rolls: [roll], flags: { [NS]: flags } });
+}
+
 /** Read the Toxic data + clear the condition (one-shot, at end of turn). Returns {potency, damageType} or null. */
 export async function consumeToxic(actor) {
   const eff = actor?.effects.find((e) => e.statuses?.has?.("toxic"));
