@@ -51,6 +51,22 @@ export async function applyProne(actor) {
   });
 }
 
+/** Set the actor On Fire (idempotent), with a chat card. */
+export async function applyOnFire(actor) {
+  if (!actor || actor.statuses?.has?.("onFire")) return;
+  await actor.toggleStatusEffect("onFire", { active: true });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${actor.name} is set On Fire!</header></div>` });
+}
+
+/** Make the actor Helpless (idempotent), with a chat card. */
+export async function applyHelpless(actor) {
+  if (!actor || actor.statuses?.has?.("helpless")) return;
+  await actor.toggleStatusEffect("helpless", { active: true });
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${actor.name} is Helpless.</header></div>` });
+}
+
 /** Add fatigue (current, clamped >=0). */
 export async function addFatigue(actor, n) {
   if (!actor || !n) return;

@@ -46,6 +46,11 @@ export function evadeConditionModifier(statuses) {
   return total;
 }
 
+/** Double every dice term in a damage formula (Helpless): NdX -> (2N)dX; flats unchanged. */
+export function doubleDamageDice(formula) {
+  return String(formula).replace(/(\d+)d(\d+)/g, (_, n, d) => `${parseInt(n, 10) * 2}d${d}`);
+}
+
 /** Most-potent Toxic wins: higher potency carries its own damage type; ties keep the current. */
 export function pickToxic(current, incoming) {
   if (!current) return incoming;

@@ -57,3 +57,15 @@ describe("pickToxic (most-potent wins)", () => {
       .toEqual({ potency: 3, damageType: "Energy" });
   });
 });
+
+import { doubleDamageDice } from "../scripts/helpers/condition-data.mjs";
+
+describe("doubleDamageDice", () => {
+  it("doubles every die term, leaves flats", () => {
+    expect(doubleDamageDice("1d10+3")).toBe("2d10+3");
+    expect(doubleDamageDice("1d10+3+2d10")).toBe("2d10+3+4d10");
+    expect(doubleDamageDice("2d5")).toBe("4d5");
+    expect(doubleDamageDice("5")).toBe("5");
+    expect(doubleDamageDice("1d10+1d5")).toBe("2d10+2d5");
+  });
+});
