@@ -16,7 +16,7 @@ import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, dou
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
 import { scatterDirection } from "../helpers/scatter.mjs";
-import { createBlastRegion, tokensInRegion } from "../canvas/region.mjs";
+import { createBlastRegion, tokensInRegion, deleteRegionByUuid } from "../canvas/region.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -47,10 +47,17 @@ export function bindCardButtons(message, html) {
   // Apply Damage and the condition-applying resist tests (Shocking/Concussive) write to the target —
   // usable only by an owner of the target (GM owns everything). Hide them for everyone else so a
   // non-owner click can't half-apply and throw on the permission-gated write.
-  const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
-  if (!target?.isOwner) {
-    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"]')
-      .forEach((b) => b.remove());
+  if (flags.blast) {
+    // Blast Apply writes to MANY actors — GM-only gate (GM owns everything).
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="applyDamage"]').forEach((b) => b.remove());
+    }
+  } else {
+    const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
+    if (!target?.isOwner) {
+      html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"]')
+        .forEach((b) => b.remove());
+    }
   }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -429,39 +436,79 @@ async function rollEvade(message) {
   const base = defender.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
   return performTest(defender, { label: "Dodge", base, modifier: modifier + evadeCondMod });
 }
-async function applyDamage(message) {
-  const f = message.flags[NS];
-  const target = await fromUuid(f.targetUuid);
-  if (!target) { ui.notifications.warn("No target to apply damage to."); return; }
-  const sys = target.system;
+/**
+ * Apply one hit's worth of damage to a token's actor: soak vs armour@location + toughness, then wounds.
+ * Returns the effective dealt amount (after soak).
+ * @param {Actor} actor
+ * @param {{damageTotal: number, penetration: number, damageType: string, qualities: object[], location: string}} opts
+ * @returns {Promise<number>}
+ */
+async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location }) {
+  const sys = actor.system;
   const tb = sys.characteristics.toughness.bonus;
-  const equipped = target.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
-  const ap = computeArmour(equipped, 0);               // pure per-location AP (tb=0 so TB isn't folded in)
-  const qualities = f.qualities ?? [];
+  const equipped = actor.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
+  const ap = computeArmour(equipped, 0);   // pure per-location AP (tb=0 so TB isn't folded in)
   const felX = fellingValue(qualities);
   const tbEff = felX ? felledToughnessBonus(tb, sys.characteristics.toughness.unnatural ?? 0, felX) : tb;
   const graviton = hasGraviton(qualities);
-  let wounds = sys.wounds.value;
-  let totalCrit = 0;
+  const locAp = ap[location] ?? 0;
+  const eff = soak(damageTotal + (graviton ? locAp : 0), locAp, penetration, tbEff);
+  const w = sys.wounds;
+  const res = applyWounds(w.value, w.max, eff);
+  await actor.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+  return eff;
+}
+
+async function applyDamage(message) {
+  const f = message.flags[NS];
+
+  // --- Blast branch: soak each pooled token individually, per-token hit location ---
+  if (f.blast) {
+    const lines = [];
+    for (const uuid of f.poolUuids ?? []) {
+      const actor = await fromUuid(uuid);
+      if (!actor) continue;
+      const location = hitLocation((await safeRoll("1d100", "hit location"))?.total ?? 50);
+      const dealt = await applyHitToToken(actor, {
+        damageTotal: f.damageTotal, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location,
+      });
+      lines.push(`${actor.name}: ${dealt} dmg (${BDH.hitLocationLabels[location] ?? location})`);
+    }
+    await deleteRegionByUuid(f.regionUuid);   // remove the template after applying
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker(),
+      content: `<div class="bdh-card"><header class="bdh-card-head">Blast damage applied</header><div class="bdh-card-line">${lines.join("<br>") || "No targets."}</div></div>`,
+    });
+    return;
+  }
+
+  // --- Single-target branch ---
+  const target = await fromUuid(f.targetUuid);
+  if (!target) { ui.notifications.warn("No target to apply damage to."); return; }
+  const sys = target.system;
+  const qualities = f.qualities ?? [];
+  let prevCrit = sys.wounds.critical ?? 0;
   let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
   const lines = [];
   for (const h of f.hits) {
-    const locAp = ap[h.location] ?? 0;
-    const eff = soak(h.total + (graviton ? locAp : 0), locAp, f.penetration, tbEff);  // pen vs AP, then tbEff
-    const res = applyWounds(wounds, sys.wounds.max, eff);
-    wounds = res.wounds;
-    totalCrit += res.critical;
+    const eff = await applyHitToToken(target, {
+      damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: h.location,
+    });
+    const nowCrit = target.system.wounds.critical ?? 0;
+    const hitCrit = nowCrit - prevCrit;
+    prevCrit = nowCrit;
     maxApplied = Math.max(maxApplied, eff);
-    lines.push(`${h.label}: ${h.total} → ${eff} dmg${res.critical ? ` (${res.critical} critical)` : ""}`);
+    lines.push(`${h.label}: ${h.total} → ${eff} dmg${hitCrit > 0 ? ` (${hitCrit} critical)` : ""}`);
   }
-  await target.update({ "system.wounds.value": wounds, "system.wounds.critical": (sys.wounds.critical ?? 0) + totalCrit });
+  const totalCrit = (target.system.wounds.critical ?? 0) - (sys.wounds.critical ?? 0);
+  const wounds = target.system.wounds.value;
   // Concussive: a single blow exceeding the target's Strength Bonus knocks it Prone.
-  if (battlemapEnabled() && (f.qualities ?? []).some((q) => q.key === "concussive")
+  if (battlemapEnabled() && qualities.some((q) => q.key === "concussive")
       && maxApplied > (target.system.characteristics.strength.bonus ?? 0)) {
     await applyProne(target);
   }
   // Toxic: if any hit dealt >=1 effective damage, apply the Toxic condition at the weapon's potency.
-  const toxPot = toxicValue(f.qualities);
+  const toxPot = toxicValue(qualities);
   if (battlemapEnabled() && toxPot > 0 && maxApplied >= 1) {
     await applyToxic(target, toxPot, f.damageType ?? "");
   }
