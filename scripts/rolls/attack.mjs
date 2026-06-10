@@ -698,10 +698,17 @@ async function rollSpray(actor, weapon) {
 async function rollSuppressingFire(actor, weapon, mode) {
   const token = actor.getActiveTokens()[0];
   if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
-  if (mode !== "semiAuto" && mode !== "fullAuto") { ui.notifications.warn("Suppressive Fire needs semi- or full-auto."); return; }
-  const angle = mode === "fullAuto" ? 45 : 30;
-  const wpPenalty = mode === "fullAuto" ? -20 : -10;
-  const rof = weapon.system.rateOfFire?.[mode] || 1;
+  // Resolve the firing mode: use the selected auto burst, else fall back to whatever auto the weapon has
+  // (the attack-type dropdown defaults to Standard). Semi uses "short" RoF, full uses "long".
+  const semiRof = weapon.system.rateOfFire?.[BDH.attackTypes.semiAuto.rof] || 0;
+  const fullRof = weapon.system.rateOfFire?.[BDH.attackTypes.fullAuto.rof] || 0;
+  if (!semiRof && !fullRof) { ui.notifications.warn("Suppressive Fire needs a semi- or full-auto weapon."); return; }
+  const useMode = (mode === "fullAuto" && fullRof) ? "fullAuto"
+    : (mode === "semiAuto" && semiRof) ? "semiAuto"
+    : (semiRof ? "semiAuto" : "fullAuto");
+  const angle = useMode === "fullAuto" ? 45 : 30;
+  const wpPenalty = useMode === "fullAuto" ? -20 : -10;
+  const rof = weapon.system.rateOfFire?.[BDH.attackTypes[useMode].rof] || 1;
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
   if (usesAmmo && (weapon.system.clip?.value ?? 0) < rof) { ui.notifications.warn(`Needs ${rof} rounds.`); return; }
   const minimized = [];
@@ -769,10 +776,12 @@ async function rollSuppressEvade(message, uuid) {
   const label = `Evade (Suppressing — ${target.name})`;
   const choice = await promptTest({ title: label, defaultModifier: "+0" });
   if (!choice) return null;
-  // Dodge base — matches rollEvade's computation: Agility total + skill rank bonus (untrained = -20).
+  // Dodge base — matches rollEvade: Agility total + skill rank bonus (untrained = -20) + condition mods (e.g. Prone -20).
+  const modifier = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
+  const evadeCondMod = battlemapEnabled() ? evadeConditionModifier(target.statuses) : 0;
   const dodge = target.system.skills.dodge;
   const base = target.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
-  return performTest(target, { label, base, modifier: choice.modifier });
+  return performTest(target, { label, base, modifier: modifier + evadeCondMod });
 }
 
 async function applySuppressDamage(message, uuid) {
@@ -893,9 +902,11 @@ export async function rollAttack(actor, weaponId) {
     toggle();
   };
 
-  // Add a "Suppressive Fire" button when on the battlemap and the weapon has semi- or full-auto RoF.
+  // Add a "Suppressive Fire" button when on the battlemap and the weapon can semi/full-auto.
+  // Semi-auto uses the weapon's "short" RoF, full-auto its "long" RoF (per BDH.attackTypes).
   const canSuppress = battlemapEnabled() && isRanged
-    && (weapon.system.rateOfFire?.semiAuto || weapon.system.rateOfFire?.fullAuto);
+    && ((weapon.system.rateOfFire?.[BDH.attackTypes.semiAuto.rof] || 0) > 0
+      || (weapon.system.rateOfFire?.[BDH.attackTypes.fullAuto.rof] || 0) > 0);
 
   let choice;
   if (canSuppress) {
