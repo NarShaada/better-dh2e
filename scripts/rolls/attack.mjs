@@ -524,7 +524,10 @@ export async function rollAttack(actor, weaponId) {
   if (battlemapEnabled()) {
     if (targetTok?.actor) {
       const cmods = targetAttackModifiers(targetTok.actor.statuses, isMelee, defaultRange);
-      if (cmods.length) targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
+      const parts = cmods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`);
+      // Helpless isn't a numeric mod (melee auto-hit + doubled dice) — surface it in the row.
+      if (isMelee && targetTok.actor.statuses?.has?.("helpless")) parts.unshift("Helpless (auto-hit, ×2 dice)");
+      if (parts.length) targetCondRow = `<div class="form-group"><label>Target has</label><span class="bdh-target-cond">${parts.join(", ")}</span></div>`;
     }
     const smods = selfAttackModifiers(actor.statuses, isMelee);
     if (smods.length) selfCondRow = `<div class="form-group"><label>You have</label><span class="bdh-self-cond">${smods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
