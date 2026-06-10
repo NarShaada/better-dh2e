@@ -249,6 +249,8 @@ async function rollDamage(message) {
       .filter((t) => caught.has(t.actor.uuid));    // RAW: re-check who is STILL inside before rolling
     if (!pool.length) {
       ui.notifications.info("No targets remain in the blast.");
+      await deleteRegionByUuid(f.regionUuid);   // everyone moved out → no damage, clean up
+      return;
     }
     // Build the weapon formula the same way the normal path does (no RoF loop, no per-hit bonus).
     const actor = await fromUuid(f.actorUuid);
@@ -813,8 +815,12 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     }
     const region = await createBlastRegion(canvas.scene, x, y, blastX);
     const caughtToks = tokensInRegion(region);
-    blastFlags = { blast: blastX, regionUuid: region.uuid, caughtUuids: caughtToks.map((t) => t.actor.uuid), scattered: !success };
-    blastCaughtNames = caughtToks.map((t) => t.name).join(", ");
+    if (caughtToks.length) {
+      blastFlags = { blast: blastX, regionUuid: region.uuid, caughtUuids: caughtToks.map((t) => t.actor.uuid), scattered: !success };
+      blastCaughtNames = caughtToks.map((t) => t.name).join(", ");
+    } else {
+      await deleteRegionByUuid(region.uuid);   // scattered into empty space → no damage step, clean up now
+    }
   }
 
   // Message flags (namespace "better-dh2e")
@@ -869,6 +875,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     overheats: jammed && hasOverheats(weapon.system.qualities),
     targetName,
     hasHits: nHits > 0,
+    // Show Roll Damage / Evade on a HIT, OR for a blast that caught targets even on a miss (scatter still lands).
+    showActions: nHits > 0 || !!blastFlags,
     qualityLabels,
     attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal }),
     dosBonus,

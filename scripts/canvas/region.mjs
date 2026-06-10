@@ -23,6 +23,11 @@ export function tokensInRegion(region) {
 
 /** Delete a region by uuid (cleanup after applying blast damage). */
 export async function deleteRegionByUuid(uuid) {
-  const region = uuid ? await fromUuid(uuid) : null;
-  if (region) await region.delete();
+  if (!uuid) return;
+  try {
+    const region = await fromUuid(uuid);
+    if (region) await region.delete();
+  } catch (err) {
+    console.warn("Better DH2e | failed to delete blast region:", uuid, err);
+  }
 }

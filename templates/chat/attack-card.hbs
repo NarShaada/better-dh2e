@@ -23,6 +23,8 @@
     <ol class="bdh-hits">
       {{#each hits}}<li>{{label}}</li>{{/each}}
     </ol>
+  {{/if}}
+  {{#if showActions}}
     <div class="bdh-card-actions">
       <button type="button" data-bdh="rollDamage">Roll Damage</button>
       <button type="button" data-bdh="evade">Evade</button>
