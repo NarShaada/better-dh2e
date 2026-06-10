@@ -13,6 +13,7 @@ import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
+import { safeRoll } from "./dice.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -268,7 +269,8 @@ async function rollDamage(message) {
   for (const hit of f.hits) {
     // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
     const weaponFormula = weaponDamageFormula(qualities, weaponBase);
-    const wRoll = await new Roll(weaponFormula).evaluate();
+    const wRoll = await safeRoll(weaponFormula, "weapon damage");
+    if (!wRoll) return;
     const rf = wRoll.dice.some((d) => d.faces === 10 && d.results.some((res) => res.active && res.result >= rfThreshold));
     rolls.push(wRoll);
     // Bonus damage — non-RF; first hit only: the input modifier + Accurate's DoS dice.
@@ -279,7 +281,7 @@ async function rollDamage(message) {
       if (acc) bonusParts.push(acc);
     }
     let bRoll = null;
-    if (bonusParts.length) { bRoll = await new Roll(bonusParts.join(" + ")).evaluate(); rolls.push(bRoll); }
+    if (bonusParts.length) { bRoll = await safeRoll(bonusParts.join(" + "), "damage modifier"); if (!bRoll) return; rolls.push(bRoll); }
     rolled.push({ hit, wRoll, bRoll, rf, baseTotal: wRoll.total + (bRoll?.total ?? 0) + dieDelta(wRoll) + dieDelta(bRoll) });
   }
   // RAW: the attacker may replace ONE damage die in the whole attack with the DoS — auto-pick the global lowest active die if it's below the DoS.
@@ -426,7 +428,8 @@ async function rollOverheatDamage(message) {
     rejectClose: false
   });
   if (!hand) return;
-  const roll = await new Roll(weapon.system.damage).evaluate();
+  const roll = await safeRoll(weapon.system.damage, "weapon damage");
+  if (!roll) return;
   const rf = roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 10));
   const hits = [{ location: hand, label: BDH.hitLocationLabels[hand], total: roll.total, rf, breakdown: formatRoll(roll) }];
   const cardData = {

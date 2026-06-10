@@ -9,6 +9,7 @@ import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
 import { effectivePenetration } from "../helpers/quality-modules.mjs";
 import { battlemapEnabled } from "../helpers/battlemap-data.mjs";
+import { safeRoll } from "./dice.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -146,7 +147,6 @@ export async function resolveManifest(actor, power, opts) {
   let isAttack = false;
   let hits = [];
   let qualityLabels = "";
-  let attackDamageType = null;
 
   if (isPsychicAttack(s.type)) {
     isAttack = true;
@@ -158,7 +158,8 @@ export async function resolveManifest(actor, power, opts) {
     const qualities = [...(s.qualities ?? [])];
     if (s.type === "blast" && (s.blastRadius ?? 0) > 0) qualities.push({ key: "blast", value: s.blastRadius });
 
-    const penBase = Number((await new Roll(substitutePR(String(s.penetration || "0"), effPR) || "0").evaluate()).total) || 0;
+    const penRoll = await safeRoll(substitutePR(String(s.penetration || "0"), effPR) || "0", "power penetration");
+    const penBase = Number(penRoll?.total) || 0;   // malformed penetration → 0 rather than abort the cast
     const penetration = effectivePenetration(penBase, { qualities, dos, success, closeRange: false });
     const damage = substitutePR(s.damage || "", effPR);
 
@@ -167,7 +168,6 @@ export async function resolveManifest(actor, power, opts) {
     hits = locs.map((loc, i) => ({ index: i, location: loc, label: CONFIG.BDH.hitLocationLabels[loc] }));
 
     qualityLabels = qualities.map((q) => `${CONFIG.BDH.qualities[q.key]?.label ?? q.key}${q.value ? ` (${q.value})` : ""}`).join(", ");
-    attackDamageType = s.damageType;
 
     attackFlags = {
       type: "attack", psychic: true, actorUuid: actor.uuid, weaponName: power.name,
