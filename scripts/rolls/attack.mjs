@@ -705,8 +705,28 @@ async function rollSuppressingFire(actor, weapon, mode) {
     }),
     flags: { [NS]: { kind: "suppressWP", wpPenalty } },
   });
-  await deleteRegionByUuid(region.uuid);   // caught is captured; the cone is no longer needed
-  // (Task 2 adds the BS test + the random-burst-hit card before this delete.)
+  // Attacker's suppressing BS test (−20). Success → random burst hits, capped by RoF.
+  const bsRoll = await new Roll("1d100").evaluate();
+  const res = evaluateTest({ base: actor.system.characteristics.ballisticSkill.total, modifier: -20, roll: bsRoll.total });
+  if (res.success && caught.length) {
+    const nHits = Math.min(1 + Math.floor(res.degrees / 2), rof);
+    const locs = locationSequence(hitLocation(bsRoll.total), nHits);   // burst locations
+    const byTarget = {};
+    for (const loc of locs) {
+      const idx = ((await safeRoll(`1d${caught.length}`, "random target"))?.total ?? 1) - 1;   // Foundry RNG
+      const t = caught[Math.max(0, Math.min(idx, caught.length - 1))];
+      (byTarget[t.actor.uuid] ??= { name: t.name, locations: [] }).locations.push(loc);
+    }
+    const rows = Object.entries(byTarget).map(([uuid, v]) => ({
+      uuid, name: v.name, locs: v.locations.map((l) => BDH.hitLocationLabels[l]).join(", "), locKeys: v.locations,
+    }));
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }), rolls: [bsRoll],
+      content: await renderTemplate("systems/better-dh2e/templates/chat/suppress-hit-card.hbs", { weaponName: weapon.name, rows, dos: res.degrees }),
+      flags: { [NS]: { kind: "suppressHit", actorUuid: actor.uuid, weaponId: weapon.id, hits: rows.map((r) => ({ uuid: r.uuid, locKeys: r.locKeys })) } },
+    });
+  }
+  await deleteRegionByUuid(region.uuid);   // existing line — keep it AFTER the BS/hit block
 }
 
 async function rollSuppressWP(message, uuid) {
