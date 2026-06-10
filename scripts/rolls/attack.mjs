@@ -229,8 +229,73 @@ async function rollOnFireWP(message) {
   if (!choice) return null;
   return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier });
 }
+const DAMAGE_CARD = "systems/better-dh2e/templates/chat/damage-card.hbs";
+
 async function rollDamage(message) {
   const f = message.flags[NS];
+
+  // --- Blast branch: ONE shared roll for all tokens still inside the template ---
+  if (f.regionUuid) {
+    const region = await fromUuid(f.regionUuid);
+    const caught = new Set(f.caughtUuids ?? []);
+    const pool = (region ? tokensInRegion(region) : [])
+      .filter((t) => caught.has(t.actor.uuid));    // RAW: re-check who is STILL inside before rolling
+    if (!pool.length) {
+      ui.notifications.info("No targets remain in the blast.");
+    }
+    // Build the weapon formula the same way the normal path does (no RoF loop, no per-hit bonus).
+    const actor = await fromUuid(f.actorUuid);
+    const weapon = actor?.items.get(f.weaponId);
+    if (!weapon) return;
+    const baseFormula = weapon.system.damage;
+    const qualities = f.qualities ?? weapon.system.qualities ?? [];
+    // Ranged blast: strBonus is always 0, craftDmg is 0 (melee-only).
+    let weaponBase = baseFormula;
+    if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
+    if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
+    if (f.helpless) weaponBase = doubleDamageDice(weaponBase);
+    const weaponFormula = weaponDamageFormula(qualities, weaponBase);
+    const dmgRoll = await safeRoll(weaponFormula, "weapon damage");
+    if (!dmgRoll) return;
+    const breakdown = formatRoll(dmgRoll);
+    const cardData = {
+      blast: true,
+      weaponName: f.weaponName ?? weapon.name,
+      damageType: f.damageType,
+      penetration: f.penetration,
+      poolNames: pool.map((t) => t.name).join(", "),
+      damageTotal: dmgRoll.total,
+      breakdown,
+      // Keep quality-triggered buttons so they still appear on blast cards
+      shocking: hasShocking(qualities),
+      concussive: concussiveValue(qualities) || null,
+      flame: hasFlame(qualities),
+      hallucinogenic: hallucinogenicValue(qualities) || null,
+      snare: snareValue(qualities) || null,
+      toxic: battlemapEnabled() ? null : (toxicValue(qualities) || null),
+      damageNotes: qualityNotes(qualities, "damage"),
+    };
+    const content = await renderTemplate(DAMAGE_CARD, cardData);
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      content,
+      rolls: [dmgRoll],
+      flags: {
+        [NS]: {
+          ...f,
+          blast: true,
+          poolUuids: pool.map((t) => t.actor.uuid),
+          damageTotal: dmgRoll.total,
+          penetration: f.penetration,
+          damageType: f.damageType,
+          qualities: f.qualities ?? [],
+          regionUuid: f.regionUuid,
+        },
+      },
+    });
+    return;
+  }
+
   const actor = await fromUuid(f.actorUuid);
   const psychic = !!f.psychic;
   const weapon = psychic ? null : actor?.items.get(f.weaponId);
