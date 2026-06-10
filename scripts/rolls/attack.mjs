@@ -11,7 +11,7 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier } from "../helpers/condition-data.mjs";
+import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic } from "./conditions.mjs";
 
 const NS = "better-dh2e";
@@ -258,6 +258,7 @@ async function rollDamage(message) {
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
   if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
   if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
+  if (f.helpless) weaponBase = doubleDamageDice(weaponBase);   // every die term doubles for Helpless
   const rolls = [];
   const rolled = [];   // per hit: { hit, wRoll, bRoll, rf, baseTotal }
   for (const hit of f.hits) {
@@ -615,10 +616,17 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
   const result = evaluateTest({ base, modifier: rawModifier, roll: roll.total });
   // evaluateTest returns: { base, modifier (clamped), target, roll, success, degrees }
-  const { success, degrees, target, modifier } = result;
+  let { success, degrees, target, modifier } = result;
 
   // Degrees of success (0 on failure)
-  const dos = success ? degrees + dosBonus : 0;
+  let dos = success ? degrees + dosBonus : 0;
+
+  // Helpless target: melee attacks auto-succeed with DoS = attacker WS bonus
+  const vsHelpless = isMelee && battlemapEnabled() && (condTarget?.statuses?.has?.("helpless") ?? false);
+  if (vsHelpless) {
+    success = true;
+    dos = actor.system.characteristics.weaponSkill.bonus ?? 0;   // DoS = attacker WS bonus
+  }
 
   // Effective penetration (Lance scales with DoS; Melta doubles at close range)
   const penetration = effectivePenetration((weapon.system.penetration ?? 0) + (maximal ? 2 : 0), {
@@ -670,6 +678,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       success,
       jammed,
       scatterDmg,
+      helpless: vsHelpless,
       reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName, roll: roll.total, success, dosBonus }
     }
   };
@@ -703,7 +712,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     hasHits: nHits > 0,
     qualityLabels,
     attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal }),
-    dosBonus
+    dosBonus,
+    helplessNote: vsHelpless ? "Automatic Hit (Helpless)" : null
   });
 
   // Create chat message (apply current roll mode)
