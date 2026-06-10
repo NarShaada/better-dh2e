@@ -656,12 +656,14 @@ async function rollForceField(actor) {
 async function rollSpray(actor, weapon) {
   const token = actor.getActiveTokens()[0];
   if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
-  // Minimize open windows (the sheet blocks the map) so the player can see + aim the cone.
+  // Minimize open windows (the sheet blocks the map) so the player can see + aim the cone; restore after.
+  const minimized = [];
   for (const app of foundry.applications.instances.values()) {
-    if (app.rendered && !app.minimized) await app.minimize();
+    if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
   }
   const length = Number(weapon.system.range) || 10;            // cone length = weapon range (m)
   const region = await placeConeRegion(token, length, 30);
+  for (const app of minimized) await app.maximize?.();         // restore windows after placement/cancel
   if (!region) return;                                          // cancelled
   const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
   const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name }));
