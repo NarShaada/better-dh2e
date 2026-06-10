@@ -8,6 +8,7 @@ import {
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
 import { effectivePenetration } from "../helpers/quality-modules.mjs";
+import { battlemapEnabled } from "../helpers/battlemap-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -44,7 +45,21 @@ export async function rollManifest(actor, powerId) {
     prOpts.push(`<option value="${pr}"${pr === normalPR ? " selected" : ""}>PR ${pr} — ${tag}</option>`);
   }
 
+  // Battlemap: show the measured distance to the target (informational only — Focus Power tests take no range modifier).
+  let rangeRow = "";
+  if (battlemapEnabled() && isPsychicAttack(s.type)) {
+    const targetTok = game.user.targets.first() ?? null;
+    const casterTok = actor.getActiveTokens()[0] ?? null;
+    if (targetTok && casterTok && targetTok.scene?.id === casterTok.scene?.id) {
+      try {
+        const dist = Math.round(canvas.grid.measurePath([casterTok.center, targetTok.center]).distance);
+        rangeRow = `<div class="form-group"><label>Range to Target</label><span class="bdh-measured">${dist} m</span></div>`;
+      } catch (e) { /* non-grid scene */ }
+    }
+  }
+
   const dialogContent = `
+    ${rangeRow}
     <div class="form-group"><label>Effective PR</label><select name="effPR">${prOpts.join("")}</select></div>
     <div class="form-group"><label>Circumstance Modifier</label><input type="text" name="modifier" value="+0"/></div>`;
 
