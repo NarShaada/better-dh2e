@@ -15,6 +15,8 @@ import { sizeToHitModifier } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
+import { scatterDirection } from "../helpers/scatter.mjs";
+import { createBlastRegion, tokensInRegion, deleteRegionByUuid } from "../canvas/region.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -45,10 +47,17 @@ export function bindCardButtons(message, html) {
   // Apply Damage and the condition-applying resist tests (Shocking/Concussive) write to the target —
   // usable only by an owner of the target (GM owns everything). Hide them for everyone else so a
   // non-owner click can't half-apply and throw on the permission-gated write.
-  const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
-  if (!target?.isOwner) {
-    html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"]')
-      .forEach((b) => b.remove());
+  if (flags.blast) {
+    // Blast Apply writes to MANY actors — GM-only gate (GM owns everything).
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="applyDamage"]').forEach((b) => b.remove());
+    }
+  } else {
+    const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
+    if (!target?.isOwner) {
+      html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"]')
+        .forEach((b) => b.remove());
+    }
   }
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -227,8 +236,70 @@ async function rollOnFireWP(message) {
   if (!choice) return null;
   return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier });
 }
+const DAMAGE_CARD = "systems/better-dh2e/templates/chat/damage-card.hbs";
+
 async function rollDamage(message) {
   const f = message.flags[NS];
+
+  // --- Blast branch: ONE shared roll for all tokens still inside the template ---
+  if (f.regionUuid) {
+    const region = await fromUuid(f.regionUuid);
+    const caught = new Set(f.caughtUuids ?? []);
+    const pool = (region ? tokensInRegion(region) : [])
+      .filter((t) => caught.has(t.actor.uuid));    // RAW: re-check who is STILL inside before rolling
+    if (!pool.length) {
+      ui.notifications.info("No targets remain in the blast.");
+      await deleteRegionByUuid(f.regionUuid);   // everyone moved out → no damage, clean up
+      return;
+    }
+    // Build the weapon formula the same way the normal path does (no RoF loop, no per-hit bonus).
+    const actor = await fromUuid(f.actorUuid);
+    const weapon = actor?.items.get(f.weaponId);
+    if (!weapon) return;
+    const baseFormula = weapon.system.damage;
+    const qualities = f.qualities ?? weapon.system.qualities ?? [];
+    // Ranged blast: strBonus is always 0, craftDmg is 0 (melee-only).
+    let weaponBase = baseFormula;
+    if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
+    if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
+    if (f.helpless) weaponBase = doubleDamageDice(weaponBase);
+    const weaponFormula = weaponDamageFormula(qualities, weaponBase);
+    const dmgRoll = await safeRoll(weaponFormula, "weapon damage");
+    if (!dmgRoll) return;
+    const breakdown = formatRoll(dmgRoll);
+    const cardData = {
+      blast: true,
+      weaponName: f.weaponName ?? weapon.name,
+      damageType: f.damageType,
+      penetration: f.penetration,
+      poolNames: pool.map((t) => t.name).join(", "),
+      damageTotal: dmgRoll.total,
+      breakdown,
+      // Per-token quality resist buttons are NOT shown on blast cards — they would test only the primary
+      // target, not the pool (multi-target quality conditions are a deferred slice).
+      damageNotes: qualityNotes(qualities, "damage"),
+    };
+    const content = await renderTemplate(DAMAGE_CARD, cardData);
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      content,
+      rolls: [dmgRoll],
+      flags: {
+        [NS]: {
+          ...f,
+          blast: true,
+          poolUuids: pool.map((t) => t.actor.uuid),
+          damageTotal: dmgRoll.total,
+          penetration: f.penetration,
+          damageType: f.damageType,
+          qualities: f.qualities ?? [],
+          regionUuid: f.regionUuid,
+        },
+      },
+    });
+    return;
+  }
+
   const actor = await fromUuid(f.actorUuid);
   const psychic = !!f.psychic;
   const weapon = psychic ? null : actor?.items.get(f.weaponId);
@@ -362,39 +433,79 @@ async function rollEvade(message) {
   const base = defender.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
   return performTest(defender, { label: "Dodge", base, modifier: modifier + evadeCondMod });
 }
-async function applyDamage(message) {
-  const f = message.flags[NS];
-  const target = await fromUuid(f.targetUuid);
-  if (!target) { ui.notifications.warn("No target to apply damage to."); return; }
-  const sys = target.system;
+/**
+ * Apply one hit's worth of damage to a token's actor: soak vs armour@location + toughness, then wounds.
+ * Returns the effective dealt amount (after soak).
+ * @param {Actor} actor
+ * @param {{damageTotal: number, penetration: number, damageType: string, qualities: object[], location: string}} opts
+ * @returns {Promise<number>}
+ */
+async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location }) {
+  const sys = actor.system;
   const tb = sys.characteristics.toughness.bonus;
-  const equipped = target.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
-  const ap = computeArmour(equipped, 0);               // pure per-location AP (tb=0 so TB isn't folded in)
-  const qualities = f.qualities ?? [];
+  const equipped = actor.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
+  const ap = computeArmour(equipped, 0);   // pure per-location AP (tb=0 so TB isn't folded in)
   const felX = fellingValue(qualities);
   const tbEff = felX ? felledToughnessBonus(tb, sys.characteristics.toughness.unnatural ?? 0, felX) : tb;
   const graviton = hasGraviton(qualities);
-  let wounds = sys.wounds.value;
-  let totalCrit = 0;
+  const locAp = ap[location] ?? 0;
+  const eff = soak(damageTotal + (graviton ? locAp : 0), locAp, penetration, tbEff);
+  const w = sys.wounds;
+  const res = applyWounds(w.value, w.max, eff);
+  await actor.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+  return eff;
+}
+
+async function applyDamage(message) {
+  const f = message.flags[NS];
+
+  // --- Blast branch: soak each pooled token individually, per-token hit location ---
+  if (f.blast) {
+    const lines = [];
+    for (const uuid of f.poolUuids ?? []) {
+      const actor = await fromUuid(uuid);
+      if (!actor) continue;
+      const location = hitLocation((await safeRoll("1d100", "hit location"))?.total ?? 50);
+      const dealt = await applyHitToToken(actor, {
+        damageTotal: f.damageTotal, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location,
+      });
+      lines.push(`${actor.name}: ${dealt} dmg (${BDH.hitLocationLabels[location] ?? location})`);
+    }
+    await deleteRegionByUuid(f.regionUuid);   // remove the template after applying
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker(),
+      content: `<div class="bdh-card"><header class="bdh-card-head">Blast damage applied</header><div class="bdh-card-line">${lines.join("<br>") || "No targets."}</div></div>`,
+    });
+    return;
+  }
+
+  // --- Single-target branch ---
+  const target = await fromUuid(f.targetUuid);
+  if (!target) { ui.notifications.warn("No target to apply damage to."); return; }
+  const sys = target.system;
+  const qualities = f.qualities ?? [];
+  let prevCrit = sys.wounds.critical ?? 0;
   let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
   const lines = [];
   for (const h of f.hits) {
-    const locAp = ap[h.location] ?? 0;
-    const eff = soak(h.total + (graviton ? locAp : 0), locAp, f.penetration, tbEff);  // pen vs AP, then tbEff
-    const res = applyWounds(wounds, sys.wounds.max, eff);
-    wounds = res.wounds;
-    totalCrit += res.critical;
+    const eff = await applyHitToToken(target, {
+      damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: h.location,
+    });
+    const nowCrit = target.system.wounds.critical ?? 0;
+    const hitCrit = nowCrit - prevCrit;
+    prevCrit = nowCrit;
     maxApplied = Math.max(maxApplied, eff);
-    lines.push(`${h.label}: ${h.total} → ${eff} dmg${res.critical ? ` (${res.critical} critical)` : ""}`);
+    lines.push(`${h.label}: ${h.total} → ${eff} dmg${hitCrit > 0 ? ` (${hitCrit} critical)` : ""}`);
   }
-  await target.update({ "system.wounds.value": wounds, "system.wounds.critical": (sys.wounds.critical ?? 0) + totalCrit });
+  const totalCrit = (target.system.wounds.critical ?? 0) - (sys.wounds.critical ?? 0);
+  const wounds = target.system.wounds.value;
   // Concussive: a single blow exceeding the target's Strength Bonus knocks it Prone.
-  if (battlemapEnabled() && (f.qualities ?? []).some((q) => q.key === "concussive")
+  if (battlemapEnabled() && qualities.some((q) => q.key === "concussive")
       && maxApplied > (target.system.characteristics.strength.bonus ?? 0)) {
     await applyProne(target);
   }
   // Toxic: if any hit dealt >=1 effective damage, apply the Toxic condition at the weapon's potency.
-  const toxPot = toxicValue(f.qualities);
+  const toxPot = toxicValue(qualities);
   if (battlemapEnabled() && toxPot > 0 && maxApplied >= 1) {
     await applyToxic(target, toxPot, f.damageType ?? "");
   }
@@ -682,6 +793,36 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // Build hits array for the card and flags
   const hits = locs.map((loc, i) => ({ index: i, location: loc, label: BDH.hitLocationLabels[loc] }));
 
+  // Blast(X) — place a circle Region on the target, scatter on miss
+  let blastFlags = null, blastCaughtNames = "";
+  const blastQuality = (weapon.system.qualities ?? []).find((q) => q.key === "blast");
+  const blastX = blastQuality ? (Number(blastQuality.value) || 0) + (maximal ? 2 : 0) : 0;   // Maximal: +2 Blast
+  // Resolve target token PLACEABLE (not just actor): liveTarget is already the Token placeable on live path;
+  // on Fate-reroll path (opts.targetUuid set, liveTarget null), derive from game.user.targets or the actor.
+  const targetToken = liveTarget ?? (opts.targetUuid
+    ? (game.user.targets.first()?.actor?.uuid === opts.targetUuid
+        ? game.user.targets.first()
+        : fromUuidSync(opts.targetUuid)?.getActiveTokens?.()[0] ?? null)
+    : null);
+  if (battlemapEnabled() && blastX > 0 && targetToken?.center) {
+    let { x, y } = targetToken.center;
+    if (!success) {                                   // MISS → scatter 1d5 squares in a 1d10 direction
+      const dist = (await safeRoll("1d5", "scatter distance"))?.total ?? 1;
+      const dir = (await safeRoll("1d10", "scatter direction"))?.total ?? 1;
+      const { dx, dy } = scatterDirection(dir);
+      x += dx * dist * canvas.dimensions.size;        // canvas.dimensions.size = pixels per square
+      y += dy * dist * canvas.dimensions.size;
+    }
+    const region = await createBlastRegion(canvas.scene, x, y, blastX);
+    const caughtToks = tokensInRegion(region);
+    if (caughtToks.length) {
+      blastFlags = { blast: blastX, regionUuid: region.uuid, caughtUuids: caughtToks.map((t) => t.actor.uuid), scattered: !success };
+      blastCaughtNames = caughtToks.map((t) => t.name).join(", ");
+    } else {
+      await deleteRegionByUuid(region.uuid);   // scattered into empty space → no damage step, clean up now
+    }
+  }
+
   // Message flags (namespace "better-dh2e")
   const flags = {
     [NS]: {
@@ -702,7 +843,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       jammed,
       scatterDmg,
       helpless: vsHelpless,
-      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName, roll: roll.total, success, dosBonus }
+      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName, roll: roll.total, success, dosBonus },
+      ...(blastFlags ?? {})
     }
   };
 
@@ -733,10 +875,14 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     overheats: jammed && hasOverheats(weapon.system.qualities),
     targetName,
     hasHits: nHits > 0,
+    // Show Roll Damage / Evade on a HIT, OR for a blast that caught targets even on a miss (scatter still lands).
+    showActions: nHits > 0 || !!blastFlags,
     qualityLabels,
     attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal }),
     dosBonus,
-    helplessNote: vsHelpless ? "Automatic Hit (Helpless)" : null
+    helplessNote: vsHelpless ? "Automatic Hit (Helpless)" : null,
+    blastCaught: blastCaughtNames || null,
+    blastScattered: blastFlags?.scattered ?? false
   });
 
   // Create chat message (apply current roll mode)
