@@ -698,17 +698,14 @@ async function rollSpray(actor, weapon) {
 async function rollSuppressingFire(actor, weapon, mode) {
   const token = actor.getActiveTokens()[0];
   if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
-  // Resolve the firing mode: use the selected auto burst, else fall back to whatever auto the weapon has
-  // (the attack-type dropdown defaults to Standard). Semi uses "short" RoF, full uses "long".
-  const semiRof = weapon.system.rateOfFire?.[BDH.attackTypes.semiAuto.rof] || 0;
-  const fullRof = weapon.system.rateOfFire?.[BDH.attackTypes.fullAuto.rof] || 0;
-  if (!semiRof && !fullRof) { ui.notifications.warn("Suppressive Fire needs a semi- or full-auto weapon."); return; }
-  const useMode = (mode === "fullAuto" && fullRof) ? "fullAuto"
-    : (mode === "semiAuto" && semiRof) ? "semiAuto"
-    : (semiRof ? "semiAuto" : "fullAuto");
-  const angle = useMode === "fullAuto" ? 45 : 30;
-  const wpPenalty = useMode === "fullAuto" ? -20 : -10;
-  const rof = weapon.system.rateOfFire?.[BDH.attackTypes[useMode].rof] || 1;
+  // Suppressive Fire uses the SELECTED auto-burst mode — forbid any non-auto mode (e.g. a normal attack).
+  if (mode !== "semiAuto" && mode !== "fullAuto") {
+    ui.notifications.warn("Select Semi- or Full-Auto Burst to use Suppressive Fire."); return;
+  }
+  const rof = weapon.system.rateOfFire?.[BDH.attackTypes[mode].rof] || 0;   // semi → "short", full → "long"
+  if (!rof) { ui.notifications.warn(`This weapon can't fire ${mode === "fullAuto" ? "full" : "semi"}-auto.`); return; }
+  const angle = mode === "fullAuto" ? 45 : 30;
+  const wpPenalty = mode === "fullAuto" ? -20 : -10;
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
   if (usesAmmo && (weapon.system.clip?.value ?? 0) < rof) { ui.notifications.warn(`Needs ${rof} rounds.`); return; }
   const minimized = [];
@@ -729,6 +726,14 @@ async function rollSuppressingFire(actor, weapon, mode) {
   // Attacker's suppressing BS test (−20). Success → random burst hits, capped by RoF.
   const bsRoll = await new Roll("1d100").evaluate();
   const res = evaluateTest({ base: actor.system.characteristics.ballisticSkill.total, modifier: -20, roll: bsRoll.total });
+  // BS result card — always printed (success or failure), with the roll.
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }), rolls: [bsRoll],
+    content: `<div class="bdh-card bdh-attack-card ${res.success ? "ok" : "fail"}">`
+      + `<div class="bdh-card-head">${weapon.name} — Suppressing Fire (BS −20)</div>`
+      + `<div class="bdh-card-line">Target ${res.target} — Rolled ${bsRoll.total}</div>`
+      + `<div class="bdh-card-result ${res.success ? "ok" : "fail"}">${res.success ? `Success (${res.degrees} DoS)` : `Failure (${res.degrees} DoF)`}</div></div>`,
+  });
   if (res.success && caught.length) {
     const nHits = Math.min(1 + Math.floor(res.degrees / 2), rof);
     const locs = locationSequence(hitLocation(bsRoll.total), nHits);   // burst locations
@@ -742,7 +747,7 @@ async function rollSuppressingFire(actor, weapon, mode) {
       uuid, name: v.name, locs: v.locations.map((l) => BDH.hitLocationLabels[l]).join(", "), locKeys: v.locations,
     }));
     await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor }), rolls: [bsRoll],
+      speaker: ChatMessage.getSpeaker({ actor }),
       content: await renderTemplate("systems/better-dh2e/templates/chat/suppress-hit-card.hbs", { weaponName: weapon.name, rows, dos: res.degrees }),
       flags: { [NS]: { kind: "suppressHit", actorUuid: actor.uuid, weaponId: weapon.id, hits: rows.map((r) => ({ uuid: r.uuid, locKeys: r.locKeys })) } },
     });
