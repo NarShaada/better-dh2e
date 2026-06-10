@@ -1,7 +1,7 @@
 // scripts/rolls/roll-test.mjs
 // Foundry-coupled roll service: dialog -> d100 -> chat card. Validated by loading in Foundry.
 import { parseModifier, evaluateTest } from "./test-logic.mjs";
-import { skillTotal } from "../helpers/derived.mjs";
+import { skillTotal, sizeStealthModifier } from "../helpers/derived.mjs";
 
 const NS = "better-dh2e";
 
@@ -94,7 +94,8 @@ export async function rollSkill(actor, key, specialtyIndex = null) {
   const chosen = choice.characteristicKey ?? skillCfg.characteristic;
   const base = skillTotal(actor.system.characteristics[chosen].total, rank);
   const short = CONFIG.BDH.characteristics[chosen].short;
-  return performTest(actor, { label: `${label} (${short})`, base, modifier: choice.modifier });
+  const sizeStealth = key === "stealth" ? sizeStealthModifier(actor.system?.size ?? 4) : 0;
+  return performTest(actor, { label: `${label} (${short})`, base, modifier: parseModifier(choice.modifier) + sizeStealth });
 }
 
 /** Malignancy / Trauma test: a Willpower test with the track penalty pre-filled in the dialog. */

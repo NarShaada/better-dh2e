@@ -217,6 +217,18 @@
 
   {{!-- Other primary tabs: placeholders for later plans --}}
   <section class="tab {{tabs.abilities.cssClass}}" data-group="primary" data-tab="abilities">
+    <div class="form-group bdh-size-row">
+      <label>Size</label>
+      {{#if canEditSize}}
+        <select name="system.size">
+          {{#each sizeOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      {{else}}
+        <span class="bdh-size-display">{{sizeName}} ({{sizeValue}})</span>
+      {{/if}}
+    </div>
     <div class="bdh-section">
       <div class="bdh-section-head">Talents {{#if isCustom}}<button type="button" class="bdh-add" data-action="createItem" data-type="talent">＋</button>{{/if}}{{#if isSimple}}<button type="button" class="bdh-add" data-action="createItem" data-type="talent">＋</button>{{/if}}</div>
       {{#each talents as |t|}}

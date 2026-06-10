@@ -11,6 +11,7 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
+import { sizeToHitModifier } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
@@ -536,7 +537,16 @@ export async function rollAttack(actor, weaponId) {
     if (smods.length) selfCondRow = `<div class="form-group"><label>You have</label><span class="bdh-self-cond">${smods.map((m) => `${m.label} (${m.mod > 0 ? "+" : ""}${m.mod})`).join(", ")}</span></div>`;
   }
 
+  // Target Size row — always shown when the target's size is not Average (4).
+  let targetSizeRow = "";
+  if (targetTok?.actor) {
+    const sz = targetTok.actor.system?.size ?? 4;
+    const m = sizeToHitModifier(sz);
+    if (m !== 0) targetSizeRow = `<div class="form-group"><label>Target Size</label><span class="bdh-target-size">${BDH.sizes[sz]} (${m > 0 ? "+" : ""}${m})</span></div>`;
+  }
+
   const dialogContent = `
+    ${targetSizeRow}
     ${targetCondRow}
     ${selfCondRow}
     <div class="form-group"><label>Modifier</label><input type="text" name="modifier" value="+0"/></div>
@@ -601,6 +611,9 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     conditionMod += selfAttackModifiers(actor.statuses, isMelee).reduce((s, m) => s + m.mod, 0);
   }
 
+  // Size modifier vs the target — always active, not battlemap-gated.
+  const sizeMod = condTarget ? sizeToHitModifier(condTarget.system?.size ?? 4) : 0;
+
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
   const aimMod = hasInaccurate(weapon.system.qualities) ? 0 : (BDH.aimOptions[choice.aim]?.mod ?? 0);
@@ -610,7 +623,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const qualMod = qualityToHitMod(weapon.system.qualities, { aiming });
   const craftMod = isMelee ? meleeCraftToHit(weapon.system.craftsmanship) : 0;
   const scatterMod = scatterToHit(weapon.system.qualities, choice.range);
-  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod + scatterMod + conditionMod;
+  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod + scatterMod + conditionMod + sizeMod;
   const base = actor.system.characteristics[charKey].total;
 
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
