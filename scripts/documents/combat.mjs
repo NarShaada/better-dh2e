@@ -14,7 +14,7 @@ export function makeDHCombat(Base) {
       if (!actor) return;
       if (actor.statuses?.has?.("run")) await actor.toggleStatusEffect("run", { active: false });
       await tickStunned(actor);
-      await tickOnFire(actor, combatant);
+      await tickOnFire(actor);
     }
 
     async _onEndTurn(combatant, context) {

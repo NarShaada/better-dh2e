@@ -88,11 +88,11 @@ export async function applyToxic(actor, potency, damageType) {
 }
 
 /** Start-of-turn On Fire: roll 1d10 and post an Apply-Damage + Willpower-Test card. */
-export async function tickOnFire(actor, combatant) {
+export async function tickOnFire(actor) {
   if (!actor?.statuses?.has?.("onFire")) return;
   const roll = await new Roll("1d10").evaluate();
-  const token = combatant?.token ?? actor.getActiveTokens()[0]?.document ?? null;
-  const flags = { kind: "onFire", damage: roll.total, targetUuid: token?.uuid ?? actor.uuid, targetName: actor.name };
+  // Store the ACTOR uuid (resolveDefender + the handlers expect an actor, matching every other card).
+  const flags = { kind: "onFire", damage: roll.total, targetUuid: actor.uuid, targetName: actor.name };
   const content = `<div class="bdh-card"><header class="bdh-card-head">${actor.name} is On Fire and takes ${roll.total} damage</header>`
     + `<div class="bdh-card-actions"><button type="button" data-bdh="onFireApply">Apply Damage</button>`
     + `<button type="button" data-bdh="onFireWP">Willpower Test</button></div></div>`;
