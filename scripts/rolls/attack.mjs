@@ -213,6 +213,14 @@ async function rollToxicResist(message) {
   }
   return result;
 }
+async function rollSprayAgTest(message, uuid) {
+  const target = uuid ? await fromUuid(uuid) : null;
+  if (!target) { ui.notifications.warn("Token not found for the Agility test."); return; }
+  const label = `Agility (Spray — ${target.name})`;
+  const choice = await promptTest({ title: label, defaultModifier: "+0" });
+  if (!choice) return null;
+  return performTest(target, { label, base: target.system.characteristics.agility.total, modifier: choice.modifier });
+}
 async function applyOnFireDamage(message) {
   const f = message.flags[NS];
   const target = await resolveDefender(f);
