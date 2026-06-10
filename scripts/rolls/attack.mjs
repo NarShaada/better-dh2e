@@ -656,6 +656,9 @@ async function rollForceField(actor) {
 async function rollSpray(actor, weapon) {
   const token = actor.getActiveTokens()[0];
   if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
+  // Spray is single-shot: needs 1 round in the clip (checked before aiming, consumed once it fires).
+  const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
+  if (usesAmmo && (weapon.system.clip?.value ?? 0) < 1) { ui.notifications.warn("The weapon is empty."); return; }
   // Minimize open windows (the sheet blocks the map) so the player can see + aim the cone; restore after.
   const minimized = [];
   for (const app of foundry.applications.instances.values()) {
@@ -664,7 +667,8 @@ async function rollSpray(actor, weapon) {
   const length = Number(weapon.system.range) || 10;            // cone length = weapon range (m)
   const region = await placeConeRegion(token, length, 30);
   for (const app of minimized) await app.maximize?.();         // restore windows after placement/cancel
-  if (!region) return;                                          // cancelled
+  if (!region) return;                                          // cancelled — no ammo spent
+  if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - 1 });   // single shot fired
   const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
   const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name }));
   if (!rows.length) await deleteRegionByUuid(region.uuid);   // caught no one → no apply step, clean up now
