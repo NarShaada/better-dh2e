@@ -174,6 +174,12 @@ BDH.attackTypes = {
 /** Hit-location display labels. */
 BDH.hitLocationLabels = { head: "Head", rightArm: "Right Arm", leftArm: "Left Arm", body: "Body", rightLeg: "Right Leg", leftLeg: "Left Leg" };
 
+/** Creature size (1 Miniscule … 4 Average … 10 Titanic) -> display name. */
+BDH.sizes = {
+  1: "Miniscule", 2: "Puny", 3: "Scrawny", 4: "Average", 5: "Hulking",
+  6: "Enormous", 7: "Massive", 8: "Immense", 9: "Monumental", 10: "Titanic",
+};
+
 /** Psychic disciplines (key -> label). */
 BDH.disciplines = { biomancy: "Biomancy", divination: "Divination", pyromancy: "Pyromancy", telekinesis: "Telekinesis", telepathy: "Telepathy", minor: "Minor / Other" };
 /** Psychic power resolution type (key -> label). bolt/barrage/storm/blast are attacks (see isPsychicAttack). */

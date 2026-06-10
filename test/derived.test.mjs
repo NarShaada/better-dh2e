@@ -5,7 +5,9 @@ import {
   characteristicBonus,
   skillTotal,
   fatigueMax,
-  movement
+  movement,
+  sizeToHitModifier,
+  sizeStealthModifier
 } from "../scripts/helpers/derived.mjs";
 
 describe("characteristicTotal", () => {
@@ -59,7 +61,30 @@ describe("movement", () => {
     // AgB 3, size 6: half = 3 + (6-4) = 5
     expect(movement(3, 6)).toEqual({ half: 5, full: 10, charge: 15, run: 30 });
   });
-  it("never goes below a half move of 0", () => {
-    expect(movement(0, 1).half).toBe(0); // 0 + (1-4) = -3 -> clamped to 0
+  it("never goes below a half move of 1 (RAW: AgB used for movement floors at 1)", () => {
+    expect(movement(0, 1).half).toBe(1); // 0 + (1-4) = -3 -> clamped to 1 (was 0 before Table 4-6 fix)
+  });
+});
+
+describe("size modifiers", () => {
+  it("to-hit vs target = (size-4)*10", () => {
+    expect(sizeToHitModifier(4)).toBe(0);
+    expect(sizeToHitModifier(1)).toBe(-30);
+    expect(sizeToHitModifier(5)).toBe(10);
+    expect(sizeToHitModifier(10)).toBe(60);
+  });
+  it("stealth (own) = -(size-4)*10", () => {
+    expect(sizeStealthModifier(4)).toBe(0);
+    expect(sizeStealthModifier(1)).toBe(30);
+    expect(sizeStealthModifier(7)).toBe(-30);
+  });
+});
+
+describe("movement floors the size-adjusted AgB at 1", () => {
+  it("a tiny / low-AgB creature still gets at least 1 m half-move", () => {
+    expect(movement(2, 1).half).toBe(1);   // AgB 2, Miniscule -> max(1, 2-3) = 1
+    expect(movement(0, 4).half).toBe(1);   // AgB 0, Average   -> max(1, 0)   = 1
+    expect(movement(3, 4).half).toBe(3);   // unchanged normal
+    expect(movement(3, 6).half).toBe(5);   // AgB 3, Enormous  -> 3+2 = 5
   });
 });

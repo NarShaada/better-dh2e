@@ -25,8 +25,14 @@ export function fatigueMax(toughnessBonus, willpowerBonus) {
   return toughnessBonus + willpowerBonus;
 }
 
+/** To-hit modifier when attacking a target of this size (Table 4-6): (size-4)*10. */
+export function sizeToHitModifier(size) { return ((size ?? 4) - 4) * 10; }
+
+/** Modifier to this creature's own Stealth rolls (Table 4-6): -(size-4)*10. */
+export function sizeStealthModifier(size) { return (4 - (size ?? 4)) * 10; }
+
 /** movement rates from agility bonus and creature size (default size 4) */
 export function movement(agilityBonus, size = 4) {
-  const half = Math.max(0, agilityBonus + (size - 4));
+  const half = Math.max(1, agilityBonus + (size - 4));   // RAW: AgB used for movement can't drop below 1
   return { half, full: half * 2, charge: half * 3, run: half * 6 };
 }
