@@ -14,6 +14,7 @@
     {{#if success}}Success ({{degrees}} DoS){{else}}Failure ({{degrees}} DoF){{/if}}
     {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS · Fate</span>{{/if}}
   </div>
+  {{#if blastCaught}}<div class="bdh-card-line">Caught in blast{{#if blastScattered}} (scattered){{/if}}: {{blastCaught}}</div>{{/if}}
   {{#if jammed}}
     {{#if overheats}}<div class="bdh-card-line fail">&#128293; Overheat! <button type="button" data-bdh="overheatDrop">Drop!</button> <button type="button" data-bdh="overheatDamage">Roll Damage</button></div>
     {{else}}<div class="bdh-card-line fail">&#9888; Weapon jammed!</div>{{/if}}

@@ -15,6 +15,8 @@ import { sizeToHitModifier } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
+import { scatterDirection } from "../helpers/scatter.mjs";
+import { createBlastRegion, tokensInRegion } from "../canvas/region.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -682,6 +684,32 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // Build hits array for the card and flags
   const hits = locs.map((loc, i) => ({ index: i, location: loc, label: BDH.hitLocationLabels[loc] }));
 
+  // Blast(X) — place a circle Region on the target, scatter on miss
+  let blastFlags = null, blastCaughtNames = "";
+  const blastQuality = (weapon.system.qualities ?? []).find((q) => q.key === "blast");
+  const blastX = blastQuality ? (Number(blastQuality.value) || 0) : 0;
+  // Resolve target token PLACEABLE (not just actor): liveTarget is already the Token placeable on live path;
+  // on Fate-reroll path (opts.targetUuid set, liveTarget null), derive from game.user.targets or the actor.
+  const targetToken = liveTarget ?? (opts.targetUuid
+    ? (game.user.targets.first()?.actor?.uuid === opts.targetUuid
+        ? game.user.targets.first()
+        : fromUuidSync(opts.targetUuid)?.getActiveTokens?.()[0] ?? null)
+    : null);
+  if (battlemapEnabled() && blastX > 0 && targetToken?.center) {
+    let { x, y } = targetToken.center;
+    if (!success) {                                   // MISS → scatter 1d5 squares in a 1d10 direction
+      const dist = (await safeRoll("1d5", "scatter distance"))?.total ?? 1;
+      const dir = (await safeRoll("1d10", "scatter direction"))?.total ?? 1;
+      const { dx, dy } = scatterDirection(dir);
+      x += dx * dist * canvas.dimensions.size;        // canvas.dimensions.size = pixels per square
+      y += dy * dist * canvas.dimensions.size;
+    }
+    const region = await createBlastRegion(canvas.scene, x, y, blastX);
+    const caughtToks = tokensInRegion(region);
+    blastFlags = { blast: blastX, regionUuid: region.uuid, caughtUuids: caughtToks.map((t) => t.actor.uuid), scattered: !success };
+    blastCaughtNames = caughtToks.map((t) => t.name).join(", ");
+  }
+
   // Message flags (namespace "better-dh2e")
   const flags = {
     [NS]: {
@@ -702,7 +730,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       jammed,
       scatterDmg,
       helpless: vsHelpless,
-      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName, roll: roll.total, success, dosBonus }
+      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName, roll: roll.total, success, dosBonus },
+      ...(blastFlags ?? {})
     }
   };
 
@@ -736,7 +765,9 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     qualityLabels,
     attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal }),
     dosBonus,
-    helplessNote: vsHelpless ? "Automatic Hit (Helpless)" : null
+    helplessNote: vsHelpless ? "Automatic Hit (Helpless)" : null,
+    blastCaught: blastCaughtNames || null,
+    blastScattered: blastFlags?.scattered ?? false
   });
 
   // Create chat message (apply current roll mode)
