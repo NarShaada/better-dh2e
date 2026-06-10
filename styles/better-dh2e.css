@@ -249,6 +249,11 @@
 
 .better-dh2e .bdh-psy-class { display:flex; align-items:center; gap:8px; margin:6px 0; }
 .better-dh2e .bdh-psy-class label { font-variant:small-caps; color:var(--bdh-maroon); }
+
+/* Size selector row (Abilities tab, Custom-mode only editable) */
+.better-dh2e .bdh-size-row { display:flex; align-items:center; gap:8px; padding:6px 14px; }
+.better-dh2e .bdh-size-row label { font-variant:small-caps; letter-spacing:1px; color:var(--bdh-maroon); font-weight:bold; min-width:40px; }
+.better-dh2e .bdh-size-display { font-weight:600; }
 .better-dh2e .bdh-pr-val { font-weight:700; }
 
 /* Aptitude chips + add control (actor advancement + talent sheet) */

@@ -678,6 +678,13 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       return { ...t, cost, valid, purchased: tsys.purchased ?? false };
     });
     context.advancementLog = sys.advancementLog;
+    const curSize = this.actor.system.size ?? 4;
+    context.sizeOptions = Object.entries(BDH.sizes).map(([n, name]) => ({
+      value: Number(n), label: `${name} (${n})`, selected: Number(n) === curSize,
+    }));
+    context.canEditSize = context.isCustom;
+    context.sizeName = BDH.sizes[curSize] ?? "Average";
+    context.sizeValue = curSize;
     return context;
   }
 
