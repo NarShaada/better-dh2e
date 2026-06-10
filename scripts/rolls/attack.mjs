@@ -16,7 +16,7 @@ import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, dou
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
 import { scatterDirection } from "../helpers/scatter.mjs";
-import { createBlastRegion, tokensInRegion, deleteRegionByUuid } from "../canvas/region.mjs";
+import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion } from "../canvas/region.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -586,9 +586,29 @@ async function rollForceField(actor) {
  * @param {string} weaponId
  * @returns {Promise<ChatMessage|null>}
  */
+async function rollSpray(actor, weapon) {
+  const token = actor.getActiveTokens()[0];
+  if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
+  const length = Number(weapon.system.range) || 10;            // cone length = weapon range (m)
+  const region = await placeConeRegion(token, length, 30);
+  if (!region) return;                                          // cancelled
+  const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
+  const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name }));
+  const cardData = { weaponName: weapon.name, caught: rows, hasCaught: rows.length > 0, damageType: weapon.system.damageType };
+  const content = await renderTemplate("systems/better-dh2e/templates/chat/spray-card.hbs", cardData);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }), content,
+    flags: { [NS]: { kind: "spray", actorUuid: actor.uuid, weaponId: weapon.id, regionUuid: region.uuid,
+      caughtUuids: rows.map((r) => r.uuid), damageType: weapon.system.damageType } },
+  });
+}
+
 export async function rollAttack(actor, weaponId) {
   const weapon = actor.items.get(weaponId);
   if (!weapon) return null;
+
+  const isSpray = (weapon.system.qualities ?? []).some((q) => q.key === "spray");
+  if (battlemapEnabled() && isSpray) return rollSpray(actor, weapon);
 
   const isMelee = weapon.system.weaponClass === "melee";
   const isRanged = !isMelee;
