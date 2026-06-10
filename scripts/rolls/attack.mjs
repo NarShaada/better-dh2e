@@ -240,21 +240,27 @@ async function applySpray(message, html) {
   // Penetration like the ranged path (no DoS for spray):
   const penBase = Number((await safeRoll(String(weapon.system.penetration || "0"), "penetration"))?.total) || 0;
   const penetration = effectivePenetration(penBase, { qualities, dos: 0, success: true, closeRange: false });
-  // Jam: natural 9 on ANY active damage die — ignores Reliable/Unreliable.
-  const jammed = roll.dice.some((d) => d.results.some((r) => r.active && r.result === 9));
+  // Primitive/Proven clamp each die (same as the normal damage path — weaponDamageFormula only does Tearing).
+  const primitiveX = primitiveValue(qualities), provenX = provenValue(qualities);
+  const transform = (v) => transformDamageDie(v, { primitiveX, provenX });
+  let dieDelta = 0;
+  for (const d of roll.dice) for (const r of d.results) if (r.active) dieDelta += transform(r.result) - r.result;
+  const damageTotal = roll.total + dieDelta;
+  // Jam: natural 9 on ANY active d10 damage die — ignores Reliable/Unreliable.
+  const jammed = roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 9));
   const lines = [];
   for (const uuid of checked) {
     const actor = await fromUuid(uuid);
     if (!actor) continue;
     const dealt = await applyHitToToken(actor, {
-      damageTotal: roll.total, penetration, damageType: f.damageType, qualities, location: "body",
+      damageTotal, penetration, damageType: f.damageType, qualities, location: "body",
     });
     lines.push(`${actor.name}: ${dealt} dmg (Body)`);
   }
   await deleteRegionByUuid(f.regionUuid);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker(), rolls: [roll],
-    content: `<div class="bdh-card"><header class="bdh-card-head">${weapon.name} — Spray damage (${roll.total})</header>`
+    content: `<div class="bdh-card"><header class="bdh-card-head">${weapon.name} — Spray damage (${damageTotal})</header>`
       + `<div class="bdh-card-line">${lines.join("<br>") || "No one hit."}</div>`
       + (jammed ? `<div class="bdh-card-line fail">&#9888; Jammed! (natural 9)</div>` : "") + `</div>`,
   });
@@ -640,11 +646,12 @@ async function rollSpray(actor, weapon) {
   if (!region) return;                                          // cancelled
   const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
   const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name }));
+  if (!rows.length) await deleteRegionByUuid(region.uuid);   // caught no one → no apply step, clean up now
   const cardData = { weaponName: weapon.name, caught: rows, hasCaught: rows.length > 0, damageType: weapon.system.damageType };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/spray-card.hbs", cardData);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }), content,
-    flags: { [NS]: { kind: "spray", actorUuid: actor.uuid, weaponId: weapon.id, regionUuid: region.uuid,
+    flags: { [NS]: { kind: "spray", actorUuid: actor.uuid, weaponId: weapon.id, regionUuid: rows.length ? region.uuid : null,
       caughtUuids: rows.map((r) => r.uuid), damageType: weapon.system.damageType } },
   });
 }
