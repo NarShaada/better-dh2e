@@ -62,6 +62,16 @@ export function bindCardButtons(message, html) {
     if (!game.user.isGM) {
       html.querySelectorAll('[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="flameTest"],[data-bdh="hallucinogenicTest"],[data-bdh="snareTest"]').forEach((b) => b.remove());
     }
+  } else if (flags.kind === "suppressWP") {
+    // suppressPin writes conditions (Pinned) to targets — GM-only. suppressWP (roll) is open to all.
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="suppressPin"]').forEach((b) => b.remove());
+    }
+  } else if (flags.kind === "suppressHit") {
+    // suppressApply writes damage to targets — GM-only. suppressEvade (roll) is open to all.
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="suppressApply"]').forEach((b) => b.remove());
+    }
   } else {
     const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
     if (!target?.isOwner) {
@@ -88,6 +98,10 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "onFireWP") await rollOnFireWP(message);
       else if (btn.dataset.bdh === "sprayAgTest") await rollSprayAgTest(message, btn.dataset.uuid);
       else if (btn.dataset.bdh === "sprayApply") await applySpray(message, html);
+      else if (btn.dataset.bdh === "suppressWP") await rollSuppressWP(message, btn.dataset.uuid);
+      else if (btn.dataset.bdh === "suppressPin") await applySuppressPinned(message, html);
+      else if (btn.dataset.bdh === "suppressEvade") await rollSuppressEvade(message, btn.dataset.uuid);
+      else if (btn.dataset.bdh === "suppressApply") await applySuppressDamage(message, btn.dataset.uuid);
     });
   });
 }
@@ -747,6 +761,41 @@ async function applySuppressPinned(message, html) {
     if (a && !a.statuses?.has?.("pinned")) { await a.toggleStatusEffect("pinned", { active: true }); names.push(a.name); }
   }
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker(), content: `<div class="bdh-card"><header class="bdh-card-head">Pinned: ${names.join(", ") || "none"}</header></div>` });
+}
+
+async function rollSuppressEvade(message, uuid) {
+  const target = uuid ? await fromUuid(uuid) : null;
+  if (!target) { ui.notifications.warn("Token not found."); return; }
+  const label = `Evade (Suppressing — ${target.name})`;
+  const choice = await promptTest({ title: label, defaultModifier: "+0" });
+  if (!choice) return null;
+  // Dodge base — matches rollEvade's computation: Agility total + skill rank bonus (untrained = -20).
+  const dodge = target.system.skills.dodge;
+  const base = target.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
+  return performTest(target, { label, base, modifier: choice.modifier });
+}
+
+async function applySuppressDamage(message, uuid) {
+  const f = message.flags[NS];
+  const attacker = await fromUuid(f.actorUuid);
+  const weapon = attacker?.items.get(f.weaponId);
+  const hit = (f.hits ?? []).find((h) => h.uuid === uuid);
+  const target = await fromUuid(uuid);
+  if (!weapon || !hit || !target) { ui.notifications.warn("Hit/weapon/target not found."); return; }
+  const qualities = weapon.system.qualities ?? [];
+  const penBase = Number((await safeRoll(String(weapon.system.penetration || "0"), "penetration"))?.total) || 0;
+  const penetration = effectivePenetration(penBase, { qualities, dos: 0, success: true, closeRange: false });
+  const primitiveX = primitiveValue(qualities), provenX = provenValue(qualities);
+  const lines = [];
+  for (const loc of hit.locKeys) {
+    const roll = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+    if (!roll) continue;
+    let delta = 0; for (const d of roll.dice) for (const r of d.results) if (r.active) delta += transformDamageDie(r.result, { primitiveX, provenX }) - r.result;
+    const dealt = await applyHitToToken(target, { damageTotal: roll.total + delta, penetration, damageType: weapon.system.damageType, qualities, location: loc });
+    lines.push(`${BDH.hitLocationLabels[loc] ?? loc}: ${dealt}`);
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${target.name} takes suppressing hits</header><div class="bdh-card-line">${lines.join("<br>")}</div></div>` });
 }
 
 export async function rollAttack(actor, weaponId) {
