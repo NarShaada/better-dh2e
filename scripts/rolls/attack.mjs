@@ -47,7 +47,12 @@ export function bindCardButtons(message, html) {
   // Apply Damage and the condition-applying resist tests (Shocking/Concussive) write to the target —
   // usable only by an owner of the target (GM owns everything). Hide them for everyone else so a
   // non-owner click can't half-apply and throw on the permission-gated write.
-  if (flags.blast) {
+  if (flags.kind === "spray") {
+    // Spray Apply writes to MANY actors — GM-only gate. AgTest buttons are open to all.
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="sprayApply"]').forEach((b) => b.remove());
+    }
+  } else if (flags.blast) {
     // Blast Apply writes to MANY actors — GM-only gate (GM owns everything).
     if (!game.user.isGM) {
       html.querySelectorAll('[data-bdh="applyDamage"]').forEach((b) => b.remove());
@@ -76,6 +81,8 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "toxicResist") await rollToxicResist(message);
       else if (btn.dataset.bdh === "onFireApply") await applyOnFireDamage(message);
       else if (btn.dataset.bdh === "onFireWP") await rollOnFireWP(message);
+      else if (btn.dataset.bdh === "sprayAgTest") await rollSprayAgTest(message, btn.dataset.uuid);
+      else if (btn.dataset.bdh === "sprayApply") await applySpray(message, html);
     });
   });
 }
@@ -220,6 +227,37 @@ async function rollSprayAgTest(message, uuid) {
   const choice = await promptTest({ title: label, defaultModifier: "+0" });
   if (!choice) return null;
   return performTest(target, { label, base: target.system.characteristics.agility.total, modifier: choice.modifier });
+}
+async function applySpray(message, html) {
+  const f = message.flags[NS];
+  const attacker = await fromUuid(f.actorUuid);
+  const weapon = attacker?.items.get(f.weaponId);
+  if (!weapon) { ui.notifications.warn("Weapon not found."); return; }
+  const checked = [...html.querySelectorAll(".bdh-spray-hit:checked")].map((c) => c.dataset.uuid);
+  const qualities = weapon.system.qualities ?? [];
+  const roll = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+  if (!roll) return;
+  // Penetration like the ranged path (no DoS for spray):
+  const penBase = Number((await safeRoll(String(weapon.system.penetration || "0"), "penetration"))?.total) || 0;
+  const penetration = effectivePenetration(penBase, { qualities, dos: 0, success: true, closeRange: false });
+  // Jam: natural 9 on ANY active damage die — ignores Reliable/Unreliable.
+  const jammed = roll.dice.some((d) => d.results.some((r) => r.active && r.result === 9));
+  const lines = [];
+  for (const uuid of checked) {
+    const actor = await fromUuid(uuid);
+    if (!actor) continue;
+    const dealt = await applyHitToToken(actor, {
+      damageTotal: roll.total, penetration, damageType: f.damageType, qualities, location: "body",
+    });
+    lines.push(`${actor.name}: ${dealt} dmg (Body)`);
+  }
+  await deleteRegionByUuid(f.regionUuid);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker(), rolls: [roll],
+    content: `<div class="bdh-card"><header class="bdh-card-head">${weapon.name} — Spray damage (${roll.total})</header>`
+      + `<div class="bdh-card-line">${lines.join("<br>") || "No one hit."}</div>`
+      + (jammed ? `<div class="bdh-card-line fail">&#9888; Jammed! (natural 9)</div>` : "") + `</div>`,
+  });
 }
 async function applyOnFireDamage(message) {
   const f = message.flags[NS];
