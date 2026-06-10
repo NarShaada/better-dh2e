@@ -10,6 +10,7 @@ export async function createBlastRegion(scene, x, y, radiusMetres, { kind = "bla
     shapes: [{ type: "circle", x: Math.round(x), y: Math.round(y), radius: radiusPx }],
     elevation: { bottom: 0, top: null },
     visibility: CONST.REGION_VISIBILITY.ALWAYS,
+    highlightMode: "coverage",   // fill the grid squares the blast actually covers (vs just an outline)
     flags: { [NS]: { kind } },
   }]);
   return region;
