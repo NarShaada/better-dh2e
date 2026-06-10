@@ -1,0 +1,13 @@
+<div class="bdh-card bdh-suppress-card">
+  <div class="bdh-card-head">{{weaponName}} — Suppressing Fire (Willpower or Pinned)</div>
+  {{#if hasCaught}}
+  <div class="bdh-card-line">Each rolls WP ({{wpPenalty}}); uncheck those who pass; Pinned applies to the checked:</div>
+  <ul class="bdh-suppress-list">
+    {{#each caught}}
+    <li><label><input type="checkbox" class="bdh-pin-hit" data-uuid="{{this.uuid}}" checked/> {{this.name}}</label>
+      <button type="button" data-bdh="suppressWP" data-uuid="{{this.uuid}}">WP Test</button></li>
+    {{/each}}
+  </ul>
+  <div class="bdh-card-actions"><button type="button" data-bdh="suppressPin">Apply Pinned to Checked</button></div>
+  {{else}}<div class="bdh-card-line">No one in the cone.</div>{{/if}}
+</div>

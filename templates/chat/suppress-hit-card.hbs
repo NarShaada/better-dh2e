@@ -1,0 +1,8 @@
+<div class="bdh-card bdh-suppress-hit-card">
+  <div class="bdh-card-head">{{weaponName}} — Suppressing hits ({{dos}} DoS)</div>
+  {{#each rows}}
+  <div class="bdh-card-line">{{this.name}}: {{this.locs}}
+    <button type="button" data-bdh="suppressEvade" data-uuid="{{this.uuid}}">Evade</button>
+    <button type="button" data-bdh="suppressApply" data-uuid="{{this.uuid}}">Apply Damage</button></div>
+  {{/each}}
+</div>

@@ -62,6 +62,16 @@ export function bindCardButtons(message, html) {
     if (!game.user.isGM) {
       html.querySelectorAll('[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="flameTest"],[data-bdh="hallucinogenicTest"],[data-bdh="snareTest"]').forEach((b) => b.remove());
     }
+  } else if (flags.kind === "suppressWP") {
+    // suppressPin writes conditions (Pinned) to targets — GM-only. suppressWP (roll) is open to all.
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="suppressPin"]').forEach((b) => b.remove());
+    }
+  } else if (flags.kind === "suppressHit") {
+    // suppressApply writes damage to targets — GM-only. suppressEvade (roll) is open to all.
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="suppressApply"]').forEach((b) => b.remove());
+    }
   } else {
     const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
     if (!target?.isOwner) {
@@ -88,6 +98,10 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "onFireWP") await rollOnFireWP(message);
       else if (btn.dataset.bdh === "sprayAgTest") await rollSprayAgTest(message, btn.dataset.uuid);
       else if (btn.dataset.bdh === "sprayApply") await applySpray(message, html);
+      else if (btn.dataset.bdh === "suppressWP") await rollSuppressWP(message, btn.dataset.uuid);
+      else if (btn.dataset.bdh === "suppressPin") await applySuppressPinned(message, html);
+      else if (btn.dataset.bdh === "suppressEvade") await rollSuppressEvade(message, btn.dataset.uuid);
+      else if (btn.dataset.bdh === "suppressApply") await applySuppressDamage(message, btn.dataset.uuid);
     });
   });
 }
@@ -681,6 +695,123 @@ async function rollSpray(actor, weapon) {
   });
 }
 
+async function rollSuppressingFire(actor, weapon, mode) {
+  const token = actor.getActiveTokens()[0];
+  if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
+  // Suppressive Fire uses the SELECTED auto-burst mode — forbid any non-auto mode (e.g. a normal attack).
+  if (mode !== "semiAuto" && mode !== "fullAuto") {
+    ui.notifications.warn("Select Semi- or Full-Auto Burst to use Suppressive Fire."); return;
+  }
+  const rof = weapon.system.rateOfFire?.[BDH.attackTypes[mode].rof] || 0;   // semi → "short", full → "long"
+  if (!rof) { ui.notifications.warn(`This weapon can't fire ${mode === "fullAuto" ? "full" : "semi"}-auto.`); return; }
+  const angle = mode === "fullAuto" ? 45 : 30;
+  const wpPenalty = mode === "fullAuto" ? -20 : -10;
+  const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
+  if (usesAmmo && (weapon.system.clip?.value ?? 0) < rof) { ui.notifications.warn(`Needs ${rof} rounds.`); return; }
+  const minimized = [];
+  for (const app of foundry.applications.instances.values()) if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
+  const region = await placeConeRegion(token, Number(weapon.system.range) || 10, angle);
+  for (const app of minimized) await app.maximize?.();
+  if (!region) return;
+  if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - rof });
+  const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content: await renderTemplate("systems/better-dh2e/templates/chat/suppress-wp-card.hbs", {
+      weaponName: weapon.name, hasCaught: caught.length > 0,
+      caught: caught.map((t) => ({ uuid: t.actor.uuid, name: t.name })), wpPenalty,
+    }),
+    flags: { [NS]: { kind: "suppressWP", wpPenalty } },
+  });
+  // Attacker's suppressing BS test (−20). Success → random burst hits, capped by RoF.
+  const bsRoll = await new Roll("1d100").evaluate();
+  const res = evaluateTest({ base: actor.system.characteristics.ballisticSkill.total, modifier: -20, roll: bsRoll.total });
+  // BS result card — always printed (success or failure), with the roll.
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }), rolls: [bsRoll],
+    content: `<div class="bdh-card bdh-attack-card ${res.success ? "ok" : "fail"}">`
+      + `<div class="bdh-card-head">${weapon.name} — Suppressing Fire (BS −20)</div>`
+      + `<div class="bdh-card-line">Target ${res.target} — Rolled ${bsRoll.total}</div>`
+      + `<div class="bdh-card-result ${res.success ? "ok" : "fail"}">${res.success ? `Success (${res.degrees} DoS)` : `Failure (${res.degrees} DoF)`}</div></div>`,
+  });
+  if (res.success && caught.length) {
+    const nHits = Math.min(1 + Math.floor(res.degrees / 2), rof);
+    const locs = locationSequence(hitLocation(bsRoll.total), nHits);   // burst locations
+    const byTarget = {};
+    for (const loc of locs) {
+      const idx = ((await safeRoll(`1d${caught.length}`, "random target"))?.total ?? 1) - 1;   // Foundry RNG
+      const t = caught[Math.max(0, Math.min(idx, caught.length - 1))];
+      (byTarget[t.actor.uuid] ??= { name: t.name, locations: [] }).locations.push(loc);
+    }
+    const rows = Object.entries(byTarget).map(([uuid, v]) => ({
+      uuid, name: v.name, locs: v.locations.map((l) => BDH.hitLocationLabels[l]).join(", "), locKeys: v.locations,
+    }));
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      content: await renderTemplate("systems/better-dh2e/templates/chat/suppress-hit-card.hbs", { weaponName: weapon.name, rows, dos: res.degrees }),
+      flags: { [NS]: { kind: "suppressHit", actorUuid: actor.uuid, weaponId: weapon.id, hits: rows.map((r) => ({ uuid: r.uuid, locKeys: r.locKeys })) } },
+    });
+  }
+  await deleteRegionByUuid(region.uuid);   // existing line — keep it AFTER the BS/hit block
+}
+
+async function rollSuppressWP(message, uuid) {
+  const target = uuid ? await fromUuid(uuid) : null;
+  if (!target) { ui.notifications.warn("Token not found."); return; }
+  const pen = message.flags[NS]?.wpPenalty ?? 0;
+  const label = `Willpower (Suppressing — ${target.name})`;
+  const choice = await promptTest({ title: label, defaultModifier: `${pen}` });
+  if (!choice) return null;
+  return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier });
+}
+
+async function applySuppressPinned(message, html) {
+  const checked = [...html.querySelectorAll(".bdh-pin-hit:checked")].map((c) => c.dataset.uuid);
+  const names = [];
+  for (const uuid of checked) {
+    const a = await fromUuid(uuid);
+    if (a && !a.statuses?.has?.("pinned")) { await a.toggleStatusEffect("pinned", { active: true }); names.push(a.name); }
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker(), content: `<div class="bdh-card"><header class="bdh-card-head">Pinned: ${names.join(", ") || "none"}</header></div>` });
+}
+
+async function rollSuppressEvade(message, uuid) {
+  const target = uuid ? await fromUuid(uuid) : null;
+  if (!target) { ui.notifications.warn("Token not found."); return; }
+  const label = `Evade (Suppressing — ${target.name})`;
+  const choice = await promptTest({ title: label, defaultModifier: "+0" });
+  if (!choice) return null;
+  // Dodge base — matches rollEvade: Agility total + skill rank bonus (untrained = -20) + condition mods (e.g. Prone -20).
+  const modifier = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
+  const evadeCondMod = battlemapEnabled() ? evadeConditionModifier(target.statuses) : 0;
+  const dodge = target.system.skills.dodge;
+  const base = target.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
+  return performTest(target, { label, base, modifier: modifier + evadeCondMod });
+}
+
+async function applySuppressDamage(message, uuid) {
+  const f = message.flags[NS];
+  const attacker = await fromUuid(f.actorUuid);
+  const weapon = attacker?.items.get(f.weaponId);
+  const hit = (f.hits ?? []).find((h) => h.uuid === uuid);
+  const target = await fromUuid(uuid);
+  if (!weapon || !hit || !target) { ui.notifications.warn("Hit/weapon/target not found."); return; }
+  const qualities = weapon.system.qualities ?? [];
+  const penBase = Number((await safeRoll(String(weapon.system.penetration || "0"), "penetration"))?.total) || 0;
+  const penetration = effectivePenetration(penBase, { qualities, dos: 0, success: true, closeRange: false });
+  const primitiveX = primitiveValue(qualities), provenX = provenValue(qualities);
+  const lines = [];
+  for (const loc of hit.locKeys) {
+    const roll = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+    if (!roll) continue;
+    let delta = 0; for (const d of roll.dice) for (const r of d.results) if (r.active) delta += transformDamageDie(r.result, { primitiveX, provenX }) - r.result;
+    const dealt = await applyHitToToken(target, { damageTotal: roll.total + delta, penetration, damageType: weapon.system.damageType, qualities, location: loc });
+    lines.push(`${BDH.hitLocationLabels[loc] ?? loc}: ${dealt}`);
+  }
+  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${target.name} takes suppressing hits</header><div class="bdh-card-line">${lines.join("<br>")}</div></div>` });
+}
+
 export async function rollAttack(actor, weaponId) {
   const weapon = actor.items.get(weaponId);
   if (!weapon) return null;
@@ -766,25 +897,57 @@ export async function rollAttack(actor, weaponId) {
     <div class="form-group" id="bdh-cs-row" style="display:none"><label>Called-Shot Location</label><select name="calledShotLocation">${locOpts}</select></div>
     ${maximalRow}`;
 
-  const choice = await DialogV2.prompt({
-    window: { title: `${weapon.name} — Attack (${charShort})` },
-    content: dialogContent,
-    rejectClose: false,
-    render: (event, dialog) => {
-      const root = dialog.element;
-      const sel = root.querySelector('[name="attackType"]');
-      const row = root.querySelector('#bdh-cs-row');
-      if (!sel || !row) return;
-      const toggle = () => { row.style.display = sel.value === "calledShot" ? "" : "none"; };
-      sel.addEventListener("change", toggle);
-      toggle();
-    },
-    ok: {
-      label: "Attack",
-      callback: (event, button) => new foundry.applications.ux.FormDataExtended(button.form).object
-    }
-  });
+  const renderFn = (event, dialog) => {
+    const root = dialog.element;
+    const sel = root.querySelector('[name="attackType"]');
+    const row = root.querySelector('#bdh-cs-row');
+    if (!sel || !row) return;
+    const toggle = () => { row.style.display = sel.value === "calledShot" ? "" : "none"; };
+    sel.addEventListener("change", toggle);
+    toggle();
+  };
+
+  // Add a "Suppressive Fire" button when on the battlemap and the weapon can semi/full-auto.
+  // Semi-auto uses the weapon's "short" RoF, full-auto its "long" RoF (per BDH.attackTypes).
+  const canSuppress = battlemapEnabled() && isRanged
+    && ((weapon.system.rateOfFire?.[BDH.attackTypes.semiAuto.rof] || 0) > 0
+      || (weapon.system.rateOfFire?.[BDH.attackTypes.fullAuto.rof] || 0) > 0);
+
+  let choice;
+  if (canSuppress) {
+    choice = await DialogV2.wait({
+      window: { title: `${weapon.name} — Attack (${charShort})` },
+      content: dialogContent,
+      rejectClose: false,
+      render: renderFn,
+      buttons: [
+        {
+          action: "attack",
+          label: "Attack",
+          default: true,
+          callback: (event, button) => ({ ...new foundry.applications.ux.FormDataExtended(button.form).object, action: "attack" }),
+        },
+        {
+          action: "suppress",
+          label: "Suppressive Fire",
+          callback: (event, button) => ({ ...new foundry.applications.ux.FormDataExtended(button.form).object, action: "suppress" }),
+        },
+      ],
+    });
+  } else {
+    choice = await DialogV2.prompt({
+      window: { title: `${weapon.name} — Attack (${charShort})` },
+      content: dialogContent,
+      rejectClose: false,
+      render: renderFn,
+      ok: {
+        label: "Attack",
+        callback: (event, button) => new foundry.applications.ux.FormDataExtended(button.form).object
+      }
+    });
+  }
   if (!choice) return null;
+  if (choice.action === "suppress") return rollSuppressingFire(actor, weapon, choice.attackType);
   return resolveAttack(actor, weapon, choice, { consumeAmmo: true });
 }
 
