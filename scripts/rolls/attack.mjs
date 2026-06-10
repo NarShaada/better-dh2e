@@ -57,6 +57,11 @@ export function bindCardButtons(message, html) {
     if (!game.user.isGM) {
       html.querySelectorAll('[data-bdh="applyDamage"]').forEach((b) => b.remove());
     }
+  } else if (flags.kind === "sprayResult") {
+    // Spray quality resist tests — no single target; the GM resolves each per selected hit token.
+    if (!game.user.isGM) {
+      html.querySelectorAll('[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="flameTest"],[data-bdh="hallucinogenicTest"],[data-bdh="snareTest"]').forEach((b) => b.remove());
+    }
   } else {
     const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
     if (!target?.isOwner) {
@@ -258,11 +263,21 @@ async function applySpray(message, html) {
     lines.push(`${actor.name}: ${dealt} dmg (Body)`);
   }
   await deleteRegionByUuid(f.regionUuid);
+  // Quality effects — select a hit token, then test (GM resolves each, like the normal resist buttons).
+  const resist = [
+    hasShocking(qualities) ? `<div class="bdh-card-line">⚡ Shocking — <button type="button" data-bdh="shockTest">Toughness Test</button></div>` : "",
+    concussiveValue(qualities) ? `<div class="bdh-card-line">⚡ Concussive (${concussiveValue(qualities)}) — <button type="button" data-bdh="concussiveTest">Toughness Test</button></div>` : "",
+    hasFlame(qualities) ? `<div class="bdh-card-line">🔥 Flame — <button type="button" data-bdh="flameTest">Agility Test</button></div>` : "",
+    hallucinogenicValue(qualities) ? `<div class="bdh-card-line">☣ Hallucinogenic (${hallucinogenicValue(qualities)}) — <button type="button" data-bdh="hallucinogenicTest">Toughness Test</button></div>` : "",
+    snareValue(qualities) ? `<div class="bdh-card-line">🕸 Snare (${snareValue(qualities)}) — <button type="button" data-bdh="snareTest">Agility Test</button></div>` : "",
+  ].filter(Boolean).join("");
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker(), rolls: [roll],
     content: `<div class="bdh-card"><header class="bdh-card-head">${weapon.name} — Spray damage (${damageTotal})</header>`
       + `<div class="bdh-card-line">${lines.join("<br>") || "No one hit."}</div>`
-      + (jammed ? `<div class="bdh-card-line fail">&#9888; Jammed! (natural 9)</div>` : "") + `</div>`,
+      + (jammed ? `<div class="bdh-card-line fail">&#9888; Jammed! (natural 9)</div>` : "")
+      + (resist ? `<div class="bdh-card-line bdh-qnote">Select a hit token, then test:</div>${resist}` : "") + `</div>`,
+    flags: { [NS]: { kind: "sprayResult", qualities, damageType: f.damageType } },
   });
 }
 async function applyOnFireDamage(message) {
@@ -641,6 +656,10 @@ async function rollForceField(actor) {
 async function rollSpray(actor, weapon) {
   const token = actor.getActiveTokens()[0];
   if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
+  // Minimize open windows (the sheet blocks the map) so the player can see + aim the cone.
+  for (const app of foundry.applications.instances.values()) {
+    if (app.rendered && !app.minimized) await app.minimize();
+  }
   const length = Number(weapon.system.range) || 10;            // cone length = weapon range (m)
   const region = await placeConeRegion(token, length, 30);
   if (!region) return;                                          // cancelled
