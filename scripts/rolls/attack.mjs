@@ -387,14 +387,19 @@ async function rollDamage(message) {
   if (!psychic && !weapon) return;
   const baseFormula = psychic ? (f.damage || "0") : weapon.system.damage;   // e.g. "1d10+3" or PR-substituted formula
   const weaponDisplayName = f.weaponName ?? weapon?.name;
-  const mod = await DialogV2.prompt({
+  // Multi-hit on one target: let the player drop hits mitigated by talents (latest hits drop first).
+  const nHitsTotal = f.hits?.length ?? 0;
+  const hitCountRow = nHitsTotal > 1
+    ? `<div class="form-group"><label>How many hits?</label><select name="hits">${Array.from({ length: nHitsTotal }, (_, i) => `<option value="${nHitsTotal - i}">${nHitsTotal - i}</option>`).join("")}</select></div>` : "";
+  const choice = await DialogV2.prompt({
     window: { title: `${weaponDisplayName} — Damage` },
-    content: `<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
-    ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object.mod },
+    content: `${hitCountRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
+    ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
     rejectClose: false
   });
-  if (mod == null) return;
-  const trimmed = String(mod).trim();
+  if (choice == null) return;
+  const trimmed = String(choice.mod ?? "").trim();
+  const hitsToRoll = nHitsTotal > 1 ? f.hits.slice(0, Number(choice.hits) || nHitsTotal) : (f.hits ?? []);   // latest hits drop first
   const qualities = psychic ? (f.qualities ?? []) : (f.qualities ?? weapon.system.qualities ?? []);
   const dos = f.dos ?? 0;
   const rfThreshold = vengefulValue(qualities) || 10;
@@ -419,7 +424,7 @@ async function rollDamage(message) {
   if (f.helpless) weaponBase = doubleDamageDice(weaponBase);   // every die term doubles for Helpless
   const rolls = [];
   const rolled = [];   // per hit: { hit, wRoll, bRoll, rf, baseTotal }
-  for (const hit of f.hits) {
+  for (const hit of hitsToRoll) {
     // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
     const weaponFormula = weaponDamageFormula(qualities, weaponBase);
     const wRoll = await safeRoll(weaponFormula, "weapon damage");
@@ -800,8 +805,21 @@ async function applySuppressDamage(message, uuid) {
   const penBase = Number((await safeRoll(String(weapon.system.penetration || "0"), "penetration"))?.total) || 0;
   const penetration = effectivePenetration(penBase, { qualities, dos: 0, success: true, closeRange: false });
   const primitiveX = primitiveValue(qualities), provenX = provenValue(qualities);
+  // Multi-hit on this target: let the GM drop hits mitigated by talents (latest drop first).
+  let locKeys = hit.locKeys ?? [];
+  if (locKeys.length > 1) {
+    const n = locKeys.length;
+    const pick = await DialogV2.prompt({
+      window: { title: `${target.name} — Suppressing hits` },
+      content: `<div class="form-group"><label>How many hits?</label><select name="hits">${Array.from({ length: n }, (_, i) => `<option value="${n - i}">${n - i}</option>`).join("")}</select></div>`,
+      ok: { label: "Apply", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object.hits },
+      rejectClose: false,
+    });
+    if (pick == null) return;
+    locKeys = locKeys.slice(0, Number(pick) || n);
+  }
   const lines = [];
-  for (const loc of hit.locKeys) {
+  for (const loc of locKeys) {
     const roll = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
     if (!roll) continue;
     let delta = 0; for (const d of roll.dice) for (const r of d.results) if (r.active) delta += transformDamageDie(r.result, { primitiveX, provenX }) - r.result;
