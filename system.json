@@ -6,7 +6,7 @@
   "compatibility": { "minimum": "13", "verified": "14.363" },
   "authors": [{ "name": "NarShaada", "url": "https://github.com/NarShaada" }],
   "esmodules": ["scripts/better-dh2e.mjs"],
-  "styles": ["styles/better-dh2e.css"],
+  "styles": ["styles/better-dh2e.css", "styles/bdh-themes.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "packs": [],
   "gridDistance": 1,
