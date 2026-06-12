@@ -1,18 +1,27 @@
 <div class="bdh-card bdh-damage-card">
-  <div class="bdh-card-head">{{weaponName}} — Damage ({{damageType}}, Pen {{penetration}})</div>
+  <div class="bdh-card-head">
+    <span class="t">Damage <span class="arrow">&mdash;</span> {{damageType}}</span>
+    <span class="sub">Pen {{penetration}}</span>
+  </div>
   {{#if blast}}
-  <div class="bdh-card-line"><span class="bdh-dmg-break">{{{breakdown}}}</span> — <b>{{damageTotal}}</b></div>
+  <ul class="bdh-hits">
+    <li><span class="loc">{{weaponName}}</span><span class="brk">{{{breakdown}}}</span><span class="dmg">{{damageTotal}}</span></li>
+  </ul>
   <div class="bdh-card-line bdh-blast-pool">Applies to: {{poolNames}}</div>
   {{else}}
-  <ol class="bdh-hits">{{#each hits}}<li>{{label}}: <span class="bdh-dmg-break">{{{breakdown}}}</span> — <b>{{total}}</b>{{#if rf}} <span class="bdh-rf">☠ Righteous Fury!</span>{{/if}}</li>{{/each}}</ol>
+  <ul class="bdh-hits">
+    {{#each hits}}<li{{#if rf}} class="rf"{{/if}}><span class="n">{{inc @index}}</span><span class="loc">{{label}}</span><span class="brk">{{{breakdown}}}</span><span class="dmg">{{total}}</span>{{#if rf}}<span class="bdh-rf-tag">&#9760; Righteous Fury</span>{{/if}}</li>{{/each}}
+  </ul>
   {{/if}}
-  {{#if damageNotes}}<div class="bdh-card-line bdh-qnote">{{damageNotes}}</div>{{/if}}
-  {{#if shocking}}<div class="bdh-card-line">⚡ Shocking — Toughness test or Stunned: <button type="button" data-bdh="shockTest">Toughness Test</button></div>{{/if}}
-  {{#if concussive}}<div class="bdh-card-line">⚡ Concussive ({{concussive}}) — Toughness test or Stunned: <button type="button" data-bdh="concussiveTest">Toughness Test</button></div>{{/if}}
-  {{#if flame}}<div class="bdh-card-line">🔥 Flame — Agility test or set on fire: <button type="button" data-bdh="flameTest">Agility Test</button></div>{{/if}}
-  {{#if hallucinogenic}}<div class="bdh-card-line">☣ Hallucinogenic ({{hallucinogenic}}) — Toughness test or Hallucinogen table: <button type="button" data-bdh="hallucinogenicTest">Toughness Test</button></div>{{/if}}
-  {{#if snare}}<div class="bdh-card-line">🕸 Snare ({{snare}}) — Agility test or Immobilised: <button type="button" data-bdh="snareTest">Agility Test</button></div>{{/if}}
-  {{#if toxic}}<div class="bdh-card-line">🧪 Toxic ({{toxic}}) — Toughness test or 1d10 damage (end of round): <button type="button" data-bdh="toxicTest">Toughness Test</button></div>{{/if}}
-  {{#if blast}}<div class="bdh-card-actions"><button type="button" data-bdh="applyDamage">Apply Blast Damage</button></div>{{/if}}
-  {{#if canApply}}<div class="bdh-card-actions"><button type="button" data-bdh="applyDamage">Apply Damage → {{targetName}}</button></div>{{/if}}
+  {{#if damageNotes}}<div class="bdh-card-line"><span class="qn">{{damageNotes}}</span></div>{{/if}}
+  <div class="bdh-qchip-row">
+    {{#if shocking}}<button type="button" class="bdh-qchip" data-bdh="shockTest"><span class="ic">&#9889;</span><b>Shocking</b> Toughness test or Stunned</button>{{/if}}
+    {{#if concussive}}<button type="button" class="bdh-qchip" data-bdh="concussiveTest"><span class="ic">&#9889;</span><b>Concussive ({{concussive}})</b> Toughness test or Stunned</button>{{/if}}
+    {{#if flame}}<button type="button" class="bdh-qchip" data-bdh="flameTest"><span class="ic">&#128293;</span><b>Flame</b> Agility test or set on fire</button>{{/if}}
+    {{#if hallucinogenic}}<button type="button" class="bdh-qchip" data-bdh="hallucinogenicTest"><span class="ic">&#9763;</span><b>Hallucinogenic ({{hallucinogenic}})</b> Toughness test</button>{{/if}}
+    {{#if snare}}<button type="button" class="bdh-qchip" data-bdh="snareTest"><span class="ic">&#128376;</span><b>Snare ({{snare}})</b> Agility test or Immobilised</button>{{/if}}
+    {{#if toxic}}<button type="button" class="bdh-qchip" data-bdh="toxicTest"><span class="ic">&#129514;</span><b>Toxic ({{toxic}})</b> Toughness test</button>{{/if}}
+  </div>
+  {{#if blast}}<div class="bdh-card-actions"><button type="button" class="bdh-btn primary" data-bdh="applyDamage">Apply Blast Damage</button></div>{{/if}}
+  {{#if canApply}}<div class="bdh-card-actions"><button type="button" class="bdh-btn primary" data-bdh="applyDamage">Apply Damage <span class="arrow">&#8594;</span> {{targetName}}</button></div>{{/if}}
 </div>

@@ -3,15 +3,17 @@
   <header class="bdh-card-head">
     {{casterName}} {{#if success}}casts{{else}}fails to cast{{/if}} <b>{{powerName}}</b>
   </header>
-  <div class="bdh-card-grid">
-    <span class="k">Target</span><span class="v">{{target}}</span>
-    <span class="k">Modifier</span><span class="v">{{modifierLabel}}</span>
-    <span class="k">Rolled</span><span class="v"><b>{{roll}}</b></span>
+  <div class="bdh-card-stats">
+    <div class="bdh-stat"><b>{{target}}</b><span>Target</span></div>
+    <div class="bdh-stat"><b>{{modifierLabel}}</b><span>Modifier</span></div>
+    <div class="bdh-stat rolled"><b>{{roll}}</b><span>Rolled</span></div>
   </div>
-  <div class="bdh-card-line">{{powerTypeLabel}} · {{focusLabel}} · {{prLabel}}</div>
+  <div class="bdh-card-line quals">{{powerTypeLabel}} &middot; {{focusLabel}} &middot; {{prLabel}}</div>
   <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
-    {{#if success}}Success ({{degrees}} DoS){{else}}Failure ({{degrees}} DoF){{/if}}
-    {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS · Fate</span>{{/if}}
+    {{#if success}}Manifested{{else}}Failure{{/if}}
+    {{#if degrees}}<span class="bdh-dos-pips">{{#times degrees}}<i></i>{{/times}}</span>{{/if}}
+    <span class="deg">{{degrees}} {{#if success}}Degrees of Success{{else}}Degrees of Failure{{/if}}</span>
+    {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS &middot; Fate</span>{{/if}}
   </div>
   {{#if phenTriggered}}
     <div class="bdh-phenomena">
@@ -27,12 +29,12 @@
   {{#if isAttack}}
     {{#if qualityLabels}}<div class="bdh-card-line bdh-quals">Qualities: {{qualityLabels}}</div>{{/if}}
     {{#if hits.length}}
-      <ol class="bdh-hits">
-        {{#each hits}}<li>{{label}}</li>{{/each}}
-      </ol>
+      <ul class="bdh-hits">
+        {{#each hits}}<li><span class="n">{{inc @index}}</span><span class="loc">{{label}}</span></li>{{/each}}
+      </ul>
       <div class="bdh-card-actions">
-        <button type="button" data-bdh="rollDamage">Roll Damage</button>
-        <button type="button" data-bdh="evade">Evade</button>
+        <button type="button" class="bdh-btn primary" data-bdh="rollDamage">Roll Damage</button>
+        <button type="button" class="bdh-btn" data-bdh="evade">Evade</button>
       </div>
     {{/if}}
   {{/if}}

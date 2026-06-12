@@ -279,18 +279,18 @@ async function applySpray(message, html) {
   await deleteRegionByUuid(f.regionUuid);
   // Quality effects — select a hit token, then test (GM resolves each, like the normal resist buttons).
   const resist = [
-    hasShocking(qualities) ? `<div class="bdh-card-line">⚡ Shocking — <button type="button" data-bdh="shockTest">Toughness Test</button></div>` : "",
-    concussiveValue(qualities) ? `<div class="bdh-card-line">⚡ Concussive (${concussiveValue(qualities)}) — <button type="button" data-bdh="concussiveTest">Toughness Test</button></div>` : "",
-    hasFlame(qualities) ? `<div class="bdh-card-line">🔥 Flame — <button type="button" data-bdh="flameTest">Agility Test</button></div>` : "",
-    hallucinogenicValue(qualities) ? `<div class="bdh-card-line">☣ Hallucinogenic (${hallucinogenicValue(qualities)}) — <button type="button" data-bdh="hallucinogenicTest">Toughness Test</button></div>` : "",
-    snareValue(qualities) ? `<div class="bdh-card-line">🕸 Snare (${snareValue(qualities)}) — <button type="button" data-bdh="snareTest">Agility Test</button></div>` : "",
+    hasShocking(qualities) ? `<button type="button" class="bdh-qchip" data-bdh="shockTest"><span class="ic">&#9889;</span><b>Shocking</b> Toughness test or Stunned</button>` : "",
+    concussiveValue(qualities) ? `<button type="button" class="bdh-qchip" data-bdh="concussiveTest"><span class="ic">&#9889;</span><b>Concussive (${concussiveValue(qualities)})</b> Toughness test or Stunned</button>` : "",
+    hasFlame(qualities) ? `<button type="button" class="bdh-qchip" data-bdh="flameTest"><span class="ic">&#128293;</span><b>Flame</b> Agility test or set on fire</button>` : "",
+    hallucinogenicValue(qualities) ? `<button type="button" class="bdh-qchip" data-bdh="hallucinogenicTest"><span class="ic">&#9763;</span><b>Hallucinogenic (${hallucinogenicValue(qualities)})</b> Toughness test</button>` : "",
+    snareValue(qualities) ? `<button type="button" class="bdh-qchip" data-bdh="snareTest"><span class="ic">&#128376;</span><b>Snare (${snareValue(qualities)})</b> Agility test or Immobilised</button>` : "",
   ].filter(Boolean).join("");
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker(), rolls: [roll],
-    content: `<div class="bdh-card"><header class="bdh-card-head">${weapon.name} — Spray damage (${damageTotal})</header>`
+    content: `<div class="bdh-card"><div class="bdh-card-head"><span class="t">${weapon.name} <span class="arrow">&mdash;</span> Spray damage</span><span class="sub">${damageTotal}</span></div>`
       + `<div class="bdh-card-line">${lines.join("<br>") || "No one hit."}</div>`
       + (jammed ? `<div class="bdh-card-line fail">&#9888; Jammed! (natural 9)</div>` : "")
-      + (resist ? `<div class="bdh-card-line bdh-qnote">Select a hit token, then test:</div>${resist}` : "") + `</div>`,
+      + (resist ? `<div class="bdh-card-line bdh-qnote">Select a hit token, then test:</div><div class="bdh-qchip-row">${resist}</div>` : "") + `</div>`,
     flags: { [NS]: { kind: "sprayResult", qualities, damageType: f.damageType } },
   });
 }
@@ -735,9 +735,16 @@ async function rollSuppressingFire(actor, weapon, mode) {
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }), rolls: [bsRoll],
     content: `<div class="bdh-card bdh-attack-card ${res.success ? "ok" : "fail"}">`
-      + `<div class="bdh-card-head">${weapon.name} — Suppressing Fire (BS −20)</div>`
-      + `<div class="bdh-card-line">Target ${res.target} — Rolled ${bsRoll.total}</div>`
-      + `<div class="bdh-card-result ${res.success ? "ok" : "fail"}">${res.success ? `Success (${res.degrees} DoS)` : `Failure (${res.degrees} DoF)`}</div></div>`,
+      + `<div class="bdh-card-head"><span class="t">${weapon.name} <span class="arrow">&mdash;</span> Suppressing Fire</span><span class="sub">BS &minus;20</span></div>`
+      + `<div class="bdh-card-stats">`
+      +   `<div class="bdh-stat"><b>${actor.system.characteristics.ballisticSkill.total}</b><span>Target</span></div>`
+      +   `<div class="bdh-stat"><b>&minus;20</b><span>Modifier</span></div>`
+      +   `<div class="bdh-stat rolled"><b>${bsRoll.total}</b><span>Rolled</span></div>`
+      + `</div>`
+      + `<div class="bdh-card-result ${res.success ? "ok" : "fail"}">${res.success ? "Hit" : "Miss"}`
+      +   (res.degrees ? `<span class="bdh-dos-pips">${"<i></i>".repeat(res.degrees)}</span>` : "")
+      +   `<span class="deg">${res.degrees} ${res.degrees === 1 ? "Degree" : "Degrees"} of ${res.success ? "Success" : "Failure"}</span>`
+      + `</div></div>`,
   });
   if (res.success && caught.length) {
     const nHits = Math.min(1 + Math.floor(res.degrees / 2), rof);
@@ -1154,6 +1161,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     overheats: jammed && hasOverheats(weapon.system.qualities),
     targetName,
     hasHits: nHits > 0,
+    hitCount: nHits,
+    multiHit: nHits > 1,
     // Show Roll Damage / Evade on a HIT, OR for a blast that caught targets even on a miss (scatter still lands).
     showActions: nHits > 0 || !!blastFlags,
     qualityLabels,

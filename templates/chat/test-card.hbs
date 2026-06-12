@@ -1,16 +1,15 @@
 {{!-- templates/chat/test-card.hbs --}}
 <div class="bdh-card {{#if success}}ok{{else}}fail{{/if}}">
   <header class="bdh-card-head">{{label}}</header>
-  <div class="bdh-card-grid">
-    <span class="k">{{localize "BDH.Roll.Target"}}</span><span class="v">{{target}}</span>
-    <span class="k">{{localize "BDH.Roll.Modifier"}}</span><span class="v">{{modifierLabel}}</span>
-    <span class="k">{{localize "BDH.Roll.Result"}}</span><span class="v">{{roll}}</span>
+  <div class="bdh-card-stats">
+    <div class="bdh-stat"><b>{{target}}</b><span>{{localize "BDH.Roll.Target"}}</span></div>
+    <div class="bdh-stat"><b>{{modifierLabel}}</b><span>{{localize "BDH.Roll.Modifier"}}</span></div>
+    <div class="bdh-stat rolled"><b>{{roll}}</b><span>{{localize "BDH.Roll.Result"}}</span></div>
   </div>
   <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
     {{#if success}}{{localize "BDH.Roll.Success"}}{{else}}{{localize "BDH.Roll.Failure"}}{{/if}}
-  </div>
-  <div class="bdh-card-degrees">
-    {{degrees}} {{#if success}}{{localize "BDH.Roll.DoS"}}{{else}}{{localize "BDH.Roll.DoF"}}{{/if}}
-    {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS · Fate</span>{{/if}}
+    {{#if degrees}}<span class="bdh-dos-pips">{{#times degrees}}<i></i>{{/times}}</span>{{/if}}
+    <span class="deg">{{degrees}} {{#if success}}{{localize "BDH.Roll.DoS"}}{{else}}{{localize "BDH.Roll.DoF"}}{{/if}}</span>
+    {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS &middot; Fate</span>{{/if}}
   </div>
 </div>

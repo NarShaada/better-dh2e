@@ -28,6 +28,15 @@ Hooks.once("init", () => {
   // Expose config
   CONFIG.BDH = BDH;
 
+  // Chat-card helpers: {{#times n}}…{{/times}} repeats a block n times (DoS pips);
+  // {{inc i}} → i+1 (1-based hit numbering in the card lists).
+  Handlebars.registerHelper("times", function (n, options) {
+    let out = "";
+    for (let i = 0; i < (Number(n) || 0); i++) out += options.fn(i);
+    return out;
+  });
+  Handlebars.registerHelper("inc", (v) => (Number(v) || 0) + 1);
+
   // Combat-tracker initiative: 1d10 + the actor's chosen initiative-characteristic bonus (see DarkHeresyActor#getRollData).
   CONFIG.Combat.initiative = { formula: "1d10 + @initiativeBonus", decimals: 0 };
 

@@ -204,65 +204,105 @@ body.bdh-themed .bdh-card {
 body.bdh-themed .bdh-card.ok { border-left-color:var(--t-green); }
 body.bdh-themed .bdh-card.fail { border-left-color:var(--t-red); }
 body.bdh-themed .bdh-card-head {
+  display:flex; align-items:baseline; gap:8px;
   font-family:var(--t-cond); font-weight:600; font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
   color:var(--t-ink2); background:var(--t-panel2); border-bottom:1px solid var(--t-line);
-  padding:6px 10px; margin-bottom:4px;
+  padding:7px 12px 6px;
 }
-body.bdh-themed .bdh-card-grid { padding:2px 10px; font-size:12px; }
+body.bdh-themed .bdh-card-head .t .arrow { color:var(--t-gold); font-weight:400; }
+body.bdh-themed .bdh-card-head .sub { margin-left:auto; font-size:11px; font-weight:400; color:var(--t-muted); letter-spacing:1px; white-space:nowrap; }
+
+body.bdh-themed .bdh-card-grid { padding:6px 12px 2px; font-size:12px; }
 body.bdh-themed .bdh-card-grid .k { font-family:var(--t-cond); letter-spacing:1.5px; text-transform:uppercase; font-size:10.5px; color:var(--t-muted); }
 body.bdh-themed .bdh-card-grid .v { font-family:var(--t-mono); color:var(--t-ink2); }
-body.bdh-themed .bdh-card-line { padding:0 10px; color:var(--t-muted); }
+
+/* Stat triptych */
+body.bdh-themed .bdh-card-stats { display:flex; gap:6px; padding:8px 12px 2px; }
+body.bdh-themed .bdh-stat { flex:1; text-align:center; background:var(--t-panel2); border:1px solid var(--t-line); padding:5px 2px 4px; }
+body.bdh-themed .bdh-stat b { display:block; font-family:var(--t-mono); font-size:16px; font-weight:700; color:var(--t-ink2); }
+body.bdh-themed .bdh-stat span { font-family:var(--t-cond); font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--t-muted); }
+body.bdh-themed .bdh-stat.rolled b { color:var(--t-gold); }
+
+body.bdh-themed .bdh-card-line { padding:3px 12px; color:var(--t-muted); font-size:11.5px; }
+body.bdh-themed .bdh-card-line.quals, body.bdh-themed .bdh-quals { font-family:var(--t-cond); letter-spacing:.5px; }
+body.bdh-themed .bdh-card-line .qn { color:var(--t-red); font-weight:600; }
 body.bdh-themed .bdh-card-line .ok { color:var(--t-green); }
 body.bdh-themed .bdh-card-line.fail, body.bdh-themed .bdh-card .fail { color:var(--t-red); }
-body.bdh-themed .bdh-quals { font-family:var(--t-cond); letter-spacing:.5px; }
 
-/* Result banner — the "stamp" */
+/* Result banner — the "stamp" + DoS pips (diamond) */
 body.bdh-themed .bdh-card-result {
-  margin:7px 10px 3px; padding:5px 8px; font-family:var(--t-display); font-weight:700;
-  font-size:13px; letter-spacing:2.5px; text-transform:uppercase;
+  margin:7px 12px 4px; padding:6px 10px; text-align:center; font-family:var(--t-display); font-weight:700;
+  font-size:14px; letter-spacing:2.5px; text-transform:uppercase;
 }
 body.bdh-themed .bdh-card-result.ok { color:var(--t-green); border:1px solid var(--t-green2); background:rgba(95,174,130,.08); }
 body.bdh-themed .bdh-card-result.fail { color:var(--t-red); border:1px solid var(--t-red2); background:rgba(192,74,58,.08); }
+body.bdh-themed .bdh-card-result .deg { display:block; font-family:var(--t-cond); font-size:10px; font-weight:400; letter-spacing:2px; color:var(--t-muted); margin-top:2px; }
+body.bdh-themed .bdh-dos-pips { display:inline-flex; gap:4px; margin-left:8px; vertical-align:2px; }
+body.bdh-themed .bdh-dos-pips i { width:7px; height:7px; transform:rotate(45deg); display:inline-block; }
+body.bdh-themed .bdh-card-result.ok .bdh-dos-pips i { background:var(--t-green); }
+body.bdh-themed .bdh-card-result.fail .bdh-dos-pips i { background:var(--t-red); }
 body.bdh-themed .bdh-card-degrees { color:var(--t-muted); font-family:var(--t-cond); letter-spacing:1.5px; text-transform:uppercase; font-size:11px; }
-body.bdh-themed .bdh-fate-note { color:var(--t-gold); font-family:var(--t-cond); letter-spacing:1px; }
+body.bdh-themed .bdh-fate-note { display:block; color:var(--t-gold); font-family:var(--t-cond); letter-spacing:1px; font-weight:400; font-size:10px; margin-top:2px; }
 
-/* Hits — numbered chips */
-body.bdh-themed .bdh-hits { list-style:none; counter-reset:bdh-hit; margin:6px 10px; padding:0;
-  display:flex; flex-direction:column; gap:3px; }
-body.bdh-themed .bdh-hits li { counter-increment:bdh-hit; background:var(--t-panel2); border:1px solid var(--t-line);
-  padding:3px 8px; font-size:12px; }
-body.bdh-themed .bdh-hits li::before { content:counter(bdh-hit); font-family:var(--t-mono); font-size:10px;
-  color:var(--t-gold); margin-right:8px; }
-body.bdh-themed .bdh-rf { color:var(--t-red); font-family:var(--t-cond); letter-spacing:1px; text-transform:uppercase; font-weight:600; }
-body.bdh-themed .bdh-dmg-break { color:var(--t-faint); font-family:var(--t-mono); font-size:10.5px; }
+/* Hit rows */
+body.bdh-themed .bdh-hits { list-style:none; margin:6px 12px; padding:0; display:flex; flex-direction:column; gap:4px; }
+body.bdh-themed .bdh-hits li { display:flex; align-items:center; gap:8px; background:var(--t-panel2); border:1px solid var(--t-line); padding:4px 9px; font-size:12px; }
+body.bdh-themed .bdh-hits .n { font-family:var(--t-mono); font-size:10px; color:var(--t-gold); flex:0 0 auto; }
+body.bdh-themed .bdh-hits .loc { font-family:var(--t-cond); letter-spacing:1px; text-transform:uppercase; font-size:11px; color:var(--t-ink); }
+body.bdh-themed .bdh-hits .brk { color:var(--t-faint); font-size:10.5px; font-family:var(--t-mono); }
+body.bdh-themed .bdh-hits .dmg { margin-left:auto; font-family:var(--t-mono); font-weight:700; color:var(--t-ink2); }
+body.bdh-themed .bdh-hits li.rf { border-color:var(--t-red); }
+body.bdh-themed .bdh-rf-tag { color:var(--t-red); font-family:var(--t-cond); font-size:10px; letter-spacing:1px; text-transform:uppercase; font-weight:600; }
 body.bdh-themed .bdh-qnote, body.bdh-themed .chat-message .bdh-qnote { color:var(--t-red); }
 body.bdh-themed .bdh-note { color:var(--t-muted); font-style:italic; }
-body.bdh-themed .bdh-effect { padding:0 10px; }
+body.bdh-themed .bdh-effect { padding:0 12px; }
 body.bdh-themed .bdh-blast-pool { font-family:var(--t-cond); letter-spacing:.5px; }
 
+/* Quality-proc chips (damage-card resist buttons) */
+body.bdh-themed .bdh-qchip-row { display:flex; flex-wrap:wrap; gap:6px; padding:4px 12px 6px; }
+body.bdh-themed .bdh-qchip-row:empty { display:none; }
+body.bdh-themed .bdh-qchip { display:inline-flex; align-items:center; gap:6px; font-family:var(--t-data); font-size:11px; color:var(--t-ink); background:var(--t-panel2); border:1px solid var(--t-line2); padding:3px 8px; cursor:pointer; }
+body.bdh-themed .bdh-qchip:hover { border-color:var(--t-gold2); color:var(--t-gold); }
+body.bdh-themed .bdh-qchip .ic { font-size:11px; }
+body.bdh-themed .bdh-qchip b { font-family:var(--t-cond); letter-spacing:1px; text-transform:uppercase; font-weight:600; font-size:10.5px; }
+
 /* Psychic */
-body.bdh-themed .bdh-phenomena { margin:5px 10px 2px; padding:4px 8px; border:1px dashed var(--t-warp); color:var(--t-warp);
+body.bdh-themed .bdh-phenomena { margin:5px 12px 2px; padding:4px 8px; border:1px dashed var(--t-warp); color:var(--t-warp);
   font-family:var(--t-cond); font-size:11.5px; letter-spacing:1.5px; text-transform:uppercase; text-align:center; }
 
-/* Card buttons */
-body.bdh-themed .bdh-card-actions { padding:2px 10px 4px; }
-body.bdh-themed .bdh-card-actions button, body.bdh-themed .bdh-card button[data-bdh] {
-  font-family:var(--t-cond); font-weight:600; font-size:11.5px; letter-spacing:1.5px; text-transform:uppercase;
-  background:var(--t-red2); color:#f2e8de; border:1px solid var(--t-red); border-radius:0; padding:4px 8px; cursor:pointer;
-  clip-path:polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); transition:all .15s;
+/* Action buttons — .bdh-btn base; .primary (or a lone button) is the red stamp */
+body.bdh-themed .bdh-card-actions { display:flex; gap:8px; padding:8px 12px 11px; }
+body.bdh-themed .bdh-btn, body.bdh-themed .bdh-card-actions button {
+  flex:1; font-family:var(--t-cond); font-weight:600; font-size:12px; letter-spacing:1.5px; text-transform:uppercase;
+  background:var(--t-panel2); color:var(--t-ink); border:1px solid var(--t-line2); border-radius:0; padding:6px 4px; cursor:pointer;
+  clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); transition:all .15s;
 }
-body.bdh-themed .bdh-card-actions button:hover, body.bdh-themed .bdh-card button[data-bdh]:hover {
-  background:var(--t-red); color:#fff; box-shadow:0 0 10px rgba(192,74,58,.3);
+body.bdh-themed .bdh-btn:hover, body.bdh-themed .bdh-card-actions button:hover { border-color:var(--t-gold2); color:var(--t-gold); }
+body.bdh-themed .bdh-btn.primary, body.bdh-themed .bdh-card-actions button.primary, body.bdh-themed .bdh-card-actions button:only-child {
+  background:var(--t-red2); color:#f2e8de; border-color:var(--t-red);
 }
-/* Inline quality-test buttons (Shocking/Toxic/etc on damage cards) stay compact */
-body.bdh-themed .bdh-card .bdh-card-line button[data-bdh] {
-  background:var(--t-panel2); color:var(--t-ink); border:1px solid var(--t-line2); padding:1px 8px; font-size:10.5px;
+body.bdh-themed .bdh-btn.primary:hover, body.bdh-themed .bdh-card-actions button.primary:hover, body.bdh-themed .bdh-card-actions button:only-child:hover {
+  background:var(--t-red); color:#fff; box-shadow:0 0 12px rgba(192,74,58,.3);
 }
-body.bdh-themed .bdh-card .bdh-card-line button[data-bdh]:hover { border-color:var(--t-gold2); color:var(--t-gold); background:var(--t-panel2); box-shadow:none; }
+/* Inline buttons living in a card line (overheat, per-target suppress Evade/Apply) stay compact */
+body.bdh-themed .bdh-card .bdh-card-line button {
+  flex:none; font-family:var(--t-cond); letter-spacing:1px; text-transform:uppercase; background:var(--t-panel2); color:var(--t-ink);
+  border:1px solid var(--t-line2); border-radius:0; padding:2px 8px; font-size:10.5px; margin-left:4px; clip-path:none; cursor:pointer;
+}
+body.bdh-themed .bdh-card .bdh-card-line button:hover { border-color:var(--t-gold2); color:var(--t-gold); background:var(--t-panel2); box-shadow:none; }
 
 /* Spray card checklist */
-body.bdh-themed .bdh-spray-list { margin:4px 10px; padding-left:0; list-style:none; }
+body.bdh-themed .bdh-spray-list { margin:4px 12px; padding-left:0; list-style:none; }
 body.bdh-themed .bdh-spray-list li { display:flex; align-items:center; gap:6px; padding:2px 0; border-bottom:1px solid var(--t-line); }
+body.bdh-themed .bdh-suppress-list { margin:4px 12px; padding-left:0; list-style:none; }
+body.bdh-themed .bdh-suppress-list li { padding:3px 0; border-bottom:1px solid var(--t-line); }
+/* Per-row test buttons in the checklists (WP Test etc.) — resist-chip look */
+body.bdh-themed .bdh-suppress-list button, body.bdh-themed .bdh-spray-list button {
+  font-family:var(--t-cond); letter-spacing:1px; text-transform:uppercase; font-size:10.5px;
+  background:var(--t-panel2); color:var(--t-ink); border:1px solid var(--t-line2); border-radius:0;
+  padding:2px 10px; margin:3px 0 1px 24px; cursor:pointer; transition:all .15s;
+}
+body.bdh-themed .bdh-suppress-list button:hover, body.bdh-themed .bdh-spray-list button:hover { border-color:var(--t-gold2); color:var(--t-gold); }
 
 /* Foundry's core .chat-message frame around our cards (sender, timestamp, border) — match the
    theme, but ONLY for messages containing a bdh card; plain chat and core rolls stay core-styled. */

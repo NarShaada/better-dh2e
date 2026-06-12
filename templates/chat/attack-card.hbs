@@ -1,33 +1,36 @@
 {{!-- templates/chat/attack-card.hbs --}}
 <div class="bdh-card bdh-attack-card {{#if success}}ok{{else}}fail{{/if}}">
-  <header class="bdh-card-head">{{weaponName}} — {{#if targetName}}{{targetName}}{{else}}Attack{{/if}}</header>
-  <div class="bdh-card-grid">
-    <span class="k">Target</span><span class="v">{{target}}</span>
-    <span class="k">Modifier</span><span class="v">{{modifierLabel}}</span>
-    <span class="k">Rolled</span><span class="v"><b>{{roll}}</b></span>
+  <div class="bdh-card-head">
+    <span class="t">{{weaponName}}{{#if targetName}} <span class="arrow">&#8594;</span> {{targetName}}{{/if}}</span>
+    {{#if attackTypeLabel}}<span class="sub">{{attackTypeLabel}}</span>{{/if}}
   </div>
-  <div class="bdh-card-line">{{attackTypeLabel}} · {{aimLabel}}{{#if rangeLabel}} · {{rangeLabel}}{{/if}}</div>
-  {{#if qualityLabels}}<div class="bdh-card-line bdh-quals">Qualities: {{qualityLabels}}</div>{{/if}}
-  {{#if attackNotes}}<div class="bdh-card-line bdh-qnote">{{attackNotes}}</div>{{/if}}
-  {{#if helplessNote}}<div class="bdh-card-line bdh-qnote">{{helplessNote}}</div>{{/if}}
+  <div class="bdh-card-stats">
+    <div class="bdh-stat"><b>{{target}}</b><span>Target</span></div>
+    <div class="bdh-stat"><b>{{modifierLabel}}</b><span>Modifier</span></div>
+    <div class="bdh-stat rolled"><b>{{roll}}</b><span>Rolled</span></div>
+  </div>
+  <div class="bdh-card-line quals">{{attackTypeLabel}}{{#if aimLabel}} &middot; {{aimLabel}}{{/if}}{{#if rangeLabel}} &middot; {{rangeLabel}}{{/if}}{{#if attackNotes}} &middot; <span class="qn">{{attackNotes}}</span>{{/if}}</div>
+  {{#if helplessNote}}<div class="bdh-card-line"><span class="qn">{{helplessNote}}</span></div>{{/if}}
   <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
-    {{#if success}}Success ({{degrees}} DoS){{else}}Failure ({{degrees}} DoF){{/if}}
-    {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS · Fate</span>{{/if}}
+    {{#if success}}{{#if hasHits}}Hit{{#if multiHit}} &times;{{hitCount}}{{/if}}{{else}}Success{{/if}}{{else}}Miss{{/if}}
+    {{#if degrees}}<span class="bdh-dos-pips">{{#times degrees}}<i></i>{{/times}}</span>{{/if}}
+    <span class="deg">{{degrees}} {{#if success}}Degree{{#if multiHit}}s{{/if}} of Success{{else}}Degrees of Failure{{/if}}</span>
+    {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS &middot; Fate</span>{{/if}}
   </div>
   {{#if blastCaught}}<div class="bdh-card-line">Caught in blast{{#if blastScattered}} (scattered){{/if}}: {{blastCaught}}</div>{{/if}}
   {{#if jammed}}
-    {{#if overheats}}<div class="bdh-card-line fail">&#128293; Overheat! <button type="button" data-bdh="overheatDrop">Drop!</button> <button type="button" data-bdh="overheatDamage">Roll Damage</button></div>
+    {{#if overheats}}<div class="bdh-card-line fail">&#128293; Overheat! <button type="button" class="bdh-btn" data-bdh="overheatDrop">Drop!</button> <button type="button" class="bdh-btn" data-bdh="overheatDamage">Roll Damage</button></div>
     {{else}}<div class="bdh-card-line fail">&#9888; Weapon jammed!</div>{{/if}}
   {{/if}}
   {{#if hasHits}}
-    <ol class="bdh-hits">
-      {{#each hits}}<li>{{label}}</li>{{/each}}
-    </ol>
+    <ul class="bdh-hits">
+      {{#each hits}}<li><span class="n">{{inc @index}}</span><span class="loc">{{label}}</span></li>{{/each}}
+    </ul>
   {{/if}}
   {{#if showActions}}
     <div class="bdh-card-actions">
-      <button type="button" data-bdh="rollDamage">Roll Damage</button>
-      <button type="button" data-bdh="evade">Evade</button>
+      <button type="button" class="bdh-btn primary" data-bdh="rollDamage">Roll Damage</button>
+      <button type="button" class="bdh-btn" data-bdh="evade">Evade</button>
     </div>
   {{/if}}
 </div>

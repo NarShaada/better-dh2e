@@ -79,15 +79,78 @@
 .better-dh2e .char .box.rollable:hover { box-shadow:0 0 6px var(--bdh-gold) inset; }
 .better-dh2e .skill[data-action]:hover .snm { text-decoration:underline; }
 
-/* Chat card (rendered inside Foundry's chat log, so not scoped to .better-dh2e) */
-.bdh-card { font-family:Georgia, serif; color:#2b2017; background:#efe6cd; border:1px solid #8a6d3b; border-left:4px solid #5a2a2a; border-radius:5px; padding:6px 8px; }
+/* Chat cards (rendered inside Foundry's chat log, so not scoped to .better-dh2e) — Classic/parchment look */
+.bdh-card { font-family:Georgia, serif; color:#2b2017; background:#efe6cd; border:1px solid #8a6d3b; border-left:4px solid #8a6d3b; border-radius:4px; font-size:13px; overflow:hidden; }
+.bdh-card.ok { border-left-color:#3d6a4a; }
 .bdh-card.fail { border-left-color:#7a1f1f; }
-.bdh-card-head { font-weight:bold; color:#5a2a2a; border-bottom:1px solid #c9b285; padding-bottom:3px; margin-bottom:4px; }
-.bdh-card-grid { display:grid; grid-template-columns:auto auto; gap:1px 14px; font-size:12px; }
+
+.bdh-card-head { display:flex; align-items:baseline; gap:8px; padding:6px 10px 5px; border-bottom:1px solid #c9b285; font-weight:bold; color:#5a2a2a; }
+.bdh-card-head .t { text-transform:uppercase; letter-spacing:.5px; font-size:13px; }
+.bdh-card-head .t .arrow { color:#9a7a4a; font-weight:normal; }
+.bdh-card-head .sub { margin-left:auto; font-size:11px; color:#7a5c30; font-weight:normal; text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
+
+/* Legacy two-column stat grid (cast / test / forcefield cards) */
+.bdh-card-grid { display:grid; grid-template-columns:auto auto; gap:1px 14px; font-size:12px; padding:5px 10px 2px; }
 .bdh-card-grid .k { color:#7a5c30; } .bdh-card-grid .v { text-align:right; font-weight:bold; }
-.bdh-card-result { text-align:center; font-size:15px; font-weight:bold; margin:5px 0 2px; }
-.bdh-card-result.ok { color:#3d6a4a; } .bdh-card-result.fail { color:#7a2a2a; }
+
+/* Stat triptych (attack card) */
+.bdh-card-stats { display:flex; gap:5px; padding:6px 10px 2px; }
+.bdh-stat { flex:1; text-align:center; background:#e3d5b0; border:1px solid #c2a86f; border-radius:3px; padding:4px 2px; }
+.bdh-stat b { display:block; font-size:16px; font-weight:bold; color:#3a2a18; }
+.bdh-stat span { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#7a5c30; }
+.bdh-stat.rolled b { color:#7a1f1f; }
+
+.bdh-card-line { font-size:11.5px; color:#5a4a30; padding:3px 10px; }
+.bdh-card-line.quals { text-transform:uppercase; letter-spacing:.4px; font-size:11px; }
+.bdh-card-line .qn, .bdh-card-line.bdh-quals, .bdh-quals { color:#a02020; font-weight:600; }
+.bdh-card-line.fail, .bdh-card .fail { color:#7a2a2a; font-weight:bold; }
+.bdh-card-line .ok, .bdh-card .ok { color:#3d6a4a; font-weight:bold; }
+
+/* Result banner + DoS pips (shared by attack / cast / test / forcefield) */
+.bdh-card-result { margin:6px 10px 3px; padding:5px 8px; text-align:center; font-weight:bold; font-size:14px; text-transform:uppercase; letter-spacing:2px; border:1px solid #c9b285; border-radius:3px; }
+.bdh-card-result.ok { color:#3d6a4a; border-color:#7fae82; background:rgba(95,174,130,.10); }
+.bdh-card-result.fail { color:#7a2a2a; border-color:#c0623a; background:rgba(192,74,58,.10); }
+.bdh-card-result .deg { display:block; font-size:9.5px; letter-spacing:1.5px; color:#8a6a4a; margin-top:2px; font-weight:normal; }
+.bdh-dos-pips { display:inline-flex; gap:4px; margin-left:8px; vertical-align:1px; }
+.bdh-dos-pips i { width:7px; height:7px; border-radius:50%; display:inline-block; }
+.bdh-card-result.ok .bdh-dos-pips i { background:#3d6a4a; }
+.bdh-card-result.fail .bdh-dos-pips i { background:#7a2a2a; }
+.bdh-fate-note { display:block; color:#9a6a1a; font-size:10px; letter-spacing:.5px; margin-top:2px; font-weight:normal; }
 .bdh-card-degrees { text-align:center; font-size:12px; color:#5a2a2a; }
+
+/* Hit rows (attack + damage cards) */
+.bdh-hits { list-style:none; margin:5px 10px; padding:0; display:flex; flex-direction:column; gap:3px; }
+.bdh-hits li { display:flex; align-items:center; gap:7px; background:#e3d5b0; border:1px solid #c2a86f; border-radius:3px; padding:3px 8px; font-size:12px; }
+.bdh-hits .n { font-weight:bold; color:#7a1f1f; flex:0 0 auto; font-size:11px; }
+.bdh-hits .loc { text-transform:uppercase; letter-spacing:.5px; font-size:11px; color:#3a2a18; }
+.bdh-hits .brk { color:#8a734a; font-size:10.5px; }
+.bdh-hits .dmg { margin-left:auto; font-weight:bold; color:#3a2a18; }
+.bdh-hits li.rf { border-color:#a02020; background:rgba(160,32,32,.07); }
+.bdh-rf-tag { color:#a02020; font-weight:bold; font-size:10px; text-transform:uppercase; letter-spacing:.5px; }
+
+/* Quality-proc chips (damage card resist buttons) */
+.bdh-qchip-row { display:flex; flex-wrap:wrap; gap:5px; padding:3px 10px 5px; }
+.bdh-qchip-row:empty { display:none; }
+.bdh-qchip { display:inline-flex; align-items:center; gap:6px; font-family:Georgia, serif; font-size:11px; color:#4a3a20; background:#e3d5b0; border:1px solid #b08d4f; border-radius:3px; padding:3px 8px; cursor:pointer; }
+.bdh-qchip:hover { border-color:#7a1f1f; }
+.bdh-qchip .ic { font-size:11px; }
+.bdh-qchip b { text-transform:uppercase; letter-spacing:.5px; font-size:10.5px; }
+
+/* Action buttons. .bdh-btn is the base; .primary (or a lone button) is maroon. */
+.bdh-card-actions { display:flex; gap:6px; padding:6px 10px 8px; }
+.bdh-btn, .bdh-card-actions button { flex:1; font-family:Georgia, serif; font-size:11.5px; text-transform:uppercase; letter-spacing:1px; font-weight:bold; padding:5px 8px; cursor:pointer; border:1px solid #8a6d3b; border-radius:3px; background:#e3d5b0; color:#4a3a20; }
+.bdh-btn:hover, .bdh-card-actions button:hover { border-color:#7a1f1f; color:#7a1f1f; }
+.bdh-btn.primary, .bdh-card-actions button.primary, .bdh-card-actions button:only-child { background:#5a2a2a; border-color:#7a1f1f; color:#e7d8b8; }
+.bdh-btn.primary:hover, .bdh-card-actions button.primary:hover, .bdh-card-actions button:only-child:hover { background:#7a1f1f; color:#fff; }
+/* Inline buttons living in a card line (overheat, per-target suppress Evade/Apply) — compact */
+.bdh-card .bdh-card-line button { font-family:Georgia, serif; font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; padding:2px 8px; margin-left:4px; cursor:pointer; border:1px solid #8a6d3b; border-radius:3px; background:#e3d5b0; color:#4a3a20; }
+.bdh-card .bdh-card-line button:hover { border-color:#7a1f1f; color:#7a1f1f; }
+/* Per-row test buttons in the spray / suppress checklists (WP Test etc.) — resist-chip look */
+.bdh-suppress-list, .bdh-spray-list { list-style:none; margin:5px 10px; padding:0; }
+.bdh-suppress-list li, .bdh-spray-list li { padding:3px 0; border-bottom:1px solid #d8c79c; }
+.bdh-suppress-list li:last-child, .bdh-spray-list li:last-child { border-bottom:none; }
+.bdh-suppress-list button, .bdh-spray-list button { font-family:Georgia, serif; font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; padding:2px 10px; margin:3px 0 1px 22px; cursor:pointer; border:1px solid #8a6d3b; border-radius:3px; background:#e3d5b0; color:#4a3a20; }
+.bdh-suppress-list button:hover, .bdh-spray-list button:hover { border-color:#7a1f1f; color:#7a1f1f; }
 
 /* Item edit sheet */
 .better-dh2e.item .bdh-item-header { display:flex; align-items:center; gap:8px; padding:6px; }
@@ -232,18 +295,6 @@
 .better-dh2e .bdh-wval input { width:46px; }
 .better-dh2e .bdh-header .fate-adj { display:flex; gap:3px; justify-content:center; margin-top:2px; }
 .better-dh2e .bdh-header .fate-adj button { flex:1; background:var(--bdh-panel); border:1px solid var(--bdh-gold); border-radius:3px; color:var(--bdh-gold); font-size:11px; line-height:1.3; padding:0; cursor:pointer; }
-
-/* Attack / damage chat cards */
-.bdh-card { border:1px solid #6b4a2b; border-radius:5px; padding:6px 8px; background:#efe6cd; color:#2b2017; font-family:Georgia, serif; }
-.bdh-card-head { font-weight:bold; color:#5a2a2a; border-bottom:1px solid #c9b896; margin-bottom:3px; }
-.bdh-card-line { font-size:12px; margin:2px 0; }
-.bdh-card-line .ok { color:#3d6a4a; font-weight:bold; }
-.bdh-card-line .fail, .bdh-card .fail { color:#7a2a2a; font-weight:bold; }
-.bdh-hits { margin:3px 0 4px 18px; font-size:12px; }
-.bdh-rf { color:#7a2a2a; font-weight:bold; }
-.bdh-dmg-break { color:#6b5a3a; font-size:11px; }
-.bdh-card-actions { display:flex; gap:6px; margin-top:4px; }
-.bdh-card-actions button { flex:1; background:#5a2a2a; color:#e7d8b8; border:none; border-radius:3px; font-size:11px; padding:3px; cursor:pointer; }
 
 .better-dh2e .bdh-auto { color:#1a1410; font-size:11px; }
 .better-dh2e .bdh-auto.partial { color:#a02020; }
