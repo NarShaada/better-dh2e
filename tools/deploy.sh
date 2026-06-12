@@ -20,7 +20,7 @@ $SSH "$HOST" "mkdir -p $DEST"
 # Sync only the files a Foundry system needs (no node_modules/docs/reference/test/git).
 sshpass -f "$PW_FILE" rsync -az --delete -e "ssh -o StrictHostKeyChecking=accept-new" \
   "$ROOT/system.json" "$ROOT/template.json" \
-  "$ROOT/scripts" "$ROOT/templates" "$ROOT/styles" "$ROOT/lang" \
+  "$ROOT/scripts" "$ROOT/templates" "$ROOT/styles" "$ROOT/lang" "$ROOT/fonts" \
   "$HOST:$DEST/"
 
 echo "Deployed to $HOST:$DEST"

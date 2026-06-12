@@ -1,6 +1,7 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
 import { battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
+import { themeChoices, themeBodyClasses, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
@@ -80,6 +81,17 @@ Hooks.once("init", () => {
     default: false
   });
 
+  game.settings.register("better-dh2e", "uiTheme", {
+    name: "UI theme",
+    hint: "Skin for sheets and chat cards. Classic is the original parchment look; Dataslate is a dark gothic-tech theme; Dossier is a refined light theme. Per-player setting — takes effect immediately.",
+    scope: "client",
+    config: true,
+    type: String,
+    choices: themeChoices(),
+    default: "classic",
+    onChange: (value) => applyUiTheme(value)
+  });
+
   // Conditions — replace Foundry's default set with our DH2e set.
   // Dead is kept so the combat-tracker "mark defeated" (CONFIG.specialStatusEffects.DEFEATED) still works.
   CONFIG.statusEffects = [
@@ -104,6 +116,15 @@ Hooks.once("setup", () => {
   if (Base) CONFIG.Token.rulerClass = makeDHTokenRuler(Base);
   if (CONFIG.Combat?.documentClass) CONFIG.Combat.documentClass = makeDHCombat(CONFIG.Combat.documentClass);
 });
+
+/** Swap the theme classes on <body>. Pure CSS switch — no re-render needed; live chat cards re-skin instantly. */
+function applyUiTheme(value) {
+  document.body.classList.remove(...ALL_THEME_CLASSES);
+  const classes = themeBodyClasses(value);
+  if (classes.length) document.body.classList.add(...classes);
+}
+
+Hooks.once("ready", () => applyUiTheme(game.settings.get("better-dh2e", "uiTheme")));
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));
 

@@ -1,0 +1,260 @@
+/* Better DH2e — Dataslate & Dossier themes (Plan 49).
+   Classic = no body class = styles/better-dh2e.css alone; nothing here loads for it.
+   body.bdh-themed       → structure shared by both modern themes
+   body.bdh-theme-*      → palette only (CSS custom properties) */
+
+/* ---------- Fonts (bundled, OFL) ---------- */
+@font-face { font-family:"Cinzel"; src:url("../fonts/Cinzel-700.woff2") format("woff2"); font-weight:700; font-display:swap; }
+@font-face { font-family:"Barlow"; src:url("../fonts/Barlow-400.woff2") format("woff2"); font-weight:400; font-display:swap; }
+@font-face { font-family:"Barlow"; src:url("../fonts/Barlow-600.woff2") format("woff2"); font-weight:600; font-display:swap; }
+@font-face { font-family:"Barlow Condensed"; src:url("../fonts/BarlowCondensed-500.woff2") format("woff2"); font-weight:500; font-display:swap; }
+@font-face { font-family:"Barlow Condensed"; src:url("../fonts/BarlowCondensed-600.woff2") format("woff2"); font-weight:600; font-display:swap; }
+@font-face { font-family:"IBM Plex Mono"; src:url("../fonts/IBMPlexMono-500.woff2") format("woff2"); font-weight:500; font-display:swap; }
+@font-face { font-family:"IBM Plex Mono"; src:url("../fonts/IBMPlexMono-700.woff2") format("woff2"); font-weight:700; font-display:swap; }
+
+/* ---------- Palettes ---------- */
+body.bdh-theme-dataslate {
+  --t-bg:#14171c; --t-panel:#1a1e25; --t-panel2:#20252e; --t-panel3:#272d38;
+  --t-line:#2e3540; --t-line2:#3d4654;
+  --t-ink:#d8d4c6; --t-ink2:#f0ecdd; --t-muted:#8e8a7a; --t-faint:#5d5a4e;
+  --t-gold:#c9a227; --t-gold2:#a3851f; --t-glow:rgba(201,162,39,.35);
+  --t-red:#c04a3a; --t-red2:#8e2b22; --t-green:#5fae82; --t-green2:#2e5c43;
+  --t-warp:#a87fd1; --t-field:#11141a; --t-on-accent:#15120a;
+}
+body.bdh-theme-dossier {
+  --t-bg:#ece3cc; --t-panel:#f3ecd9; --t-panel2:#e9dfc4; --t-panel3:#e0d4b4;
+  --t-line:#c8b68d; --t-line2:#a98f5d;
+  --t-ink:#2c251b; --t-ink2:#1c170f; --t-muted:#7c6a45; --t-faint:#a59575;
+  --t-gold:#8a6d1f; --t-gold2:#a3851f; --t-glow:rgba(138,109,31,.3);
+  --t-red:#962f25; --t-red2:#74221a; --t-green:#3f6b4f; --t-green2:#2e5c43;
+  --t-warp:#6d3d8e; --t-field:#fbf6e8; --t-on-accent:#fbf6e8;
+}
+
+/* ---------- Type system + chrome ---------- */
+body.bdh-themed { --t-display:"Cinzel",serif; --t-data:"Barlow",sans-serif; --t-cond:"Barlow Condensed",sans-serif; --t-mono:"IBM Plex Mono",monospace; }
+body.bdh-themed .better-dh2e { color:var(--t-ink); font-family:var(--t-data); }
+body.bdh-themed .better-dh2e .window-content,
+body.bdh-themed .better-dh2e form { background:var(--t-bg); color:var(--t-ink); }
+
+/* Form fields — critical on the dark palette */
+body.bdh-themed .better-dh2e input[type="text"],
+body.bdh-themed .better-dh2e input[type="number"],
+body.bdh-themed .better-dh2e select,
+body.bdh-themed .better-dh2e textarea {
+  background:var(--t-field); color:var(--t-ink); border:1px solid var(--t-line2);
+}
+body.bdh-themed .better-dh2e input:focus,
+body.bdh-themed .better-dh2e select:focus,
+body.bdh-themed .better-dh2e textarea:focus { border-color:var(--t-gold); box-shadow:0 0 6px var(--t-glow); outline:none; }
+body.bdh-themed .better-dh2e select option { background:var(--t-field); color:var(--t-ink); }
+body.bdh-themed .better-dh2e .bdh-edit { background:var(--t-field); border-color:var(--t-gold2); color:var(--t-ink); }
+
+/* ---------- Header ---------- */
+body.bdh-themed .better-dh2e .bdh-header { background:linear-gradient(180deg, var(--t-panel2), var(--t-bg)); border-bottom:1px solid var(--t-line); }
+body.bdh-themed .better-dh2e .bdh-header img { border:1px solid var(--t-gold2); outline:1px solid var(--t-line); outline-offset:2px; border-radius:0;
+  clip-path:polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+body.bdh-themed .better-dh2e .bdh-header .name input { font-family:var(--t-display); font-weight:700; font-size:19px; color:var(--t-ink2); border-bottom:1px solid var(--t-line2); }
+body.bdh-themed .better-dh2e .bdh-header .meta label { font-family:var(--t-cond); font-weight:600; font-size:10px; letter-spacing:2px; color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-header .fate { background:var(--t-panel); border:1px solid var(--t-line2); border-radius:0;
+  clip-path:polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+body.bdh-themed .better-dh2e .bdh-header .fate .lbl { font-family:var(--t-cond); letter-spacing:2.5px; color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-header .fate .v { font-family:var(--t-mono); color:var(--t-gold); }
+body.bdh-themed .better-dh2e .bdh-header .fate-adj button { background:var(--t-panel2); border:1px solid var(--t-line2); color:var(--t-muted); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-header .fate-adj button:hover { color:var(--t-gold); border-color:var(--t-gold2); }
+
+/* ---------- Tabs ---------- */
+body.bdh-themed .better-dh2e nav.tabs { background:transparent; border-radius:0; border-bottom:1px solid var(--t-line2); gap:2px; padding:0 8px; }
+body.bdh-themed .better-dh2e nav.tabs .item { font-family:var(--t-cond); font-weight:600; font-variant:normal; text-transform:uppercase; font-size:12px;
+  letter-spacing:2px; color:var(--t-muted); border-right:none; flex:0 1 auto; padding:8px 14px 7px; }
+body.bdh-themed .better-dh2e nav.tabs .item:hover { color:var(--t-ink); }
+body.bdh-themed .better-dh2e nav.tabs .item.active { background:var(--t-panel); color:var(--t-gold); font-weight:600;
+  box-shadow:inset 0 2px 0 var(--t-gold), 0 0 8px var(--t-glow); }
+body.bdh-themed .better-dh2e nav.tabs.secondary { border-bottom:1px solid var(--t-line); margin-top:8px; }
+body.bdh-themed .better-dh2e nav.tabs.secondary .item.active { background:transparent; color:var(--t-ink2); border-radius:0;
+  box-shadow:inset 0 -2px 0 var(--t-red); }
+
+/* ---------- Characteristics ---------- */
+body.bdh-themed .better-dh2e .char .bonus { background:var(--t-gold); color:var(--t-on-accent); font-family:var(--t-mono); font-weight:700; border-radius:0; }
+body.bdh-themed .better-dh2e .char .box { background:var(--t-panel2); border:1px solid var(--t-line2); border-radius:0;
+  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%); transition:border-color .15s, background .15s; }
+body.bdh-themed .better-dh2e .char .box .val { font-family:var(--t-mono); color:var(--t-ink2); }
+body.bdh-themed .better-dh2e .char .box .nm { font-family:var(--t-cond); letter-spacing:2px; color:var(--t-muted); }
+body.bdh-themed .better-dh2e .char .box.rollable:hover { border-color:var(--t-gold); background:var(--t-panel3); box-shadow:0 0 8px var(--t-glow); }
+body.bdh-themed .better-dh2e .char.inf { border-left:1px dashed var(--t-gold2); }
+body.bdh-themed .better-dh2e .char.inf .box { border-color:var(--t-gold2); }
+body.bdh-themed .better-dh2e .char.impaired .box .val, body.bdh-themed .better-dh2e .char.impaired .bonus { color:var(--t-red); }
+body.bdh-themed .better-dh2e .char.impaired .bonus { background:var(--t-red2); color:#f2e8de; }
+body.bdh-themed .better-dh2e .bdh-unnat { background:var(--t-gold); color:var(--t-on-accent); }
+body.bdh-themed .better-dh2e .bdh-unnat .bdh-plus, body.bdh-themed .better-dh2e .bdh-unnat input { color:var(--t-on-accent); }
+
+/* ---------- Fatigue ---------- */
+body.bdh-themed .better-dh2e .fatigue { background:var(--t-panel); border:1px solid var(--t-line); border-radius:0; }
+body.bdh-themed .better-dh2e .fatigue .lbl { font-family:var(--t-cond); letter-spacing:2px; color:var(--t-muted); }
+body.bdh-themed .better-dh2e .fatigue .bar { background:var(--t-panel3); border-radius:0; }
+body.bdh-themed .better-dh2e .fatigue .bar i { background:var(--t-gold2); }
+body.bdh-themed .better-dh2e .fatigue .v { font-family:var(--t-mono); color:var(--t-ink2); }
+body.bdh-themed .better-dh2e .bdh-fat-btn { background:var(--t-panel2); border:1px solid var(--t-line2); color:var(--t-muted); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-fat-btn:hover { color:var(--t-gold); border-color:var(--t-gold2); }
+
+/* ---------- Skills ---------- */
+body.bdh-themed .better-dh2e .inv-toolbar button { background:transparent; border:1px solid var(--t-line2); color:var(--t-muted);
+  font-family:var(--t-cond); letter-spacing:1.5px; text-transform:uppercase; border-radius:0; }
+body.bdh-themed .better-dh2e .inv-toolbar button:hover { color:var(--t-gold); border-color:var(--t-gold2); }
+body.bdh-themed .better-dh2e .skill { border-bottom:1px solid var(--t-line); padding:3px 4px; }
+body.bdh-themed .better-dh2e .skill[data-action]:hover { background:var(--t-panel2); }
+body.bdh-themed .better-dh2e .skill[data-action]:hover .snm { color:var(--t-gold); text-decoration:none; }
+body.bdh-themed .better-dh2e .skill .tier i { width:7px; height:7px; border:1px solid var(--t-line2); border-radius:0; transform:rotate(45deg); }
+body.bdh-themed .better-dh2e .skill .tier i.on { background:var(--t-red); border-color:var(--t-red); }
+body.bdh-themed .better-dh2e .skill .sval { font-family:var(--t-mono); color:var(--t-ink2); }
+body.bdh-themed .better-dh2e .skill-group-head { font-family:var(--t-cond); font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-fav { color:var(--t-faint); }
+body.bdh-themed .better-dh2e .bdh-fav.on { color:var(--t-gold); text-shadow:0 0 6px var(--t-glow); }
+
+/* ---------- Sections & item rows (Abilities / Gear / Psychic / Afflictions / Advancement) ---------- */
+body.bdh-themed .better-dh2e .bdh-section { background:var(--t-panel); border:1px solid var(--t-line); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-section-head { background:var(--t-panel2); color:var(--t-gold); border-bottom:1px solid var(--t-line);
+  font-family:var(--t-cond); font-weight:600; font-variant:normal; text-transform:uppercase; letter-spacing:2.5px; font-size:12px; }
+body.bdh-themed .better-dh2e .bdh-subhead { background:var(--t-panel3); color:var(--t-muted); font-family:var(--t-cond); letter-spacing:1.5px; }
+body.bdh-themed .better-dh2e .bdh-item-row { border-bottom:1px solid var(--t-line); }
+body.bdh-themed .better-dh2e .bdh-name { color:var(--t-ink2); }
+body.bdh-themed .better-dh2e .bdh-name:hover { color:var(--t-gold); text-decoration:none; }
+body.bdh-themed .better-dh2e .bdh-desc-line, body.bdh-themed .better-dh2e .bdh-meta, body.bdh-themed .better-dh2e .bdh-tier { color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-empty { color:var(--t-faint); }
+body.bdh-themed .better-dh2e .bdh-del { color:var(--t-red); }
+body.bdh-themed .better-dh2e .bdh-add { background:transparent; color:var(--t-muted); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-add:hover { color:var(--t-gold); }
+body.bdh-themed .better-dh2e .bdh-tag { color:var(--t-muted); border-color:var(--t-line2); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-clip { font-family:var(--t-mono); color:var(--t-ink); background:var(--t-field); border:1px solid var(--t-line2); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-eq.on { color:var(--t-green); }
+body.bdh-themed .better-dh2e .bdh-gear-bar { color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-gear-bar b { color:var(--t-ink2); font-family:var(--t-mono); }
+body.bdh-themed .better-dh2e .bdh-over { color:var(--t-red); }
+body.bdh-themed .better-dh2e .bdh-notes { background:var(--t-field); color:var(--t-ink); border:1px solid var(--t-line2); border-radius:0; font-family:var(--t-data); }
+
+/* ---------- Buttons ---------- */
+body.bdh-themed .better-dh2e .bdh-atk { background:var(--t-red2); color:#f2e8de; border:1px solid var(--t-red);
+  font-family:var(--t-cond); font-weight:600; letter-spacing:1px; border-radius:0;
+  clip-path:polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px); transition:all .15s; }
+body.bdh-themed .better-dh2e .bdh-atk:hover { background:var(--t-red); box-shadow:0 0 10px rgba(192,74,58,.35); }
+body.bdh-themed .better-dh2e .bdh-buy { background:var(--t-green2); color:#e8f0e8; border:1px solid var(--t-green); border-radius:0;
+  font-family:var(--t-cond); letter-spacing:.5px;
+  clip-path:polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px); }
+body.bdh-themed .better-dh2e .bdh-buy:hover { background:var(--t-green); color:var(--t-on-accent); }
+body.bdh-themed .better-dh2e .bdh-mode { background:var(--t-panel2); color:var(--t-muted); border:1px solid var(--t-line2); border-radius:0;
+  font-family:var(--t-cond); font-variant:normal; text-transform:uppercase; letter-spacing:2px;
+  clip-path:polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+body.bdh-themed .better-dh2e .bdh-mode.on { background:var(--t-gold); color:var(--t-on-accent); border-color:var(--t-gold); }
+body.bdh-themed .better-dh2e .bdh-reload { background:var(--t-panel2); border:1px solid var(--t-line2); color:var(--t-muted); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-reload:hover { color:var(--t-gold); }
+
+/* ---------- Combat sub-tab ---------- */
+body.bdh-themed .better-dh2e .bdh-armtb { background:var(--t-green2); color:#e8f0e8; font-family:var(--t-mono); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-armap { background:var(--t-panel2); border:1px solid var(--t-line2); border-radius:0; font-family:var(--t-mono); color:var(--t-ink2);
+  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%); }
+body.bdh-themed .better-dh2e .bdh-armlbl { font-family:var(--t-cond); letter-spacing:1.5px; color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-ff-line { color:var(--t-warp); font-family:var(--t-cond); letter-spacing:1px; }
+body.bdh-themed .better-dh2e .bdh-wounds label, body.bdh-themed .better-dh2e .bdh-xp label { font-family:var(--t-cond); letter-spacing:1.5px; color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-move, body.bdh-themed .better-dh2e .bdh-init { color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-move b, body.bdh-themed .better-dh2e .bdh-init b { font-family:var(--t-mono); color:var(--t-ink2); }
+
+/* ---------- Afflictions / Psychic / Advancement ---------- */
+body.bdh-themed .better-dh2e .bdh-track { background:var(--t-panel); border:1px solid var(--t-line); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-track-head { color:var(--t-gold); font-family:var(--t-cond); font-variant:normal; text-transform:uppercase; letter-spacing:2px; }
+body.bdh-themed .better-dh2e .bdh-track-tier { color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-psy-bar label, body.bdh-themed .better-dh2e .bdh-psy-class label,
+body.bdh-themed .better-dh2e .bdh-size-row label { font-family:var(--t-cond); font-variant:normal; text-transform:uppercase; letter-spacing:2px; color:var(--t-gold); }
+body.bdh-themed .better-dh2e .bdh-pr-val, body.bdh-themed .better-dh2e .bdh-xp-v { font-family:var(--t-mono); color:var(--t-ink2); }
+body.bdh-themed .better-dh2e .bdh-xp-free { color:var(--t-green); }
+body.bdh-themed .better-dh2e .bdh-cast { color:var(--t-warp); }
+body.bdh-themed .better-dh2e .bdh-apt-chip { background:var(--t-panel2); border:1px solid var(--t-line2); color:var(--t-ink); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-log-row { border-bottom:1px solid var(--t-line); }
+body.bdh-themed .better-dh2e .bdh-log-detail { color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-log-cost { color:var(--t-gold); font-family:var(--t-mono); }
+body.bdh-themed .better-dh2e .bdh-mode-hint, body.bdh-themed .better-dh2e .bdh-hint2 { color:var(--t-faint); }
+body.bdh-themed .better-dh2e .bdh-warn { color:var(--t-red); }
+body.bdh-themed .better-dh2e .bdh-cost-done { color:var(--t-green); }
+body.bdh-themed .better-dh2e .bdh-maxed { color:var(--t-faint); }
+
+/* ---------- Item sheet ---------- */
+body.bdh-themed .better-dh2e.item .bdh-item-header img { border:1px solid var(--t-gold2); border-radius:0;
+  clip-path:polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+body.bdh-themed .better-dh2e.item .bdh-item-header input { font-family:var(--t-display); color:var(--t-ink2); border-bottom:1px solid var(--t-line2); }
+body.bdh-themed .better-dh2e.item .bdh-fields label, body.bdh-themed .better-dh2e.item .bdh-desc-label,
+body.bdh-themed .better-dh2e.item .bdh-armour-locs label { font-family:var(--t-cond); letter-spacing:1.5px; color:var(--t-muted); }
+body.bdh-themed .better-dh2e.item textarea.bdh-desc { background:var(--t-field); color:var(--t-ink); border:1px solid var(--t-line2); border-radius:0; font-family:var(--t-data); }
+body.bdh-themed .better-dh2e.item .bdh-list-section { border:1px solid var(--t-line); border-radius:0; }
+body.bdh-themed .better-dh2e.item .bdh-list-head { background:var(--t-panel2); color:var(--t-gold); font-family:var(--t-cond);
+  font-variant:normal; text-transform:uppercase; letter-spacing:2px; }
+body.bdh-themed .better-dh2e.item .bdh-list-row { border-bottom:1px solid var(--t-line); }
+body.bdh-themed .better-dh2e.item .bdh-add-row button { background:var(--t-red2); color:#f2e8de; border:1px solid var(--t-red); border-radius:0; }
+
+/* ============================================================
+   CHAT CARDS (scoped to body.bdh-themed; palette via body.bdh-theme-*)
+   ============================================================ */
+body.bdh-themed .bdh-card {
+  font-family:var(--t-data); color:var(--t-ink); background:var(--t-panel);
+  border:1px solid var(--t-line2); border-left:3px solid var(--t-gold); border-radius:0; padding:0 0 6px;
+  box-shadow:0 2px 10px rgba(0,0,0,.25);
+}
+body.bdh-themed .bdh-card.ok { border-left-color:var(--t-green); }
+body.bdh-themed .bdh-card.fail { border-left-color:var(--t-red); }
+body.bdh-themed .bdh-card-head {
+  font-family:var(--t-cond); font-weight:600; font-size:13px; letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--t-ink2); background:var(--t-panel2); border-bottom:1px solid var(--t-line);
+  padding:6px 10px; margin-bottom:4px;
+}
+body.bdh-themed .bdh-card-grid { padding:2px 10px; font-size:12px; }
+body.bdh-themed .bdh-card-grid .k { font-family:var(--t-cond); letter-spacing:1.5px; text-transform:uppercase; font-size:10.5px; color:var(--t-muted); }
+body.bdh-themed .bdh-card-grid .v { font-family:var(--t-mono); color:var(--t-ink2); }
+body.bdh-themed .bdh-card-line { padding:0 10px; color:var(--t-muted); }
+body.bdh-themed .bdh-card-line .ok { color:var(--t-green); }
+body.bdh-themed .bdh-card-line.fail, body.bdh-themed .bdh-card .fail { color:var(--t-red); }
+body.bdh-themed .bdh-quals { font-family:var(--t-cond); letter-spacing:.5px; }
+
+/* Result banner — the "stamp" */
+body.bdh-themed .bdh-card-result {
+  margin:7px 10px 3px; padding:5px 8px; font-family:var(--t-display); font-weight:700;
+  font-size:13px; letter-spacing:2.5px; text-transform:uppercase;
+}
+body.bdh-themed .bdh-card-result.ok { color:var(--t-green); border:1px solid var(--t-green2); background:rgba(95,174,130,.08); }
+body.bdh-themed .bdh-card-result.fail { color:var(--t-red); border:1px solid var(--t-red2); background:rgba(192,74,58,.08); }
+body.bdh-themed .bdh-card-degrees { color:var(--t-muted); font-family:var(--t-cond); letter-spacing:1.5px; text-transform:uppercase; font-size:11px; }
+body.bdh-themed .bdh-fate-note { color:var(--t-gold); font-family:var(--t-cond); letter-spacing:1px; }
+
+/* Hits — numbered chips */
+body.bdh-themed .bdh-hits { list-style:none; counter-reset:bdh-hit; margin:6px 10px; padding:0;
+  display:flex; flex-direction:column; gap:3px; }
+body.bdh-themed .bdh-hits li { counter-increment:bdh-hit; background:var(--t-panel2); border:1px solid var(--t-line);
+  padding:3px 8px; font-size:12px; }
+body.bdh-themed .bdh-hits li::before { content:counter(bdh-hit); font-family:var(--t-mono); font-size:10px;
+  color:var(--t-gold); margin-right:8px; }
+body.bdh-themed .bdh-rf { color:var(--t-red); font-family:var(--t-cond); letter-spacing:1px; text-transform:uppercase; font-weight:600; }
+body.bdh-themed .bdh-dmg-break { color:var(--t-faint); font-family:var(--t-mono); font-size:10.5px; }
+body.bdh-themed .bdh-qnote, body.bdh-themed .chat-message .bdh-qnote { color:var(--t-red); }
+body.bdh-themed .bdh-note { color:var(--t-muted); font-style:italic; }
+body.bdh-themed .bdh-effect { padding:0 10px; }
+body.bdh-themed .bdh-blast-pool { font-family:var(--t-cond); letter-spacing:.5px; }
+
+/* Psychic */
+body.bdh-themed .bdh-phenomena { margin:5px 10px 2px; padding:4px 8px; border:1px dashed var(--t-warp); color:var(--t-warp);
+  font-family:var(--t-cond); font-size:11.5px; letter-spacing:1.5px; text-transform:uppercase; text-align:center; }
+
+/* Card buttons */
+body.bdh-themed .bdh-card-actions { padding:2px 10px 4px; }
+body.bdh-themed .bdh-card-actions button, body.bdh-themed .bdh-card button[data-bdh] {
+  font-family:var(--t-cond); font-weight:600; font-size:11.5px; letter-spacing:1.5px; text-transform:uppercase;
+  background:var(--t-red2); color:#f2e8de; border:1px solid var(--t-red); border-radius:0; padding:4px 8px; cursor:pointer;
+  clip-path:polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); transition:all .15s;
+}
+body.bdh-themed .bdh-card-actions button:hover, body.bdh-themed .bdh-card button[data-bdh]:hover {
+  background:var(--t-red); color:#fff; box-shadow:0 0 10px rgba(192,74,58,.3);
+}
+/* Inline quality-test buttons (Shocking/Toxic/etc on damage cards) stay compact */
+body.bdh-themed .bdh-card .bdh-card-line button[data-bdh] {
+  background:var(--t-panel2); color:var(--t-ink); border:1px solid var(--t-line2); padding:1px 8px; font-size:10.5px;
+}
+body.bdh-themed .bdh-card .bdh-card-line button[data-bdh]:hover { border-color:var(--t-gold2); color:var(--t-gold); background:var(--t-panel2); box-shadow:none; }
+
+/* Spray card checklist */
+body.bdh-themed .bdh-spray-list { margin:4px 10px; padding-left:0; list-style:none; }
+body.bdh-themed .bdh-spray-list li { display:flex; align-items:center; gap:6px; padding:2px 0; border-bottom:1px solid var(--t-line); }
