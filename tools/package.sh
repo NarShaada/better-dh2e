@@ -7,6 +7,6 @@ cd "$(dirname "$0")/.."
 rm -f better-dh2e.zip
 zip -r better-dh2e.zip \
   system.json template.json LICENSE README.md \
-  scripts styles lang templates \
+  scripts styles lang templates fonts \
   -x '*.DS_Store' >/dev/null
 echo "Built better-dh2e.zip ($(du -h better-dh2e.zip | cut -f1))"
