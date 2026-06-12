@@ -639,6 +639,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.isCustom = this._advancementMode === "custom";
     context.isSimple = this._advancementMode === "simple";
     context.isPlay = !context.isCustom && !context.isSimple;
+    // Fate pips for the top bar: one per max, the first `value` filled.
+    const fv = this.document.system.fate?.value ?? 0, fm = this.document.system.fate?.max ?? 0;
+    context.fatePips = Array.from({ length: fm }, (_, i) => ({ on: i < fv }));
     const pr = this.document.system.psyRating ?? 0;
     context.showPsyker = pr > 0;
     context.psykerClassChoices = CONFIG.BDH.psykerClasses;

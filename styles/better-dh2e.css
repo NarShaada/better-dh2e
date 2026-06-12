@@ -5,15 +5,26 @@
 .better-dh2e .window-content, .better-dh2e form { background:var(--bdh-parch); }
 
 /* Header */
-.better-dh2e .bdh-header { display:flex; align-items:center; gap:12px; padding:8px 10px; }
-.better-dh2e .bdh-header img { width:48px; height:48px; border:2px solid var(--bdh-gold); border-radius:6px; flex:0 0 auto; object-fit:cover; }
-.better-dh2e .bdh-header .name { flex:0 0 200px; }
-.better-dh2e .bdh-header .name input { font-size:18px; font-weight:bold; width:100%; color:var(--bdh-ink); background:transparent; border:none; border-bottom:1px solid var(--bdh-brown); }
-.better-dh2e .bdh-header .meta { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:2px 12px; font-size:11px; }
-.better-dh2e .bdh-header .meta label { color:var(--bdh-muted); text-transform:uppercase; font-size:9px; margin-right:4px; }
-.better-dh2e .bdh-header .fate { text-align:center; background:var(--bdh-panel); border:2px solid var(--bdh-gold); border-radius:6px; padding:3px 9px; }
-.better-dh2e .bdh-header .fate .lbl { font-size:9px; text-transform:uppercase; color:var(--bdh-muted); }
-.better-dh2e .bdh-header .fate .v { font-size:15px; font-weight:bold; color:var(--bdh-gold); }
+.better-dh2e .bdh-header { display:flex; align-items:center; gap:14px; padding:10px 12px; }
+.better-dh2e .bdh-header .portrait { flex:0 0 auto; }
+.better-dh2e .bdh-header .portrait img { width:64px; height:64px; border:2px solid var(--bdh-gold); border-radius:6px; object-fit:cover; display:block; }
+.better-dh2e .bdh-header .id-block { flex:1; min-width:0; }
+.better-dh2e .bdh-header .nm input { font-size:22px; font-weight:bold; width:100%; color:var(--bdh-ink); background:transparent; border:none; border-bottom:1px solid transparent; font-family:inherit; }
+.better-dh2e .bdh-header .nm input:hover, .better-dh2e .bdh-header .nm input:focus { border-bottom-color:var(--bdh-brown); }
+.better-dh2e .bdh-header .bio-row { display:flex; flex-wrap:wrap; gap:3px 18px; margin-top:6px; }
+.better-dh2e .bdh-header .bio { font-size:12px; }
+.better-dh2e .bdh-header .bio b { display:block; color:var(--bdh-muted); text-transform:uppercase; font-size:9px; letter-spacing:1px; font-weight:bold; }
+.better-dh2e .bdh-header .bio span { color:var(--bdh-ink); }
+.better-dh2e .bdh-header .bio input { font-size:12px; color:var(--bdh-ink); background:transparent; border:none; border-bottom:1px solid var(--bdh-brown); width:auto; max-width:120px; }
+.better-dh2e .bdh-header .fate { flex:0 0 auto; text-align:center; background:var(--bdh-panel); border:2px solid var(--bdh-gold); border-radius:6px; padding:5px 12px; }
+.better-dh2e .bdh-header .fate[data-action] { cursor:pointer; }
+.better-dh2e .bdh-header .fate .lbl { font-size:9px; text-transform:uppercase; color:var(--bdh-muted); letter-spacing:1.5px; }
+.better-dh2e .bdh-header .fate-pips { display:flex; gap:4px; justify-content:center; margin:5px 0 3px; }
+.better-dh2e .bdh-header .fate-pips i { width:12px; height:12px; display:block; border-radius:50%; border:1px solid var(--bdh-gold); }   /* Classic: round pips */
+.better-dh2e .bdh-header .fate-pips i.on { background:var(--bdh-gold); }
+.better-dh2e .bdh-header .fate .v { font-size:13px; font-weight:bold; color:var(--bdh-gold); }
+.better-dh2e .bdh-header .fate-adj { display:flex; gap:3px; justify-content:center; margin-top:3px; }
+.better-dh2e .bdh-header .fate-adj button { width:18px; height:18px; line-height:1; padding:0; font-size:12px; flex:0 0 auto; }
 
 /* Tabs */
 .better-dh2e nav.tabs { display:flex; background:var(--bdh-maroon); border-radius:4px; overflow:hidden; }
