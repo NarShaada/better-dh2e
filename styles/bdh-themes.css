@@ -258,3 +258,15 @@ body.bdh-themed .bdh-card .bdh-card-line button[data-bdh]:hover { border-color:v
 /* Spray card checklist */
 body.bdh-themed .bdh-spray-list { margin:4px 10px; padding-left:0; list-style:none; }
 body.bdh-themed .bdh-spray-list li { display:flex; align-items:center; gap:6px; padding:2px 0; border-bottom:1px solid var(--t-line); }
+
+/* Foundry's core .chat-message frame around our cards (sender, timestamp, border) — match the
+   theme, but ONLY for messages containing a bdh card; plain chat and core rolls stay core-styled. */
+body.bdh-themed .chat-message:has(.bdh-card) {
+  background:var(--t-panel2); border:1px solid var(--t-line2); color:var(--t-muted);
+}
+body.bdh-themed .chat-message:has(.bdh-card) .message-header { color:var(--t-muted); }
+body.bdh-themed .chat-message:has(.bdh-card) .message-sender { color:var(--t-ink2); }
+body.bdh-themed .chat-message:has(.bdh-card) .message-metadata,
+body.bdh-themed .chat-message:has(.bdh-card) .message-timestamp { color:var(--t-faint); }
+body.bdh-themed .chat-message:has(.bdh-card) .message-header a,
+body.bdh-themed .chat-message:has(.bdh-card) .message-delete { color:var(--t-muted); }
