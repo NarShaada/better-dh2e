@@ -2,6 +2,7 @@
 import { BDH } from "./config.mjs";
 import { battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
 import { themeChoices, themeBodyClasses, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
+import { registerTokenPrefix } from "./helpers/token-prefix.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
@@ -100,6 +101,17 @@ Hooks.once("init", () => {
     default: "classic",
     onChange: (value) => applyUiTheme(value)
   });
+
+  game.settings.register("better-dh2e", "tokenPrefixes", {
+    name: "NPC token prefixes",
+    hint: "When enabled, each newly placed unlinked NPC token gets a random Inquisition-flavour prefix (e.g. Filthy Heretic, Lowly Heretic) so multiple tokens from one stat block are easy to tell apart. Token names only — the actor sheet is untouched. Acolytes and linked NPCs are never prefixed.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  registerTokenPrefix();
 
   // Conditions — replace Foundry's default set with our DH2e set.
   // Dead is kept so the combat-tracker "mark defeated" (CONFIG.specialStatusEffects.DEFEATED) still works.

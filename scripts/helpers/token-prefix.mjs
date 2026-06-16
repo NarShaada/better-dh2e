@@ -43,3 +43,44 @@ export function stripKnownPrefix(name, list) {
   if (sp > 0 && list.includes(name.slice(0, sp))) return name.slice(sp + 1);
   return name;
 }
+
+/* ---- Runtime (Foundry) — executed only when called, never at import ---- */
+
+const _inflight = new Map();   // "<sceneId>:<actorId>" -> Set(prefix) for the current creation batch
+let _inflightClear = false;
+
+// preCreateToken handler: prefix an unlinked NPC token with a non-duplicate adjective (token name only).
+export function applyTokenPrefix(tokenDoc) {
+  if (!game.settings.get("better-dh2e", "tokenPrefixes")) return;
+  const actor = tokenDoc.actor;
+  if (!actor || actor.type !== "npc" || tokenDoc.actorLink) return;
+  const raw = (tokenDoc.name || actor.name || "").trim();
+  if (!raw) return;
+  const base = stripKnownPrefix(raw, PREFIXES);
+  if (!base) return;
+
+  const scene = tokenDoc.parent, actorId = tokenDoc.actorId;
+  const key = `${scene?.id}:${actorId}`;
+  const used = new Set(_inflight.get(key) || []);
+  if (scene && actorId) {
+    for (const t of scene.tokens) {
+      if (t.actorId !== actorId) continue;
+      const pre = extractPrefix(t.name, base);
+      if (pre) used.add(pre);
+    }
+  }
+
+  const prefix = pickPrefix(PREFIXES, used);
+  const set = _inflight.get(key) || new Set();
+  set.add(prefix); _inflight.set(key, set);
+  if (!_inflightClear) { _inflightClear = true; setTimeout(() => { _inflight.clear(); _inflightClear = false; }, 0); }
+
+  tokenDoc.updateSource({ name: `${prefix} ${base}` });
+}
+
+// Wire the preCreateToken hook (call once at init).
+export function registerTokenPrefix() {
+  Hooks.on("preCreateToken", (tokenDoc) => {
+    try { applyTokenPrefix(tokenDoc); } catch (e) { console.error("better-dh2e | token-prefix", e); }
+  });
+}
