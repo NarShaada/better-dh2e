@@ -12,7 +12,8 @@ import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { coverApFromInput } from "../helpers/cover.mjs";
 import { facingFromDelta } from "../helpers/facing.mjs";
-import { coverApForTarget } from "../canvas/cover.mjs";
+import { coverPieceForTarget } from "../canvas/cover.mjs";
+import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { sizeToHitModifier } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
@@ -573,13 +574,17 @@ async function applyDamage(message) {
   if (!target) { ui.notifications.warn("No target to apply damage to."); return; }
   const sys = target.system;
   const qualities = f.qualities ?? [];
-  // Cover (Phase 1, manual): an In-Cover target prompts for cover AP added at every hit location.
+  // Cover: the prompt appears whenever the target is In Cover. Phase 2b only chooses the pre-filled value —
+  // the piece's AP when the shot crossed a defended side AND struck a protected location, else 0 — and the
+  // GM's confirmed value always applies (geometry never blocks the GM). Manual In Cover (no piece) pre-fills 0.
   let coverAp = 0;
   if (target.statuses?.has?.("inCover")) {
-    const prefill = coverApForTarget(target);   // piece's AP if standing in cover (& mechanics on); else 0
+    const piece = coverPieceForTarget(target);
+    const prefill = coverPrefill(piece, f.coverApproach ?? null, (f.hits ?? []).map((h) => h.location));
+    const ctxLine = piece ? `<p class="notes">${coverContextLabel(piece, f.coverApproach ?? null)}</p>` : "";
     const choice = await DialogV2.prompt({
       window: { title: "Apply Damage — Cover" },
-      content: `<div class="form-group"><label>Cover (AP)</label><input type="text" name="cover" value="${prefill}" autofocus/></div>`,
+      content: `<div class="form-group"><label>Cover (AP)</label><input type="text" name="cover" value="${prefill}" autofocus/></div>${ctxLine}`,
       ok: { label: "Apply", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
       rejectClose: false,
     });
