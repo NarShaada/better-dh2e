@@ -63,6 +63,28 @@ export function coverAutoDecision({ inCover, hasCondition, wasAuto }) {
   return "none";
 }
 
+/** True iff the cover piece exists and the shot's approach side is one it defends. */
+export function isApproachDefended(piece, approachSide) {
+  return !!(piece && approachSide && piece.sides?.includes(approachSide));
+}
+
+/** Pre-fill value for the cover-AP prompt: the piece's AP only when the shot came from a defended side
+ *  AND struck a protected location; otherwise 0 (and 0 for a manual In Cover / null piece). */
+export function coverPrefill(piece, approachSide, hitLocations) {
+  if (!isApproachDefended(piece, approachSide)) return 0;
+  const protectedHit = (hitLocations ?? []).some((l) => piece.locations?.includes(l));
+  return protectedHit ? (Number(piece.ap) || 0) : 0;
+}
+
+/** Human context line for the cover prompt, e.g.
+ *  "Shot approached from N (undefended) · protects Right Leg, Left Leg". */
+export function coverContextLabel(piece, approachSide) {
+  const from = approachSide ? SIDE_LABELS[approachSide] : "unknown";
+  const dir = approachSide ? (isApproachDefended(piece, approachSide) ? "defended" : "undefended") : "no direction";
+  const locs = piece?.locations?.length ? piece.locations.map((l) => LOCATION_LABELS[l]).join(", ") : "nothing";
+  return `Shot approached from ${from} (${dir}) · protects ${locs}`;
+}
+
 // --- world-setting wrappers (not unit-tested; thin) ---
 
 /** Read the template library from the world setting, validated. */
