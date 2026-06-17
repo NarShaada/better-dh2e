@@ -23,6 +23,7 @@ import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
 import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 import { makeDHCombat } from "./documents/combat.mjs";
 import { registerCoverAutomation } from "./canvas/cover.mjs";
+import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -171,6 +172,7 @@ function applyUiTheme(value) {
 Hooks.once("ready", () => {
   applyUiTheme(game.settings.get("better-dh2e", "uiTheme"));
   registerCoverAutomation();
+  initCoverOverlay();
 });
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));
