@@ -113,10 +113,11 @@ export function beginCoverPlacement(template) {
   endCoverPlacement();
   ui.notifications.info(`Placing "${template.name}" — left-click cells, right-click or Esc to stop.`);
   const onDown = async (event) => {
-    const btn = event.data?.originalEvent?.button ?? event.data?.button ?? 0;
+    // Foundry v13/v14 uses PIXI v7 FederatedPointerEvent — button + getLocalPosition live on the event itself.
+    const btn = event.button ?? event.originalEvent?.button ?? 0;
     if (btn === 2) { endCoverPlacement(); return; }       // right-click cancels
     if (btn !== 0) return;
-    const p = event.data.getLocalPosition(canvas.stage);  // scene coordinates
+    const p = event.getLocalPosition(canvas.stage);       // scene coordinates
     await createCoverPiece(canvas.scene, p, template);
   };
   const onKey = (e) => { if (e.key === "Escape") endCoverPlacement(); };
