@@ -219,18 +219,15 @@ Hooks.on("getSceneControlButtons", (controls) => {
   if (game.user.isGM) {
     group.tools.bdhCoverTemplates = {
       name: "bdhCoverTemplates", title: "Cover Templates", icon: "fa-solid fa-shield-halved", button: true,
-      onChange: () => new CoverTemplatesApp().render(true),
       onClick: () => new CoverTemplatesApp().render(true),
     };
     group.tools.bdhCoverClear = {
       name: "bdhCoverClear", title: "Clear All Cover", icon: "fa-solid fa-broom", button: true,
-      onChange: () => confirmClearCover(),
       onClick: () => confirmClearCover(),
     };
   }
   group.tools.bdhCoverVisibility = {
     name: "bdhCoverVisibility", title: "Toggle Cover Visibility", icon: "fa-solid fa-eye", button: true,
-    onChange: () => toggleCoverVisibility(),
     onClick: () => toggleCoverVisibility(),
   };
 });

@@ -3,7 +3,7 @@ import {
   SIDE_KEYS, SIDE_LABELS, LOCATION_KEYS, LOCATION_LABELS,
   newTemplate, validateTemplate, summarizeTemplate, loadLibrary, saveLibrary,
 } from "../helpers/cover-templates.mjs";
-import { beginCoverPlacement } from "../canvas/cover.mjs";
+import { beginCoverPlacement, endCoverPlacement } from "../canvas/cover.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
@@ -110,5 +110,11 @@ export class CoverTemplatesApp extends HandlebarsApplicationMixin(ApplicationV2)
     if (!current) return;
     await this.minimize();
     beginCoverPlacement(current);
+  }
+
+  // Placement lives only as long as this manager is open (minimised still counts). Closing it stops stamping.
+  _onClose(options) {
+    super._onClose?.(options);
+    endCoverPlacement();
   }
 }
