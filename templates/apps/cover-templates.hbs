@@ -1,0 +1,19 @@
+<div class="bdh-cover-app">
+  <ol class="bdh-cover-list">
+    {{#each templates}}
+    <li class="bdh-cover-row" data-id="{{this.id}}">
+      <span class="bdh-cover-swatch" style="background:{{this.color}}"></span>
+      <span class="bdh-cover-name">{{this.name}}</span>
+      <span class="bdh-cover-sum">{{this.summary}}</span>
+      <span class="bdh-cover-actions">
+        <button type="button" data-action="place" data-id="{{this.id}}" title="Place"><i class="fa-solid fa-arrow-pointer"></i></button>
+        <button type="button" data-action="edit" data-id="{{this.id}}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+        <button type="button" data-action="remove" data-id="{{this.id}}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+      </span>
+    </li>
+    {{else}}
+    <li class="bdh-cover-empty">No cover templates yet.</li>
+    {{/each}}
+  </ol>
+  <button type="button" class="bdh-cover-new" data-action="create"><i class="fa-solid fa-plus"></i> New template</button>
+</div>

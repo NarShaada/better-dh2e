@@ -105,3 +105,31 @@ export function registerCoverAutomation() {
   Hooks.on("updateRegion", onRegion);
   Hooks.on("deleteRegion", onRegion);
 }
+
+let _placement = null;   // active placement session { template, onDown, onKey }
+
+/** Begin click-to-stamp placement of a template. Left-click = one piece; right-click / Esc = stop. */
+export function beginCoverPlacement(template) {
+  endCoverPlacement();
+  ui.notifications.info(`Placing "${template.name}" — left-click cells, right-click or Esc to stop.`);
+  const onDown = async (event) => {
+    const btn = event.data?.originalEvent?.button ?? event.data?.button ?? 0;
+    if (btn === 2) { endCoverPlacement(); return; }       // right-click cancels
+    if (btn !== 0) return;
+    const p = event.data.getLocalPosition(canvas.stage);  // scene coordinates
+    await createCoverPiece(canvas.scene, p, template);
+  };
+  const onKey = (e) => { if (e.key === "Escape") endCoverPlacement(); };
+  _placement = { template, onDown, onKey };
+  canvas.stage.eventMode = "static";
+  canvas.stage.on("pointerdown", onDown);
+  window.addEventListener("keydown", onKey);
+}
+
+/** Stop any active placement session. */
+export function endCoverPlacement() {
+  if (!_placement) return;
+  canvas.stage.off("pointerdown", _placement.onDown);
+  window.removeEventListener("keydown", _placement.onKey);
+  _placement = null;
+}

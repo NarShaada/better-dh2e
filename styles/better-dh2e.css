@@ -345,3 +345,18 @@
 /* Attack dialog — target condition modifier row */
 .better-dh2e .bdh-target-cond { color:#c08a2e; }
 .better-dh2e .bdh-self-cond { color:#b0884a; }
+
+/* --- Cover Templates manager + editor --- */
+.bdh-cover-app { display: flex; flex-direction: column; gap: 8px; padding: 6px; }
+.bdh-cover-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bdh-cover-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--color-border-light-tertiary, #999); border-radius: 5px; }
+.bdh-cover-swatch { width: 14px; height: 14px; border-radius: 3px; flex: 0 0 auto; border: 1px solid rgba(0,0,0,.4); }
+.bdh-cover-name { font-weight: 600; }
+.bdh-cover-sum { margin-left: auto; opacity: 0.75; font-size: 12px; }
+.bdh-cover-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+.bdh-cover-actions button { width: 26px; height: 26px; line-height: 1; padding: 0; flex: 0 0 auto; }
+.bdh-cover-empty { opacity: 0.6; font-style: italic; padding: 8px; }
+.bdh-cover-new { align-self: flex-start; }
+.bdh-cover-editor .form-group { margin: 4px 0; }
+.bdh-cover-chks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.bdh-cover-chk { white-space: nowrap; }
