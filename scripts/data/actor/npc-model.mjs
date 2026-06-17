@@ -8,7 +8,9 @@ export class NpcModel extends BaseActorModel {
     return {
       ...super.defineSchema(),
       faction:     new fields.StringField({ required: true, initial: "" }),
-      threatLevel: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
+      threatLevel: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      personality: new fields.StringField({ required: true, initial: "" }),
+      disposition: new fields.StringField({ required: true, initial: "" })
     };
   }
 }
