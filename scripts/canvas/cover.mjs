@@ -1,5 +1,5 @@
 // scripts/canvas/cover.mjs — cover-piece Regions: create, query overlap, AP lookup, clear, auto-mark, placement.
-import { highestCoverAp, coverAutoDecision } from "../helpers/cover-templates.mjs";
+import { coverAutoDecision } from "../helpers/cover-templates.mjs";
 
 const NS = "better-dh2e";
 
@@ -48,13 +48,15 @@ export function coverRegionsForToken(tokenDoc) {
   return tokenDoc.parent.regions.filter((r) => isCoverRegion(r) && tokenDoc.testInsideRegion(r));
 }
 
-/** Highest cover AP protecting an Actor's token (0 if mechanics off, no token, or not in cover). */
-export function coverApForTarget(targetActor) {
-  if (!coverMechanicsEnabled()) return 0;
+/** The highest-AP cover piece flag the target's token stands in, or null
+ *  (mechanics off / no token / not in cover). Phase 2b reads its sides + locations for the pre-fill. */
+export function coverPieceForTarget(targetActor) {
+  if (!coverMechanicsEnabled()) return null;
   const token = targetActor?.getActiveTokens?.()?.[0];
-  if (!token) return 0;
-  const covers = coverRegionsForToken(token.document).map(coverFlag);
-  return highestCoverAp(covers);
+  if (!token) return null;
+  const covers = coverRegionsForToken(token.document).map(coverFlag).filter(Boolean);
+  if (!covers.length) return null;
+  return covers.reduce((best, c) => ((Number(c.ap) || 0) > (Number(best.ap) || 0) ? c : best));
 }
 
 /** Delete every cover Region on a scene. Returns the count removed. */
