@@ -64,3 +64,44 @@ export async function clearAllCover(scene) {
   if (ids.length) await scene.deleteEmbeddedDocuments("Region", ids);
   return ids.length;
 }
+
+/** Is this client the GM responsible for shared writes? (avoids every connected GM racing the same update) */
+function isPrimaryGM() {
+  return game.user.isGM && (game.users.activeGM?.id === game.user.id);
+}
+
+/** Reconcile one token's In Cover condition with whether it stands in a cover piece. GM-only writes. */
+export async function updateTokenCover(tokenDoc) {
+  if (!isPrimaryGM() || !coverMechanicsEnabled()) return;
+  const actor = tokenDoc?.actor;
+  if (!actor) return;
+  const inCover = coverRegionsForToken(tokenDoc).length > 0;
+  const hasCondition = actor.statuses?.has?.("inCover") ?? false;
+  const wasAuto = !!tokenDoc.getFlag(NS, "coverAuto");
+  const decision = coverAutoDecision({ inCover, hasCondition, wasAuto });
+  if (decision === "apply") {
+    await actor.toggleStatusEffect("inCover", { active: true });
+    await tokenDoc.setFlag(NS, "coverAuto", true);
+  } else if (decision === "remove") {
+    await actor.toggleStatusEffect("inCover", { active: false });
+    await tokenDoc.unsetFlag(NS, "coverAuto");
+  }
+}
+
+/** Re-evaluate every token on a scene (after a cover piece is added/removed/changed). */
+export async function refreshAllCover(scene) {
+  if (!scene) return;
+  for (const t of scene.tokens) await updateTokenCover(t);
+}
+
+/** Wire auto-marking: token create/move, and cover-Region create/update/delete. */
+export function registerCoverAutomation() {
+  Hooks.on("createToken", (doc) => updateTokenCover(doc));
+  Hooks.on("updateToken", (doc, changes) => {
+    if ("x" in changes || "y" in changes || "width" in changes || "height" in changes) updateTokenCover(doc);
+  });
+  const onRegion = (region) => { if (isCoverRegion(region)) refreshAllCover(region.parent); };
+  Hooks.on("createRegion", onRegion);
+  Hooks.on("updateRegion", onRegion);
+  Hooks.on("deleteRegion", onRegion);
+}
