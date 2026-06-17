@@ -11,6 +11,7 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { coverApFromInput } from "../helpers/cover.mjs";
+import { facingFromDelta } from "../helpers/facing.mjs";
 import { coverApForTarget } from "../canvas/cover.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { sizeToHitModifier } from "../helpers/derived.mjs";
@@ -474,7 +475,7 @@ async function rollDamage(message) {
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
     flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: f.penetration, damageType: f.damageType,
-      qualities: f.qualities ?? [],
+      qualities: f.qualities ?? [], coverApproach: f.coverApproach ?? null,
       hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf })) } }
   };
   ChatMessage.applyRollMode(messageData, "roll");
@@ -1124,6 +1125,14 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     }
   }
 
+  // Cover approach side (Phase 2b): which face of the target's cell the shot crossed. Computed here (both
+  // tokens are known) and consumed at Apply Damage. Ranged only; needs both tokens on the same scene.
+  const attackerToken = actor.getActiveTokens?.()[0] ?? canvas.tokens?.controlled?.[0] ?? null;
+  const coverApproach = (isRanged && attackerToken?.center && targetToken?.center
+    && attackerToken.scene?.id === targetToken.scene?.id)
+    ? facingFromDelta(attackerToken.center.x - targetToken.center.x, attackerToken.center.y - targetToken.center.y)
+    : null;
+
   // Message flags (namespace "better-dh2e")
   const flags = {
     [NS]: {
@@ -1139,6 +1148,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       dos,
       targetUuid,
       targetName,
+      coverApproach,
       hits,
       success,
       jammed,
