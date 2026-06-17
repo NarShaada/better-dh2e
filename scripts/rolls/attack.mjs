@@ -10,6 +10,7 @@ import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../he
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
+import { coverApFromInput } from "../helpers/cover.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { sizeToHitModifier } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
@@ -526,7 +527,7 @@ async function rollEvade(message) {
  * @param {{damageTotal: number, penetration: number, damageType: string, qualities: object[], location: string}} opts
  * @returns {Promise<number>}
  */
-async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location }) {
+async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location, coverAp = 0 }) {
   const sys = actor.system;
   const tb = sys.characteristics.toughness.bonus;
   const equipped = actor.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
@@ -534,7 +535,7 @@ async function applyHitToToken(actor, { damageTotal, penetration, damageType, qu
   const felX = fellingValue(qualities);
   const tbEff = felX ? felledToughnessBonus(tb, sys.characteristics.toughness.unnatural ?? 0, felX) : tb;
   const graviton = hasGraviton(qualities);
-  const locAp = ap[location] ?? 0;
+  const locAp = (ap[location] ?? 0) + coverAp;   // cover stacks as armour; penetration reduces the combined total
   const eff = soak(damageTotal + (graviton ? locAp : 0), locAp, penetration, tbEff);
   const w = sys.wounds;
   const res = applyWounds(w.value, w.max, eff);
@@ -570,12 +571,24 @@ async function applyDamage(message) {
   if (!target) { ui.notifications.warn("No target to apply damage to."); return; }
   const sys = target.system;
   const qualities = f.qualities ?? [];
+  // Cover (Phase 1, manual): an In-Cover target prompts for cover AP added at every hit location.
+  let coverAp = 0;
+  if (target.statuses?.has?.("inCover")) {
+    const choice = await DialogV2.prompt({
+      window: { title: "Apply Damage — Cover" },
+      content: `<div class="form-group"><label>Cover (AP)</label><input type="text" name="cover" value="0" autofocus/></div>`,
+      ok: { label: "Apply", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
+      rejectClose: false,
+    });
+    if (!choice) return;   // cancelled → abort the whole apply, change nothing
+    coverAp = coverApFromInput(choice.cover);
+  }
   let prevCrit = sys.wounds.critical ?? 0;
   let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
   const lines = [];
   for (const h of f.hits) {
     const eff = await applyHitToToken(target, {
-      damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: h.location,
+      damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: h.location, coverAp,
     });
     const nowCrit = target.system.wounds.critical ?? 0;
     const hitCrit = nowCrit - prevCrit;
@@ -598,7 +611,7 @@ async function applyDamage(message) {
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
-    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div><div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${wounds} / ${sys.wounds.max}</div></div>`
+    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${wounds} / ${sys.wounds.max}</div></div>`
   });
 }
 
