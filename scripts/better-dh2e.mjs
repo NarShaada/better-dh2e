@@ -24,6 +24,9 @@ import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 import { makeDHCombat } from "./documents/combat.mjs";
 import { registerCoverAutomation } from "./canvas/cover.mjs";
 import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
+import { clearAllCover, coverMechanicsEnabled } from "./canvas/cover.mjs";
+import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
+import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -206,4 +209,40 @@ Hooks.on("moveToken", async (doc, movement, operation, user) => {
   if (running && !hasRun) await doc.actor.toggleStatusEffect("run", { active: true });
   else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
 });
+
+// Cover scene controls — attached to the Token controls group (proven to render across v13/v14).
+// GM: open the template manager, clear all cover. Everyone: toggle cover overlay visibility (per-client).
+Hooks.on("getSceneControlButtons", (controls) => {
+  if (!coverMechanicsEnabled()) return;
+  const group = controls.tokens ?? Object.values(controls)[0];
+  if (!group?.tools) return;
+  if (game.user.isGM) {
+    group.tools.bdhCoverTemplates = {
+      name: "bdhCoverTemplates", title: "Cover Templates", icon: "fa-solid fa-shield-halved", button: true,
+      onChange: () => new CoverTemplatesApp().render(true),
+      onClick: () => new CoverTemplatesApp().render(true),
+    };
+    group.tools.bdhCoverClear = {
+      name: "bdhCoverClear", title: "Clear All Cover", icon: "fa-solid fa-broom", button: true,
+      onChange: () => confirmClearCover(),
+      onClick: () => confirmClearCover(),
+    };
+  }
+  group.tools.bdhCoverVisibility = {
+    name: "bdhCoverVisibility", title: "Toggle Cover Visibility", icon: "fa-solid fa-eye", button: true,
+    onChange: () => toggleCoverVisibility(),
+    onClick: () => toggleCoverVisibility(),
+  };
+});
+
+async function confirmClearCover() {
+  const ok = await foundry.applications.api.DialogV2.confirm({
+    window: { title: "Clear All Cover" },
+    content: "<p>Delete <b>every</b> cover piece on this scene? This cannot be undone.</p>",
+    rejectClose: false,
+  });
+  if (!ok) return;
+  const n = await clearAllCover(canvas.scene);
+  ui.notifications.info(`Removed ${n} cover piece${n === 1 ? "" : "s"}.`);
+}
 
