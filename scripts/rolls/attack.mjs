@@ -11,6 +11,7 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { coverApFromInput } from "../helpers/cover.mjs";
+import { coverApForTarget } from "../canvas/cover.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { sizeToHitModifier } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
@@ -574,9 +575,10 @@ async function applyDamage(message) {
   // Cover (Phase 1, manual): an In-Cover target prompts for cover AP added at every hit location.
   let coverAp = 0;
   if (target.statuses?.has?.("inCover")) {
+    const prefill = coverApForTarget(target);   // piece's AP if standing in cover (& mechanics on); else 0
     const choice = await DialogV2.prompt({
       window: { title: "Apply Damage — Cover" },
-      content: `<div class="form-group"><label>Cover (AP)</label><input type="text" name="cover" value="0" autofocus/></div>`,
+      content: `<div class="form-group"><label>Cover (AP)</label><input type="text" name="cover" value="${prefill}" autofocus/></div>`,
       ok: { label: "Apply", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
       rejectClose: false,
     });
