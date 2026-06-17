@@ -111,6 +111,27 @@ Hooks.once("init", () => {
     default: false
   });
 
+  game.settings.register("better-dh2e", "coverMechanics", {
+    name: "Cover mechanics (battlemap)",
+    hint: "Opt-in cover automation: adds Cover Templates / Clear Cover / Toggle-Visibility controls, auto-marks tokens standing in a cover piece as In Cover, and pre-fills the cover AP at Apply Damage. Off = only manual In Cover (toggle the condition + type the AP yourself). Independent of the Experimental battlemap setting.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: () => {
+      ui.controls?.render?.();                 // show/hide the cover scene-control buttons
+      import("./canvas/cover-overlay.mjs").then((m) => m.redrawCoverOverlay());
+      import("./canvas/cover.mjs").then((m) => m.refreshAllCover(canvas?.scene));
+    },
+  });
+
+  game.settings.register("better-dh2e", "coverTemplates", {
+    scope: "world",
+    config: false,
+    type: Array,
+    default: [],
+  });
+
   registerTokenPrefix();
 
   // Conditions — replace Foundry's default set with our DH2e set.
