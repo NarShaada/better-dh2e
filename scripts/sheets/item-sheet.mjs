@@ -2,6 +2,8 @@
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
+import { filterQualityChoices } from "../helpers/quality-modules.mjs";
+import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -103,7 +105,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.psyIsBlast = s.type === "blast";
       context.psyOpposed = s.opposed;
       if (context.psyIsAttack) {
-        context.qualityChoices = Object.fromEntries(Object.entries(BDH.qualities).map(([k, v]) => [k, v.label]));
+        context.qualityChoices = filterQualityChoices(BDH.qualities, homebrewQualitiesEnabled());
         context.qualityList = (s.qualities ?? []).map((q, i) => {
           const cfg = BDH.qualities[q.key];
           const label = cfg?.label ?? q.key;
@@ -122,7 +124,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.weaponTypes = BDH.weaponTypes;
       context.damageTypes = BDH.damageTypes;
       context.reloadChoices = BDH.reload;
-      context.qualityChoices = Object.fromEntries(Object.entries(BDH.qualities).map(([k, v]) => [k, v.label]));
+      context.qualityChoices = filterQualityChoices(BDH.qualities, homebrewQualitiesEnabled());
       context.qualityList = system.qualities.map((q, i) => {
         const cfg = BDH.qualities[q.key];
         const label = cfg?.label ?? q.key;

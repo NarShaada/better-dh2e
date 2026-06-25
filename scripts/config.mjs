@@ -148,6 +148,8 @@ BDH.qualities = {
   spray:      { label: "Spray", takesValue: false, noteOn: "attack" },
   toxic:      { label: "Toxic", takesValue: true, automation: "partial" },
   vengeful:   { label: "Vengeful", takesValue: true, automation: "full" },
+  // --- Homebrew qualities (gated by the "Homebrew Qualities" world setting; hidden + inert when off) ---
+  radPhage:   { label: "Rad-Phage", takesValue: false, automation: "full", homebrew: true },
 };
 
 /** Aim bonuses. */

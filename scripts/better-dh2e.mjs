@@ -137,6 +137,15 @@ Hooks.once("init", () => {
     default: [],
   });
 
+  game.settings.register("better-dh2e", "homebrewQualities", {
+    name: "Homebrew Qualities",
+    hint: "Enable non-core, homebrew weapon qualities (e.g. Rad-Phage). Off = hidden from the quality picker and never automated.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+  });
+
   registerTokenPrefix();
 
   // Conditions — replace Foundry's default set with our DH2e set.
