@@ -5,7 +5,8 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
+import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
@@ -79,7 +80,7 @@ export function bindCardButtons(message, html) {
   } else {
     const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
     if (!target?.isOwner) {
-      html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"]')
+      html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"],[data-bdh="radPhageTest"]')
         .forEach((b) => b.remove());
     }
   }
@@ -98,6 +99,7 @@ export function bindCardButtons(message, html) {
       else if (btn.dataset.bdh === "overheatDamage") await rollOverheatDamage(message);
       else if (btn.dataset.bdh === "castResist") await rollCastResist(message);
       else if (btn.dataset.bdh === "toxicResist") await rollToxicResist(message);
+      else if (btn.dataset.bdh === "radPhageTest") await rollRadPhageTest(message);
       else if (btn.dataset.bdh === "onFireApply") await applyOnFireDamage(message);
       else if (btn.dataset.bdh === "onFireWP") await rollOnFireWP(message);
       else if (btn.dataset.bdh === "sprayAgTest") await rollSprayAgTest(message, btn.dataset.uuid);
@@ -239,6 +241,29 @@ async function rollToxicResist(message) {
       rolls: [roll],
       content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type}damage from Toxic</header>`
         + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>`
+    });
+  }
+  return result;
+}
+async function rollRadPhageTest(message) {
+  const f = message.flags[NS];
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const label = "Toughness (Rad-Phage)";
+  const choice = await promptTest({ title: label, defaultModifier: "+0" });
+  if (!choice) return null;
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  if (battlemapEnabled() && result && !result.success) {
+    // Failed: 2d10 raw Toughness characteristic damage (no soak), stored as a charDamage injury entry.
+    const roll = await new Roll("2d10").evaluate();
+    const injuries = foundry.utils.deepClone(defender.system.injuries);
+    injuries.push({ type: "charDamage", characteristic: "toughness", amount: roll.total, description: "Rad-Phage" });
+    await defender.update({ "system.injuries": injuries });
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: defender }),
+      rolls: [roll],
+      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} suffers &minus;${roll.total} Toughness from Rad-Phage</header>`
+        + `<div class="bdh-card-line">2d10: ${roll.total} characteristic damage (raw, armour &amp; Toughness ignored)</div></div>`
     });
   }
   return result;
@@ -471,6 +496,7 @@ async function rollDamage(message) {
     hallucinogenic: hallucinogenicValue(qualities) || null,
     snare: snareValue(qualities) || null,
     toxic: battlemapEnabled() ? null : (toxicValue(qualities) || null),
+    radPhage: homebrewQualitiesEnabled() && hasRadPhage(qualities),
     damageNotes: qualityNotes(qualities, "damage") };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
