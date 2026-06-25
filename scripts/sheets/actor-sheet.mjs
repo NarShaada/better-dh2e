@@ -652,7 +652,17 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     }
     context.favSkills = favSkills;
     context.specialtyRankChoices = { known: "Known +0", trained: "Trained +10", experienced: "Experienced +20", veteran: "Veteran +30" };
-    context.injuries = sys.injuries.map((inj, i) => ({ index: i, description: inj.description }));
+    context.injuries = sys.injuries.map((inj, i) => ({
+      index: i,
+      type: inj.type ?? "injury",
+      isCharDamage: inj.type === "charDamage",
+      description: inj.description,
+      characteristic: inj.characteristic,
+      characteristicLabel: inj.characteristic
+        ? game.i18n.localize(BDH.characteristics[inj.characteristic]?.label ?? inj.characteristic)
+        : "",
+      amount: inj.amount ?? 0,
+    }));
     const cor = corruptionTrack(sys.corruption);
     const ins = insanityTrack(sys.insanity);
     context.corruption = { value: sys.corruption, tier: cor.tier, penalty: cor.penalty, nextAt: nextTestAt(sys.corruption) };
@@ -755,6 +765,16 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         const injuries = foundry.utils.deepClone(this.actor.system.injuries);
         if (injuries[idx]) {
           injuries[idx].description = event.currentTarget.value;
+          this.actor.update({ "system.injuries": injuries });
+        }
+      });
+    }
+    for (const input of this.element.querySelectorAll(".bdh-chardmg-amount")) {
+      input.addEventListener("change", (event) => {
+        const idx = Number(event.currentTarget.dataset.index);
+        const injuries = foundry.utils.deepClone(this.actor.system.injuries);
+        if (injuries[idx]) {
+          injuries[idx].amount = Math.max(0, Math.floor(Number(event.currentTarget.value) || 0));
           this.actor.update({ "system.injuries": injuries });
         }
       });
