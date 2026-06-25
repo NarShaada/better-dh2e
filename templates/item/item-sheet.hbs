@@ -63,6 +63,24 @@
     </div>
   {{/if}}
 
+  {{#if showBonuses}}
+    <div class="bdh-section bdh-bonuses">
+      <div class="bdh-section-head">Bonuses</div>
+      {{#each bonusList as |b|}}
+        <div class="bdh-item-row"><span class="bdh-name">{{b.display}}</span>
+          <a data-action="removeBonus" data-index="{{b.index}}" title="Remove">✖</a></div>
+      {{/each}}
+      {{#unless bonusList.length}}<div class="bdh-empty">No bonuses.</div>{{/unless}}
+      <div class="bdh-bonus-add">
+        <select class="bdh-bonus-key">{{selectOptions bonusTargetChoices}}</select>
+        <input class="bdh-bonus-amount" type="number" placeholder="±X"/>
+        <label><input class="bdh-bonus-situational" type="checkbox"/> Situational</label>
+        {{#if allowPersistent}}<label><input class="bdh-bonus-persistent" type="checkbox"/> Persistent</label>{{/if}}
+        <button type="button" data-action="addBonus">＋ Add</button>
+      </div>
+    </div>
+  {{/if}}
+
   {{#if isWeaponMod}}
     <div class="bdh-fields">
       <label>Attack Mod</label><input type="number" name="system.attackMod" value="{{system.attackMod}}"/>

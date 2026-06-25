@@ -29,6 +29,31 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     await this.document.update({ "system.qualities": qualities });
   }
 
+  /** Action: add a bonus entry from the picker row (kind is derived from the chosen key). */
+  static async #onAddBonus(event, target) {
+    const root = this.element;
+    const key = root.querySelector(".bdh-bonus-key")?.value;
+    if (!key) return;
+    const kind = BDH.skills[key] ? "skill" : "characteristic";
+    const amount = parseInt(root.querySelector(".bdh-bonus-amount")?.value, 10) || 0;
+    const type = this.document.type;
+    let situational = !!root.querySelector(".bdh-bonus-situational")?.checked;
+    let persistent = (type === "cybernetic" || type === "armour") && kind === "characteristic"
+      && !!root.querySelector(".bdh-bonus-persistent")?.checked;
+    if (type === "gear") { situational = true; persistent = false; }   // gear is situational-only
+    if (persistent) situational = false;                               // mutually exclusive
+    const bonuses = foundry.utils.deepClone(this.document.system.bonuses);
+    bonuses.push({ kind, key, amount, situational, persistent });
+    await this.document.update({ "system.bonuses": bonuses });
+  }
+
+  /** Action: remove a bonus entry by index. */
+  static async #onRemoveBonus(event, target) {
+    const bonuses = foundry.utils.deepClone(this.document.system.bonuses);
+    bonuses.splice(Number(target.dataset.index), 1);
+    await this.document.update({ "system.bonuses": bonuses });
+  }
+
   /** Action: remove an installed mod by index. */
   static async #onRemoveMod(event, target) {
     const mods = foundry.utils.deepClone(this.document.system.mods);
@@ -61,7 +86,9 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       removeQuality: DarkHeresyItemSheet.#onRemoveQuality,
       removeMod: DarkHeresyItemSheet.#onRemoveMod,
       addAptitude: DarkHeresyItemSheet.#onAddAptitude,
-      removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude
+      removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude,
+      addBonus: DarkHeresyItemSheet.#onAddBonus,
+      removeBonus: DarkHeresyItemSheet.#onRemoveBonus,
     }
   };
 
@@ -136,6 +163,21 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       });
       context.modList = system.mods.map((m, i) => ({ index: i, ...m }));
     }
+
+    context.showBonuses = context.isCybernetic || context.isGear || context.isArmour;
+    if (context.showBonuses) {
+      context.allowPersistent = context.isCybernetic || context.isArmour;
+      context.bonusTargetChoices = {
+        ...Object.fromEntries(Object.entries(BDH.skills).map(([k, s]) => [k, `Skill: ${game.i18n.localize(s.label)}`])),
+        ...Object.fromEntries(Object.entries(BDH.characteristics).map(([k, c]) => [k, `Char: ${game.i18n.localize(c.label)}`]))
+      };
+      context.bonusList = (system.bonuses ?? []).map((b, i) => {
+        const lbl = BDH.skills[b.key]?.label ?? BDH.characteristics[b.key]?.label ?? b.key;
+        const tag = b.persistent ? "persistent" : (b.situational ? "situational" : "always");
+        return { index: i, display: `${game.i18n.localize(lbl)} ${b.amount >= 0 ? "+" : ""}${b.amount} (${tag})` };
+      });
+    }
+
     return context;
   }
 
