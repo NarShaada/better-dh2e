@@ -36,6 +36,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     if (!key) return;
     const kind = BDH.skills[key] ? "skill" : "characteristic";
     const amount = parseInt(root.querySelector(".bdh-bonus-amount")?.value, 10) || 0;
+    if (!amount) return;   // a zero bonus is inert — don't create a dead "+0" row (negatives are allowed)
     const type = this.document.type;
     let situational = !!root.querySelector(".bdh-bonus-situational")?.checked;
     let persistent = (type === "cybernetic" || type === "armour") && kind === "characteristic"
