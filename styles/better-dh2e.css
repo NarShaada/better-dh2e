@@ -367,3 +367,8 @@
 .bdh-cover-editor .form-group { margin: 4px 0; }
 .bdh-cover-chks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .bdh-cover-chk { white-space: nowrap; }
+
+/* Add-entry dialog (qualities / bonuses): picker + number on one compact line. */
+.better-dh2e .bdh-add-dialog .bdh-add-line { display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-wrap:wrap; }
+.better-dh2e .bdh-add-dialog .bdh-pick { flex:1 1 auto; min-width:10em; }
+.better-dh2e .bdh-add-dialog .bdh-num { width:5em; flex:0 0 auto; }
