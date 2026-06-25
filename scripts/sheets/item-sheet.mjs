@@ -49,7 +49,6 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
   /** Action: add a bonus entry via a searchable dialog (kind derived from the chosen key). */
   static async #onAddBonus(event, target) {
     const type = this.document.type;
-    const allowPersistent = type === "cybernetic" || type === "armour";
     // datalist option value = the LABEL (single clean string + label search); map back to the key on submit.
     const labelToKey = {};
     const opt = (k, label) => { labelToKey[label] = k; return `<option value="${label}"></option>`; };
@@ -63,7 +62,6 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       <input class="bdh-num" name="amount" type="number" placeholder="±X"/>
     </div><div class="bdh-add-line">
       <label><input name="situational" type="checkbox"/> Situational</label>
-      ${allowPersistent ? `<label><input name="persistent" type="checkbox"/> Persistent</label>` : ""}
     </div></div>`;
     const result = await DialogV2.prompt({
       window: { title: "Add Bonus" }, position: { width: 360 }, content, rejectClose: false,
@@ -74,11 +72,8 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         const kind = BDH.skills[key] ? "skill" : "characteristic";
         const amount = parseInt(f.amount, 10) || 0;
         if (!amount) return null;   // a zero bonus is inert
-        let situational = !!f.situational;
-        let persistent = allowPersistent && kind === "characteristic" && !!f.persistent;
-        if (type === "gear") { situational = true; persistent = false; }   // gear is situational-only
-        if (persistent) situational = false;                               // mutually exclusive
-        return { kind, key, amount, situational, persistent };
+        const situational = type === "gear" ? true : !!f.situational;   // gear is situational-only
+        return { kind, key, amount, situational };
       } }
     });
     if (!result) return;
@@ -206,7 +201,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     if (context.showBonuses) {
       context.bonusList = (system.bonuses ?? []).map((b, i) => {
         const lbl = BDH.skills[b.key]?.label ?? BDH.characteristics[b.key]?.label ?? b.key;
-        const tag = b.persistent ? "persistent" : (b.situational ? "situational" : "always");
+        const tag = b.situational ? "situational" : "always";
         return { index: i, display: `${game.i18n.localize(lbl)} ${b.amount >= 0 ? "+" : ""}${b.amount} (${tag})` };
       });
     }
