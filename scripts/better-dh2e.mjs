@@ -79,7 +79,7 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "lockCustomMode", {
     name: "Lock Custom mode to the GM",
-    hint: "When enabled, only the GM can use Custom (free-edit) advancement. Players are limited to Simple mode (proper XP costs). Have players build characters in Custom first, then enable this to avoid XP-counting errors. The GM keeps Custom everywhere.",
+    hint: "When enabled, only the GM can use Custom (free-edit) advancement. Players are limited to Simple mode (proper XP costs).",
     scope: "world",
     config: true,
     type: Boolean,
@@ -88,8 +88,8 @@ Hooks.once("init", () => {
   });
 
   game.settings.register("better-dh2e", "enableBattlemap", {
-    name: "Enable battlemap integration (Experimental)",
-    hint: "Opt-in token/grid automation — starts with range auto-measurement on attacks; movement, templates, cover, and conditions arrive in later updates. Off = theatre-of-mind play, fully unaffected.",
+    name: "Enable battlemap integration",
+    hint: "token/grid automation(will be enabled by default in future versions)",
     scope: "world",
     config: true,
     type: Boolean,
@@ -98,7 +98,6 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "uiTheme", {
     name: "UI theme",
-    hint: "Skin for sheets and chat cards. Classic is the original parchment look; Dataslate is a dark gothic-tech theme; Dossier is a refined light theme. Per-player setting — takes effect immediately.",
     scope: "client",
     config: true,
     type: String,
@@ -109,7 +108,7 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "tokenPrefixes", {
     name: "NPC token prefixes",
-    hint: "When enabled, each newly placed unlinked NPC token gets a random Inquisition-flavour prefix (e.g. Filthy Heretic, Lowly Heretic) so multiple tokens from one stat block are easy to tell apart. Token names only — the actor sheet is untouched. Acolytes and linked NPCs are never prefixed.",
+    hint: "When enabled, each newly placed unlinked NPC token gets a random prefix)",
     scope: "world",
     config: true,
     type: Boolean,
@@ -118,7 +117,7 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "coverMechanics", {
     name: "Cover mechanics (battlemap)",
-    hint: "Opt-in cover automation: adds Cover Templates / Clear Cover / Toggle-Visibility controls, auto-marks tokens standing in a cover piece as In Cover, and pre-fills the cover AP at Apply Damage. Off = only manual In Cover (toggle the condition + type the AP yourself). Independent of the Experimental battlemap setting.",
+    hint: "Adds cover templates and cover automation for battlemaps",
     scope: "world",
     config: true,
     type: Boolean,
@@ -139,7 +138,7 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "homebrewQualities", {
     name: "Homebrew Qualities",
-    hint: "Enable non-core, homebrew weapon qualities (e.g. Rad-Phage). Off = hidden from the quality picker and never automated.",
+    hint: "Enable non-vanilla weapon qualities",
     scope: "world",
     config: true,
     type: Boolean,
