@@ -256,10 +256,59 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (item) await item.update({ "system.clip.value": item.system.clip.max });
   }
 
-  /** Action: add a blank lasting injury. */
+  /** Action: add a Lasting Injury or Characteristic Damage entry via a type-picker dialog. */
   static async #onAddInjury(event, target) {
+    const { DialogV2 } = foundry.applications.api;
+    const charOptions = Object.keys(BDH.characteristics)
+      .map((k) => `<option value="${k}">${game.i18n.localize(BDH.characteristics[k].label)}</option>`)
+      .join("");
+    const content = `
+      <div class="bdh-add-injury">
+        <div class="form-group"><label>Type</label>
+          <select name="type">
+            <option value="injury">Lasting Injury</option>
+            <option value="charDamage">Characteristic Damage</option>
+          </select>
+        </div>
+        <div class="form-group bdh-cd-field" style="display:none"><label>Characteristic</label>
+          <select name="characteristic">${charOptions}</select>
+        </div>
+        <div class="form-group bdh-cd-field" style="display:none"><label>Damage (points)</label>
+          <input type="number" name="amount" value="1" min="1" step="1"/>
+        </div>
+      </div>`;
+
+    const render = (ev, dialog) => {
+      const root = dialog.element;
+      const sel = root.querySelector('[name="type"]');
+      const fields = root.querySelectorAll('.bdh-cd-field');
+      if (!sel) return;
+      const toggle = () => { for (const f of fields) f.style.display = sel.value === "charDamage" ? "" : "none"; };
+      sel.addEventListener("change", toggle);
+      toggle();
+    };
+
+    const result = await DialogV2.prompt({
+      window: { title: "Add Crit / Characteristic Damage" },
+      position: { width: 360 },
+      content,
+      render,
+      ok: {
+        label: "Add",
+        callback: (ev, button) => {
+          const f = new foundry.applications.ux.FormDataExtended(button.form).object;
+          if (f.type === "charDamage") {
+            // Clamp to a minimum of 1 (matches the input's min) so an emptied field can't create a dead "−0" row.
+            return { type: "charDamage", characteristic: f.characteristic, amount: Math.max(1, Math.floor(Number(f.amount) || 0)), description: "" };
+          }
+          return { type: "injury", description: "", characteristic: "", amount: 0 };
+        },
+      },
+      rejectClose: false,
+    });
+    if (!result) return; // cancelled
     const injuries = foundry.utils.deepClone(this.actor.system.injuries);
-    injuries.push({ description: "" });
+    injuries.push(result);
     await this.actor.update({ "system.injuries": injuries });
   }
 
@@ -604,7 +653,17 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     }
     context.favSkills = favSkills;
     context.specialtyRankChoices = { known: "Known +0", trained: "Trained +10", experienced: "Experienced +20", veteran: "Veteran +30" };
-    context.injuries = sys.injuries.map((inj, i) => ({ index: i, description: inj.description }));
+    context.injuries = sys.injuries.map((inj, i) => ({
+      index: i,
+      type: inj.type ?? "injury",
+      isCharDamage: inj.type === "charDamage",
+      description: inj.description,
+      characteristic: inj.characteristic,
+      characteristicLabel: inj.characteristic
+        ? game.i18n.localize(BDH.characteristics[inj.characteristic]?.label ?? inj.characteristic)
+        : "",
+      amount: inj.amount ?? 0,
+    }));
     const cor = corruptionTrack(sys.corruption);
     const ins = insanityTrack(sys.insanity);
     context.corruption = { value: sys.corruption, tier: cor.tier, penalty: cor.penalty, nextAt: nextTestAt(sys.corruption) };
@@ -707,6 +766,16 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         const injuries = foundry.utils.deepClone(this.actor.system.injuries);
         if (injuries[idx]) {
           injuries[idx].description = event.currentTarget.value;
+          this.actor.update({ "system.injuries": injuries });
+        }
+      });
+    }
+    for (const input of this.element.querySelectorAll(".bdh-chardmg-amount")) {
+      input.addEventListener("change", (event) => {
+        const idx = Number(event.currentTarget.dataset.index);
+        const injuries = foundry.utils.deepClone(this.actor.system.injuries);
+        if (injuries[idx]) {
+          injuries[idx].amount = Math.max(0, Math.floor(Number(event.currentTarget.value) || 0));
           this.actor.update({ "system.injuries": injuries });
         }
       });

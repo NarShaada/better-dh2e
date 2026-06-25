@@ -2,6 +2,7 @@
 import { BDH } from "../../config.mjs";
 import { characteristicTotal, characteristicBonus, skillTotal, fatigueMax, movement } from "../../helpers/derived.mjs";
 import { effectiveAgilityCap, applyImpairments } from "../../helpers/impairment-data.mjs";
+import { applyCharacteristicDamage } from "../../helpers/char-damage.mjs";
 
 const fields = foundry.data.fields;
 
@@ -74,7 +75,10 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
         mentalDisorders: namedListField()
       }),
       injuries: new fields.ArrayField(new fields.SchemaField({
-        description: new fields.StringField({ required: true, initial: "" })
+        type:           new fields.StringField({ required: true, initial: "injury", choices: ["injury", "charDamage"] }),
+        description:    new fields.StringField({ required: true, initial: "" }),
+        characteristic: new fields.StringField({ required: true, blank: true, initial: "" }),
+        amount:         new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 })
       })),
       notes: new fields.StringField({ required: true, initial: "" }),
       corruption: new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
@@ -107,7 +111,9 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       c.total = characteristicTotal(c);
       c.bonus = characteristicBonus(c);
     }
-    // Fatigue max from UNIMPAIRED Toughness/Willpower bonuses (impairment must not shrink the max).
+    // Characteristic damage (temporary, from injuries) applies FIRST — before fatigue max + impairments.
+    applyCharacteristicDamage(this.characteristics, this.injuries);
+    // Fatigue max derives from the (char-damage-reduced) Toughness/Willpower bonuses; fatigue halving must not shrink it.
     this.fatigue.max = this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus);
     // Impairment: armour Agility cap + fatigue halving (mutates this.characteristics, sets `impaired`).
     const equippedArmour = this.parent.items.filter((i) => i.type === "armour" && i.system.equipped).map((i) => i.system);

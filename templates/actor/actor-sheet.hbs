@@ -196,10 +196,16 @@
             </div>
           </div>
           <div class="bdh-section">
-            <div class="bdh-section-head">Lasting Injuries <button type="button" class="bdh-add" data-action="addInjury">＋</button></div>
+            <div class="bdh-section-head">Crits &amp; Char Damage <button type="button" class="bdh-add" data-action="addInjury">＋</button></div>
             {{#each injuries as |inj|}}
               <div class="bdh-item-row">
-                <input type="text" class="bdh-injury" data-index="{{inj.index}}" value="{{inj.description}}" placeholder="e.g. Lost left arm"/>
+                {{#if inj.isCharDamage}}
+                  <span class="bdh-chardmg-label">{{inj.characteristicLabel}}</span>
+                  <span class="bdh-chardmg-minus">−</span>
+                  <input type="number" class="bdh-chardmg-amount" data-index="{{inj.index}}" value="{{inj.amount}}" min="0" step="1" title="Characteristic points lost"/>
+                {{else}}
+                  <input type="text" class="bdh-injury" data-index="{{inj.index}}" value="{{inj.description}}" placeholder="e.g. Lost left arm"/>
+                {{/if}}
                 <a class="bdh-del" data-action="removeInjury" data-index="{{inj.index}}" title="Remove">✖</a>
               </div>
             {{/each}}
