@@ -15,7 +15,6 @@ export function bonusesField() {
     kind:        new fields.StringField({ required: true, initial: "skill", choices: ["skill", "characteristic"] }),
     key:         new fields.StringField({ required: true, blank: true, initial: "" }),
     amount:      new fields.NumberField({ required: true, integer: true, initial: 0 }),
-    situational: new fields.BooleanField({ required: true, initial: false }),
-    persistent:  new fields.BooleanField({ required: true, initial: false })
+    situational: new fields.BooleanField({ required: true, initial: false })
   }));
 }

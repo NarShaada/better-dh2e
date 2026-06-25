@@ -1,9 +1,10 @@
-// scripts/helpers/item-bonuses.mjs — PURE. Situational & persistent item bonuses (cybernetics/gear/armour).
-// No imports: each entry carries its own `kind`, so no registry lookup is needed.
+// scripts/helpers/item-bonuses.mjs — PURE. Item bonuses (cybernetics/gear/armour).
+// One flag: `situational`. Unchecked = always-on (auto roll bonus for skills; persistent flat increase
+// for characteristics). Checked = opt-in at roll. No imports: each entry carries its own `kind`.
 
 /** Flatten bonus entries from an actor's ACTIVE bonus-bearing items.
  *  Active = installed cybernetics, equipped armour, or any gear (owned ⇒ present).
- *  Gear is situational-only: its entries are coerced to situational and never persistent. */
+ *  Gear is situational-only: its entries are coerced to situational. */
 export function gatherActiveBonusEntries(items) {
   const out = [];
   for (const it of items ?? []) {
@@ -13,18 +14,18 @@ export function gatherActiveBonusEntries(items) {
     if (!active) continue;
     for (const b of sys.bonuses ?? []) {
       const base = { kind: b.kind, key: b.key, amount: Number(b.amount) || 0, sourceType: type, sourceName: it.name ?? "Item" };
-      if (type === "gear") out.push({ ...base, situational: true, persistent: false });
-      else out.push({ ...base, situational: !!b.situational, persistent: !!b.persistent });
+      out.push({ ...base, situational: type === "gear" ? true : !!b.situational });
     }
   }
   return out;
 }
 
-/** Sum persistent characteristic increases per characteristic key (cybernetic/armour sources only). */
+/** Sum persistent characteristic increases per key: UNCHECKED characteristic bonuses from
+ *  cybernetic/armour sources (gear is always situational, so excluded). */
 export function persistentCharacteristicBonuses(entries) {
   const totals = {};
   for (const e of entries ?? []) {
-    if (e.kind !== "characteristic" || !e.persistent) continue;
+    if (e.kind !== "characteristic" || e.situational) continue;
     if (e.sourceType !== "cybernetic" && e.sourceType !== "armour") continue;
     const amt = Number(e.amount) || 0;
     if (!e.key || !amt) continue;
@@ -47,17 +48,22 @@ export function applyPersistentBonuses(chars, entries) {
   return chars;
 }
 
-/** For a roll target (kind+key), split matching NON-persistent bonuses into an auto sum and a
- *  situational opt-in list. The situational id is stable within one gather (its index). */
+/** For a roll target (kind+key): situational = matching checked entries (any kind); auto = matching
+ *  unchecked SKILL entries only (an unchecked characteristic is persistent, never a roll bonus). */
 export function rollBonusesFor(entries, kind, key) {
   let auto = 0;
   const situational = [];
   (entries ?? []).forEach((e, i) => {
-    if (e.persistent || e.kind !== kind || e.key !== key) return;
+    if (e.kind !== kind || e.key !== key) return;
     const amt = Number(e.amount) || 0;
     if (!amt) return;
     if (e.situational) situational.push({ id: `b${i}`, label: `${e.sourceName} ${amt >= 0 ? "+" : ""}${amt}`, amount: amt });
-    else auto += amt;
+    else if (e.kind === "skill") auto += amt;
   });
   return { auto, situational };
+}
+
+/** Strength Bonus for a damage roll given a situational Strength-point delta: floor((total+delta)/10)+unnatural. */
+export function effectiveStrengthBonus(total, unnatural, delta) {
+  return Math.floor(((total ?? 0) + (delta ?? 0)) / 10) + (unnatural ?? 0);
 }
