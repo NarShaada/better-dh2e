@@ -298,7 +298,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         callback: (ev, button) => {
           const f = new foundry.applications.ux.FormDataExtended(button.form).object;
           if (f.type === "charDamage") {
-            return { type: "charDamage", characteristic: f.characteristic, amount: Math.max(0, Math.floor(Number(f.amount) || 0)), description: "" };
+            // Clamp to a minimum of 1 (matches the input's min) so an emptied field can't create a dead "−0" row.
+            return { type: "charDamage", characteristic: f.characteristic, amount: Math.max(1, Math.floor(Number(f.amount) || 0)), description: "" };
           }
           return { type: "injury", description: "", characteristic: "", amount: 0 };
         },
