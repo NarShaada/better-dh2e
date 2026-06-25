@@ -7,6 +7,7 @@ import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
 import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
+import { gatherActiveBonusEntries, rollBonusesFor, effectiveStrengthBonus } from "../helpers/item-bonuses.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
@@ -420,13 +421,19 @@ async function rollDamage(message) {
   const nHitsTotal = f.hits?.length ?? 0;
   const hitCountRow = nHitsTotal > 1
     ? `<div class="form-group"><label>How many hits?</label><select name="hits">${Array.from({ length: nHitsTotal }, (_, i) => `<option value="${nHitsTotal - i}">${nHitsTotal - i}</option>`).join("")}</select></div>` : "";
+  // Melee only: offer the actor's situational Strength bonuses (e.g. a bionic limb) to opt into for this attack's SB.
+  const isMeleeDamage = !psychic && !f.isRanged;
+  const strSit = isMeleeDamage ? rollBonusesFor(gatherActiveBonusEntries(actor.items), "characteristic", "strength").situational : [];
+  const strRow = strSit.length
+    ? `<div class="form-group"><label>Bionic Strength</label><div>${strSit.map((s) => `<label class="bdh-sit"><input type="checkbox" name="sit_${s.id}"/> ${s.label} Str</label>`).join("")}</div></div>` : "";
   const choice = await DialogV2.prompt({
     window: { title: `${weaponDisplayName} — Damage` },
-    content: `${hitCountRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
+    content: `${hitCountRow}${strRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
     ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
     rejectClose: false
   });
   if (choice == null) return;
+  const strDelta = strSit.filter((s) => choice[`sit_${s.id}`]).reduce((n, s) => n + s.amount, 0);
   const trimmed = String(choice.mod ?? "").trim();
   const hitsToRoll = nHitsTotal > 1 ? f.hits.slice(0, Number(choice.hits) || nHitsTotal) : (f.hits ?? []);   // latest hits drop first
   const qualities = psychic ? (f.qualities ?? []) : (f.qualities ?? weapon.system.qualities ?? []);
@@ -443,8 +450,9 @@ async function rollDamage(message) {
   };
   // Melee-only bonuses: psychic powers skip craftsmanship and Strength bonus.
   const craftDmg = (!psychic && !f.isRanged) ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
-  // Melee weapons add the attacker's Strength Bonus (already includes unnatural Strength) to each hit.
-  const strBonus = (!psychic && !f.isRanged) ? (actor.system.characteristics.strength?.bonus ?? 0) : 0;
+  // Melee weapons add the attacker's Strength Bonus (incl. unnatural + any persistent/situational limb delta).
+  const str = actor.system.characteristics.strength ?? {};
+  const strBonus = isMeleeDamage ? effectiveStrengthBonus(str.total ?? 0, str.unnatural ?? 0, strDelta) : 0;
   let weaponBase = baseFormula;
   if (strBonus) weaponBase = `${weaponBase} + ${strBonus}`;
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
