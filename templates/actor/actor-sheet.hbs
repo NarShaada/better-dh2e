@@ -39,7 +39,7 @@
   <section class="tab {{tabs.stats.cssClass}}" data-group="primary" data-tab="stats">
     <div class="char-row">
       {{#each characteristics as |c|}}
-        <div class="char {{#if c.isInfluence}}inf{{/if}}{{#unless @root.isCustom}}{{#if c.impaired}} impaired{{/if}}{{/unless}}" data-characteristic="{{c.key}}">
+        <div class="char {{#if c.isInfluence}}inf{{/if}}{{#unless @root.isCustom}}{{#if c.impaired}} impaired{{else}}{{#if c.boosted}} boosted{{/if}}{{/if}}{{/unless}}" data-characteristic="{{c.key}}">
           {{#if @root.isCustom}}
             <span class="bonus bdh-edit bdh-unnat"><span class="bdh-plus">+</span><input type="number" name="system.characteristics.{{c.key}}.unnatural" value="{{c.unnatural}}" title="Unnatural bonus (additive)"/></span>
           {{else}}

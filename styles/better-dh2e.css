@@ -309,6 +309,10 @@
 .better-dh2e .char.impaired .box .val { color:#a02020; }
 .better-dh2e .char.impaired .bonus { color:#a02020; }
 
+/* Persistent item bonus (installed cybernetic / equipped armour) — value + bonus green. */
+.better-dh2e .char.boosted .box .val { color:#2e7d32; }
+.better-dh2e .char.boosted .bonus { color:#2e7d32; }
+
 /* Non-automated weapon-quality note on a chat card (just the name+value, in red) */
 .better-dh2e .bdh-qnote, .chat-message .bdh-qnote { color:#a02020; font-weight:600; }
 
