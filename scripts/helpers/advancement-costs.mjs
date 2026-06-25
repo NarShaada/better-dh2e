@@ -32,3 +32,11 @@ export function talentCost(matches, tier) {
 export function psyRatingCost(newLevel) {
   return 200 * newLevel;
 }
+
+/** When a talent / psychic power is acquired (via the ＋ button or a drag-drop), is it already purchased?
+ *  Custom mode = owned outright; Simple/Play (any non-custom mode) = awaits a Buy. Only talents and
+ *  psychic powers carry a `purchased` flag; every other item type returns null (no flag to set). */
+export function purchasedOnAcquire(type, mode) {
+  if (type !== "talent" && type !== "psychicPower") return null;
+  return mode === "custom";
+}

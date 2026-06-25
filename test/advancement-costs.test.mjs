@@ -1,5 +1,21 @@
 import { describe, it, expect } from "vitest";
-import { aptitudeMatches, characteristicCost, skillCost, talentCost, psyRatingCost, RANK_ORDER } from "../scripts/helpers/advancement-costs.mjs";
+import { aptitudeMatches, characteristicCost, skillCost, talentCost, psyRatingCost, RANK_ORDER, purchasedOnAcquire } from "../scripts/helpers/advancement-costs.mjs";
+
+describe("purchasedOnAcquire", () => {
+  it("talents/psychic powers are purchased only when acquired in Custom mode", () => {
+    expect(purchasedOnAcquire("talent", "custom")).toBe(true);
+    expect(purchasedOnAcquire("psychicPower", "custom")).toBe(true);
+    expect(purchasedOnAcquire("talent", "simple")).toBe(false);
+    expect(purchasedOnAcquire("psychicPower", "simple")).toBe(false);
+    expect(purchasedOnAcquire("talent", "none")).toBe(false);
+    expect(purchasedOnAcquire("psychicPower", "none")).toBe(false);
+  });
+  it("returns null for types that carry no purchased flag", () => {
+    expect(purchasedOnAcquire("weapon", "custom")).toBe(null);
+    expect(purchasedOnAcquire("gear", "simple")).toBe(null);
+    expect(purchasedOnAcquire("trait", "custom")).toBe(null);
+  });
+});
 
 describe("aptitudeMatches", () => {
   it("counts how many advance aptitudes the character has (0/1/2)", () => {
