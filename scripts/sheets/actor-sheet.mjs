@@ -9,7 +9,7 @@ import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
-import { aptitudeMatches, characteristicCost, skillCost, talentCost, psyRatingCost, RANK_ORDER } from "../helpers/advancement-costs.mjs";
+import { aptitudeMatches, characteristicCost, skillCost, talentCost, psyRatingCost, RANK_ORDER, purchasedOnAcquire } from "../helpers/advancement-costs.mjs";
 import { carryLimits } from "../helpers/encumbrance-data.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -122,10 +122,22 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const type = target.dataset.type;
     const name = `New ${game.i18n.localize(`TYPES.Item.${type}`)}`;
     const data = { name, type };
-    // Talents created in Custom advancement are free/owned; created in Simple they await a Buy.
-    if (type === "talent" || type === "psychicPower") data.system = { purchased: this._advancementMode === "custom" };
+    // Talents/psychic powers created in Custom advancement are free/owned; in Simple they await a Buy.
+    const purchased = purchasedOnAcquire(type, this._advancementMode);
+    if (purchased !== null) data.system = { purchased };
     const [created] = await this.actor.createEmbeddedDocuments("Item", [data]);
     created?.sheet.render(true);
+  }
+
+  /** Drag-drop create must match the ＋-button path: stamp `purchased` on a dropped talent/psychic power
+   *  to the current advancement mode (Custom = owned, Simple/Play = unpaid). The ActorSheetV2 default
+   *  would create it with the model default (unpaid) regardless of mode. Same-actor drops are reorders. */
+  async _onDropItem(event, item) {
+    if (item.parent === this.actor) return super._onDropItem(event, item);
+    const itemData = item.toObject();
+    const purchased = purchasedOnAcquire(itemData.type, this._advancementMode);
+    if (purchased !== null) itemData.system = { ...itemData.system, purchased };
+    return this.actor.createEmbeddedDocuments("Item", [itemData]);
   }
 
   /** Action: open an owned item's sheet for editing. */

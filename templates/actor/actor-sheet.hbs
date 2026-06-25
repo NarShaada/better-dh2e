@@ -253,7 +253,7 @@
             {{else if t.valid}}<button type="button" class="bdh-buy" data-action="buyTalent">Buy {{t.cost}}</button>
             {{else}}<span class="bdh-warn">set tier + 2 aptitudes</span>{{/if}}
           {{else}}{{#unless t.purchased}}<span class="bdh-warn">unpaid</span>{{/unless}}{{/if}}
-          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+          {{#unless @root.isPlay}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}
         </div>
       {{/each}}
       {{#unless talents.length}}<div class="bdh-empty">No talents — drag one in or press ＋.</div>{{/unless}}
@@ -266,7 +266,7 @@
           <a class="bdh-fav {{#if tr.favourite}}on{{/if}}" data-action="toggleFavourite" title="Favourite">★</a>
           <span class="bdh-name" data-action="editItem">{{tr.name}}</span>
           <span class="bdh-desc-line">{{tr.desc}}</span>
-          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+          {{#unless @root.isPlay}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}
         </div>
       {{/each}}
       {{#unless traits.length}}<div class="bdh-empty">No traits.</div>{{/unless}}
@@ -427,7 +427,7 @@
             {{#if p.purchased}}<span class="bdh-cost-done">{{p.cost}} xp ✓</span>
             {{else}}<button type="button" class="bdh-buy" data-action="buyPower" data-item-id="{{p.id}}">Buy {{p.cost}}</button>{{/if}}
           {{else}}{{#unless p.purchased}}<span class="bdh-warn">unpaid</span>{{/unless}}{{/if}}
-          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+          {{#unless @root.isPlay}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}
         </div>
       {{/each}}
       {{#unless psychicPowers.length}}<div class="bdh-empty">No powers — add one in Custom or Simple.</div>{{/unless}}
