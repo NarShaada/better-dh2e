@@ -46,6 +46,20 @@ export function hasShocking(qualities) {
   return has(qualities, "shocking");
 }
 
+/** Whether a weapon has Rad-Phage (homebrew). */
+export function hasRadPhage(qualities) {
+  return has(qualities, "radPhage");
+}
+
+/** {key:label} map for the quality picker; drops `homebrew`-flagged qualities unless homebrew is enabled. */
+export function filterQualityChoices(qualitiesConfig, homebrewEnabled) {
+  return Object.fromEntries(
+    Object.entries(qualitiesConfig)
+      .filter(([, v]) => homebrewEnabled || !v.homebrew)
+      .map(([k, v]) => [k, v.label])
+  );
+}
+
 /** The numeric value of a weapon quality by key (0 if absent or blank). */
 function qualityValue(qualities, key) {
   const q = Array.isArray(qualities) ? qualities.find((x) => x.key === key) : null;

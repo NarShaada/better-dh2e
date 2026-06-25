@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, filterQualityChoices } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -194,5 +194,31 @@ describe("toxicValue / vengefulValue / hasUnwieldy", () => {
     expect(vengefulValue(Q())).toBe(0);
     expect(hasUnwieldy(Q("unwieldy"))).toBe(true);
     expect(hasUnwieldy(Q())).toBe(false);
+  });
+});
+
+describe("hasRadPhage", () => {
+  it("is true only when a radPhage entry is present", () => {
+    expect(hasRadPhage([{ key: "radPhage" }])).toBe(true);
+    expect(hasRadPhage([{ key: "toxic", value: 2 }])).toBe(false);
+    expect(hasRadPhage([])).toBe(false);
+    expect(hasRadPhage(undefined)).toBe(false);
+  });
+});
+
+describe("filterQualityChoices", () => {
+  const cfg = {
+    toxic:    { label: "Toxic", homebrew: false },
+    shocking: { label: "Shocking" },
+    radPhage: { label: "Rad-Phage", homebrew: true },
+  };
+  it("hides homebrew-flagged entries when homebrew is disabled", () => {
+    expect(filterQualityChoices(cfg, false)).toEqual({ toxic: "Toxic", shocking: "Shocking" });
+  });
+  it("includes homebrew-flagged entries when homebrew is enabled", () => {
+    expect(filterQualityChoices(cfg, true)).toEqual({ toxic: "Toxic", shocking: "Shocking", radPhage: "Rad-Phage" });
+  });
+  it("keys by quality key and preserves labels", () => {
+    expect(filterQualityChoices(cfg, true).radPhage).toBe("Rad-Phage");
   });
 });
