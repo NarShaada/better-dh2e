@@ -5,20 +5,37 @@ import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { filterQualityChoices } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
-  /** Action: add the selected quality (with optional value) to the weapon. */
+  /** Action: add a quality via a searchable dialog (shared by weapon + psychic-power sheets). */
   static async #onAddQuality(event, target) {
-    const root = this.element;
-    const key = root.querySelector(".bdh-quality-key")?.value;
-    if (!key) return;
-    const takesValue = BDH.qualities[key]?.takesValue;
-    const raw = root.querySelector(".bdh-quality-value")?.value;
-    const value = takesValue ? (parseInt(raw, 10) || 0) : null;
+    const choices = filterQualityChoices(BDH.qualities, homebrewQualitiesEnabled());
+    // datalist option value = the LABEL (so the dropdown shows one clean string + filters by label);
+    // map the label back to the registry key on submit.
+    const labelToKey = {};
+    const opts = Object.entries(choices)
+      .sort((a, b) => a[1].localeCompare(b[1]))   // alphabetical by label
+      .map(([k, label]) => { labelToKey[label] = k; return `<option value="${label}"></option>`; }).join("");
+    const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
+      <input class="bdh-pick" name="key" list="bdh-q-list" placeholder="Quality…" autofocus/>
+      <datalist id="bdh-q-list">${opts}</datalist>
+      <input class="bdh-num" name="value" type="number" placeholder="X"/>
+    </div></div>`;
+    const result = await DialogV2.prompt({
+      window: { title: "Add Quality" }, position: { width: 340 }, content, rejectClose: false,
+      ok: { label: "Add", callback: (ev, button) => {
+        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
+        const key = labelToKey[f.key];
+        if (!key || !BDH.qualities[key]) return null;
+        const value = BDH.qualities[key].takesValue ? (parseInt(f.value, 10) || 0) : null;
+        return { key, value };
+      } }
+    });
+    if (!result) return;
     const qualities = foundry.utils.deepClone(this.document.system.qualities);
-    qualities.push({ key, value });
+    qualities.push(result);
     await this.document.update({ "system.qualities": qualities });
   }
 
@@ -27,6 +44,54 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     const qualities = foundry.utils.deepClone(this.document.system.qualities);
     qualities.splice(Number(target.dataset.index), 1);
     await this.document.update({ "system.qualities": qualities });
+  }
+
+  /** Action: add a bonus entry via a searchable dialog (kind derived from the chosen key). */
+  static async #onAddBonus(event, target) {
+    const type = this.document.type;
+    const allowPersistent = type === "cybernetic" || type === "armour";
+    // datalist option value = the LABEL (single clean string + label search); map back to the key on submit.
+    const labelToKey = {};
+    const opt = (k, label) => { labelToKey[label] = k; return `<option value="${label}"></option>`; };
+    const opts = [
+      ...Object.entries(BDH.skills).map(([k, s]) => opt(k, `Skill: ${game.i18n.localize(s.label)}`)),
+      ...Object.entries(BDH.characteristics).map(([k, c]) => opt(k, `Char: ${game.i18n.localize(c.label)}`))
+    ].join("");
+    const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
+      <input class="bdh-pick" name="key" list="bdh-b-list" placeholder="Skill or characteristic…" autofocus/>
+      <datalist id="bdh-b-list">${opts}</datalist>
+      <input class="bdh-num" name="amount" type="number" placeholder="±X"/>
+    </div><div class="bdh-add-line">
+      <label><input name="situational" type="checkbox"/> Situational</label>
+      ${allowPersistent ? `<label><input name="persistent" type="checkbox"/> Persistent</label>` : ""}
+    </div></div>`;
+    const result = await DialogV2.prompt({
+      window: { title: "Add Bonus" }, position: { width: 360 }, content, rejectClose: false,
+      ok: { label: "Add", callback: (ev, button) => {
+        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
+        const key = labelToKey[f.key];
+        if (!key || (!BDH.skills[key] && !BDH.characteristics[key])) return null;
+        const kind = BDH.skills[key] ? "skill" : "characteristic";
+        const amount = parseInt(f.amount, 10) || 0;
+        if (!amount) return null;   // a zero bonus is inert
+        let situational = !!f.situational;
+        let persistent = allowPersistent && kind === "characteristic" && !!f.persistent;
+        if (type === "gear") { situational = true; persistent = false; }   // gear is situational-only
+        if (persistent) situational = false;                               // mutually exclusive
+        return { kind, key, amount, situational, persistent };
+      } }
+    });
+    if (!result) return;
+    const bonuses = foundry.utils.deepClone(this.document.system.bonuses);
+    bonuses.push(result);
+    await this.document.update({ "system.bonuses": bonuses });
+  }
+
+  /** Action: remove a bonus entry by index. */
+  static async #onRemoveBonus(event, target) {
+    const bonuses = foundry.utils.deepClone(this.document.system.bonuses);
+    bonuses.splice(Number(target.dataset.index), 1);
+    await this.document.update({ "system.bonuses": bonuses });
   }
 
   /** Action: remove an installed mod by index. */
@@ -61,7 +126,9 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       removeQuality: DarkHeresyItemSheet.#onRemoveQuality,
       removeMod: DarkHeresyItemSheet.#onRemoveMod,
       addAptitude: DarkHeresyItemSheet.#onAddAptitude,
-      removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude
+      removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude,
+      addBonus: DarkHeresyItemSheet.#onAddBonus,
+      removeBonus: DarkHeresyItemSheet.#onRemoveBonus,
     }
   };
 
@@ -105,7 +172,6 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.psyIsBlast = s.type === "blast";
       context.psyOpposed = s.opposed;
       if (context.psyIsAttack) {
-        context.qualityChoices = filterQualityChoices(BDH.qualities, homebrewQualitiesEnabled());
         context.qualityList = (s.qualities ?? []).map((q, i) => {
           const cfg = BDH.qualities[q.key];
           const label = cfg?.label ?? q.key;
@@ -124,7 +190,6 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.weaponTypes = BDH.weaponTypes;
       context.damageTypes = BDH.damageTypes;
       context.reloadChoices = BDH.reload;
-      context.qualityChoices = filterQualityChoices(BDH.qualities, homebrewQualitiesEnabled());
       context.qualityList = system.qualities.map((q, i) => {
         const cfg = BDH.qualities[q.key];
         const label = cfg?.label ?? q.key;
@@ -136,6 +201,16 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       });
       context.modList = system.mods.map((m, i) => ({ index: i, ...m }));
     }
+
+    context.showBonuses = context.isCybernetic || context.isGear || context.isArmour;
+    if (context.showBonuses) {
+      context.bonusList = (system.bonuses ?? []).map((b, i) => {
+        const lbl = BDH.skills[b.key]?.label ?? BDH.characteristics[b.key]?.label ?? b.key;
+        const tag = b.persistent ? "persistent" : (b.situational ? "situational" : "always");
+        return { index: i, display: `${game.i18n.localize(lbl)} ${b.amount >= 0 ? "+" : ""}${b.amount} (${tag})` };
+      });
+    }
+
     return context;
   }
 

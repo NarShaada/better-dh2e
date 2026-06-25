@@ -63,6 +63,18 @@
     </div>
   {{/if}}
 
+  {{#if showBonuses}}
+    <div class="bdh-section bdh-bonuses">
+      <div class="bdh-section-head">Bonuses</div>
+      {{#each bonusList as |b|}}
+        <div class="bdh-item-row"><span class="bdh-name">{{b.display}}</span>
+          <a data-action="removeBonus" data-index="{{b.index}}" title="Remove">✖</a></div>
+      {{/each}}
+      {{#unless bonusList.length}}<div class="bdh-empty">No bonuses.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addBonus">＋ Add</button></div>
+    </div>
+  {{/if}}
+
   {{#if isWeaponMod}}
     <div class="bdh-fields">
       <label>Attack Mod</label><input type="number" name="system.attackMod" value="{{system.attackMod}}"/>
@@ -101,11 +113,7 @@
           <div class="bdh-list-row"><span>{{q.display}}{{#if q.autoFull}} <span class="bdh-auto" title="Fully automated">⚙</span>{{else if q.autoPartial}} <span class="bdh-auto partial" title="Mostly automated — some manual input (e.g. consult a table)">⚙</span>{{/if}}</span>
             <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
         {{/each}}
-        <div class="bdh-add-row">
-          <select class="bdh-quality-key">{{selectOptions qualityChoices}}</select>
-          <input class="bdh-quality-value" type="number" placeholder="X"/>
-          <button type="button" data-action="addQuality">＋ Add</button>
-        </div>
+        <div class="bdh-add-row"><button type="button" data-action="addQuality">＋ Add</button></div>
       {{/if}}
     </div>
   {{/if}}
@@ -135,11 +143,7 @@
         <div class="bdh-list-row"><span>{{q.display}}{{#if q.autoFull}} <span class="bdh-auto" title="Fully automated">⚙</span>{{else if q.autoPartial}} <span class="bdh-auto partial" title="Mostly automated — some manual input (e.g. consult a table)">⚙</span>{{/if}}</span>
           <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
       {{/each}}
-      <div class="bdh-add-row">
-        <select class="bdh-quality-key">{{selectOptions qualityChoices}}</select>
-        <input class="bdh-quality-value" type="number" placeholder="X"/>
-        <button type="button" data-action="addQuality">＋ Add</button>
-      </div>
+      <div class="bdh-add-row"><button type="button" data-action="addQuality">＋ Add</button></div>
     </div>
 
     <div class="bdh-list-section">

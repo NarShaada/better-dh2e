@@ -3,6 +3,7 @@ import { BDH } from "../../config.mjs";
 import { characteristicTotal, characteristicBonus, skillTotal, fatigueMax, movement } from "../../helpers/derived.mjs";
 import { effectiveAgilityCap, applyImpairments } from "../../helpers/impairment-data.mjs";
 import { applyCharacteristicDamage } from "../../helpers/char-damage.mjs";
+import { gatherActiveBonusEntries, applyPersistentBonuses } from "../../helpers/item-bonuses.mjs";
 
 const fields = foundry.data.fields;
 
@@ -111,7 +112,9 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       c.total = characteristicTotal(c);
       c.bonus = characteristicBonus(c);
     }
-    // Characteristic damage (temporary, from injuries) applies FIRST — before fatigue max + impairments.
+    // Persistent item bonuses (installed cybernetics / equipped armour) raise the value (green) before damage.
+    applyPersistentBonuses(this.characteristics, gatherActiveBonusEntries(this.parent.items));
+    // Characteristic damage (temporary, from injuries) — before fatigue max + impairments.
     applyCharacteristicDamage(this.characteristics, this.injuries);
     // Fatigue max derives from the (char-damage-reduced) Toughness/Willpower bonuses; fatigue halving must not shrink it.
     this.fatigue.max = this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus);

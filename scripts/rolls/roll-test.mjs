@@ -2,6 +2,7 @@
 // Foundry-coupled roll service: dialog -> d100 -> chat card. Validated by loading in Foundry.
 import { parseModifier, evaluateTest } from "./test-logic.mjs";
 import { skillTotal, sizeStealthModifier } from "../helpers/derived.mjs";
+import { gatherActiveBonusEntries, rollBonusesFor } from "../helpers/item-bonuses.mjs";
 
 const NS = "better-dh2e";
 
@@ -10,11 +11,19 @@ const { renderTemplate } = foundry.applications.handlebars;
 
 const CARD = "systems/better-dh2e/templates/chat/test-card.hbs";
 
+/** Build a short " [src +X, …]" note of the item bonuses applied to a roll (empty when none). */
+function bonusNote(auto, applied) {
+  const parts = [];
+  if (auto) parts.push(`Always ${auto >= 0 ? "+" : ""}${auto}`);
+  for (const s of applied) parts.push(s.label);
+  return parts.length ? ` [${parts.join(", ")}]` : "";
+}
+
 /**
  * Show the modifier dialog (plus an optional characteristic picker).
  * @returns {Promise<{modifier:string, characteristicKey:(string|null)}|null>} null if cancelled.
  */
-export async function promptTest({ title, characteristics = null, defaultModifier = "+0" }) {
+export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [] }) {
   let picker = "";
   if (characteristics) {
     const opts = characteristics.map((c) =>
@@ -23,7 +32,13 @@ export async function promptTest({ title, characteristics = null, defaultModifie
     picker = `<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Characteristic")}</label>
       <select name="characteristic">${opts}</select></div>`;
   }
-  const content = `${picker}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
+  let checks = "";
+  if (situational.length) {
+    checks = `<div class="form-group bdh-situational"><label>Situational</label><div>` +
+      situational.map((s) => `<label class="bdh-sit"><input type="checkbox" name="sit_${s.id}"/> ${s.label}</label>`).join("") +
+      `</div></div>`;
+  }
+  const content = `${picker}${checks}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
     <input type="text" name="modifier" value="${defaultModifier}" autofocus/></div>`;
 
   return DialogV2.prompt({
@@ -34,7 +49,8 @@ export async function promptTest({ title, characteristics = null, defaultModifie
       label: game.i18n.localize("BDH.Roll.Roll"),
       callback: (event, button) => ({
         modifier: button.form.elements.modifier.value,
-        characteristicKey: button.form.elements.characteristic?.value ?? null
+        characteristicKey: button.form.elements.characteristic?.value ?? null,
+        situationalIds: situational.filter((s) => button.form.elements[`sit_${s.id}`]?.checked).map((s) => s.id)
       })
     }
   });
@@ -63,9 +79,13 @@ export async function performTest(actor, { label, base, modifier, fixedRoll = nu
 export async function rollCharacteristic(actor, key) {
   const cfg = CONFIG.BDH.characteristics[key];
   const label = game.i18n.localize(cfg.label);
-  const choice = await promptTest({ title: label });
+  const { auto, situational } = rollBonusesFor(gatherActiveBonusEntries(actor.items), "characteristic", key);
+  const choice = await promptTest({ title: label, situational });
   if (!choice) return null;
-  return performTest(actor, { label, base: actor.system.characteristics[key].total, modifier: choice.modifier });
+  const applied = situational.filter((s) => choice.situationalIds.includes(s.id));
+  const bonusTotal = auto + applied.reduce((n, s) => n + s.amount, 0);
+  const note = bonusNote(auto, applied);
+  return performTest(actor, { label: label + note, base: actor.system.characteristics[key].total, modifier: parseModifier(choice.modifier) + bonusTotal });
 }
 
 /** Skill test: dialog includes a characteristic picker defaulting to the skill's governing characteristic. */
@@ -89,13 +109,17 @@ export async function rollSkill(actor, key, specialtyIndex = null) {
     selected: ck === skillCfg.characteristic
   }));
   const label = `${game.i18n.localize(skillCfg.label)}${suffix}`;
-  const choice = await promptTest({ title: label, characteristics });
+  const { auto, situational } = rollBonusesFor(gatherActiveBonusEntries(actor.items), "skill", key);
+  const choice = await promptTest({ title: label, characteristics, situational });
   if (!choice) return null;
   const chosen = choice.characteristicKey ?? skillCfg.characteristic;
   const base = skillTotal(actor.system.characteristics[chosen].total, rank);
   const short = CONFIG.BDH.characteristics[chosen].short;
   const sizeStealth = key === "stealth" ? sizeStealthModifier(actor.system?.size ?? 4) : 0;
-  return performTest(actor, { label: `${label} (${short})`, base, modifier: parseModifier(choice.modifier) + sizeStealth });
+  const applied = situational.filter((s) => choice.situationalIds.includes(s.id));
+  const bonusTotal = auto + applied.reduce((n, s) => n + s.amount, 0);
+  const note = bonusNote(auto, applied);
+  return performTest(actor, { label: `${label} (${short})${note}`, base, modifier: parseModifier(choice.modifier) + sizeStealth + bonusTotal });
 }
 
 /** Malignancy / Trauma test: a Willpower test with the track penalty pre-filled in the dialog. */

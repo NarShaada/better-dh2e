@@ -175,7 +175,6 @@
 .better-dh2e.item .bdh-list-row { display:flex; justify-content:space-between; align-items:center; padding:3px 8px; border-bottom:1px dotted #cbb88c; font-size:12px; }
 .better-dh2e.item .bdh-list-row a { cursor:pointer; color:#7a1f1f; }
 .better-dh2e.item .bdh-add-row { display:flex; gap:5px; align-items:center; padding:5px 8px; }
-.better-dh2e.item .bdh-add-row .bdh-quality-value { width:48px; }
 .better-dh2e.item .bdh-add-row button { background:var(--bdh-maroon); color:var(--bdh-parch); border:none; border-radius:3px; padding:2px 8px; cursor:pointer; }
 .better-dh2e.item .bdh-empty { padding:4px 8px; color:var(--bdh-muted); font-style:italic; font-size:11px; }
 
@@ -309,6 +308,10 @@
 .better-dh2e .char.impaired .box .val { color:#a02020; }
 .better-dh2e .char.impaired .bonus { color:#a02020; }
 
+/* Persistent item bonus (installed cybernetic / equipped armour) — value + bonus green. */
+.better-dh2e .char.boosted .box .val { color:#2e7d32; }
+.better-dh2e .char.boosted .bonus { color:#2e7d32; }
+
 /* Non-automated weapon-quality note on a chat card (just the name+value, in red) */
 .better-dh2e .bdh-qnote, .chat-message .bdh-qnote { color:#a02020; font-weight:600; }
 
@@ -363,3 +366,8 @@
 .bdh-cover-editor .form-group { margin: 4px 0; }
 .bdh-cover-chks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .bdh-cover-chk { white-space: nowrap; }
+
+/* Add-entry dialog (qualities / bonuses): picker + number on one compact line. */
+.better-dh2e .bdh-add-dialog .bdh-add-line { display:flex; gap:6px; align-items:center; margin-bottom:6px; flex-wrap:wrap; }
+.better-dh2e .bdh-add-dialog .bdh-pick { flex:1 1 auto; min-width:10em; }
+.better-dh2e .bdh-add-dialog .bdh-num { width:5em; flex:0 0 auto; }
