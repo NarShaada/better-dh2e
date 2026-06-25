@@ -148,6 +148,8 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.craftChoices = BDH.craftsmanship;
     context.availChoices = BDH.availability;
     context.tierChoices = { 1: "Tier 1", 2: "Tier 2", 3: "Tier 3" };
+    // Quality cog: only shown when Homebrew Qualities is enabled — black = Core, red = Homebrew.
+    context.showQualityCogs = homebrewQualitiesEnabled();
     if (context.isTalent) {
       context.availableAptitudes = BDH.aptitudes.filter((a) => !(system.aptitudes ?? []).includes(a));
     }
@@ -170,9 +172,8 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         context.qualityList = (s.qualities ?? []).map((q, i) => {
           const cfg = BDH.qualities[q.key];
           const label = cfg?.label ?? q.key;
-          const automation = cfg?.automation;
           const display = cfg?.takesValue && q.value ? `${label} (${q.value})` : label;
-          return { index: i, key: q.key, display, autoFull: automation === "full", autoPartial: automation === "partial" };
+          return { index: i, key: q.key, display, isHomebrew: cfg?.homebrew === true };
         });
       }
     }
@@ -188,11 +189,10 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.qualityList = system.qualities.map((q, i) => {
         const cfg = BDH.qualities[q.key];
         const label = cfg?.label ?? q.key;
-        const automation = cfg?.automation;
         // Show the (value) only for qualities that actually take one (and have a truthy value) —
         // matches the chat cards and avoids "Reliable (0)" on value-less qualities.
         const display = cfg?.takesValue && q.value ? `${label} (${q.value})` : label;
-        return { index: i, key: q.key, display, autoFull: automation === "full", autoPartial: automation === "partial" };
+        return { index: i, key: q.key, display, isHomebrew: cfg?.homebrew === true };
       });
       context.modList = system.mods.map((m, i) => ({ index: i, ...m }));
     }
