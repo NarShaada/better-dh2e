@@ -12,9 +12,12 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
   /** Action: add a quality via a searchable dialog (shared by weapon + psychic-power sheets). */
   static async #onAddQuality(event, target) {
     const choices = filterQualityChoices(BDH.qualities, homebrewQualitiesEnabled());
+    // datalist option value = the LABEL (so the dropdown shows one clean string + filters by label);
+    // map the label back to the registry key on submit.
+    const labelToKey = {};
     const opts = Object.entries(choices)
       .sort((a, b) => a[1].localeCompare(b[1]))   // alphabetical by label
-      .map(([k, label]) => `<option value="${k}">${label}</option>`).join("");
+      .map(([k, label]) => { labelToKey[label] = k; return `<option value="${label}"></option>`; }).join("");
     const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
       <input class="bdh-pick" name="key" list="bdh-q-list" placeholder="Quality…" autofocus/>
       <datalist id="bdh-q-list">${opts}</datalist>
@@ -24,7 +27,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       window: { title: "Add Quality" }, position: { width: 340 }, content, rejectClose: false,
       ok: { label: "Add", callback: (ev, button) => {
         const f = new foundry.applications.ux.FormDataExtended(button.form).object;
-        const key = f.key;
+        const key = labelToKey[f.key];
         if (!key || !BDH.qualities[key]) return null;
         const value = BDH.qualities[key].takesValue ? (parseInt(f.value, 10) || 0) : null;
         return { key, value };
@@ -47,9 +50,12 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
   static async #onAddBonus(event, target) {
     const type = this.document.type;
     const allowPersistent = type === "cybernetic" || type === "armour";
+    // datalist option value = the LABEL (single clean string + label search); map back to the key on submit.
+    const labelToKey = {};
+    const opt = (k, label) => { labelToKey[label] = k; return `<option value="${label}"></option>`; };
     const opts = [
-      ...Object.entries(BDH.skills).map(([k, s]) => `<option value="${k}">Skill: ${game.i18n.localize(s.label)}</option>`),
-      ...Object.entries(BDH.characteristics).map(([k, c]) => `<option value="${k}">Char: ${game.i18n.localize(c.label)}</option>`)
+      ...Object.entries(BDH.skills).map(([k, s]) => opt(k, `Skill: ${game.i18n.localize(s.label)}`)),
+      ...Object.entries(BDH.characteristics).map(([k, c]) => opt(k, `Char: ${game.i18n.localize(c.label)}`))
     ].join("");
     const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
       <input class="bdh-pick" name="key" list="bdh-b-list" placeholder="Skill or characteristic…" autofocus/>
@@ -63,7 +69,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       window: { title: "Add Bonus" }, position: { width: 360 }, content, rejectClose: false,
       ok: { label: "Add", callback: (ev, button) => {
         const f = new foundry.applications.ux.FormDataExtended(button.form).object;
-        const key = f.key;
+        const key = labelToKey[f.key];
         if (!key || (!BDH.skills[key] && !BDH.characteristics[key])) return null;
         const kind = BDH.skills[key] ? "skill" : "characteristic";
         const amount = parseInt(f.amount, 10) || 0;
