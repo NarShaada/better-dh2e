@@ -75,6 +75,18 @@
     </div>
   {{/if}}
 
+  {{#if isCybernetic}}
+    <div class="bdh-section bdh-statmods">
+      <div class="bdh-section-head">Derived Stat Modifiers</div>
+      {{#each statModList as |m|}}
+        <div class="bdh-item-row"><span class="bdh-name">{{m.display}}</span>
+          <a data-action="removeStatMod" data-index="{{m.index}}" title="Remove">✖</a></div>
+      {{/each}}
+      {{#unless statModList.length}}<div class="bdh-empty">No stat modifiers.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addStatMod">＋ Add</button></div>
+    </div>
+  {{/if}}
+
   {{#if isWeaponMod}}
     <div class="bdh-fields">
       <label>Attack Mod</label><input type="number" name="system.attackMod" value="{{system.attackMod}}"/>

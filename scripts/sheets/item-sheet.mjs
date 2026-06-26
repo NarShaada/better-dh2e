@@ -5,6 +5,12 @@ import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { filterQualityChoices } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 
+const STAT_MOD_LABELS = {
+  moveAll: "Movement (all bands)", moveHalf: "Movement: Half", moveFull: "Movement: Full",
+  moveCharge: "Movement: Charge", moveRun: "Movement: Run",
+  wounds: "Wounds", size: "Size", fatigue: "Fatigue threshold", carry: "Carry"
+};
+
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
@@ -89,6 +95,36 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     await this.document.update({ "system.bonuses": bonuses });
   }
 
+  /** Action: add a derived-stat modifier via a small dialog. */
+  static async #onAddStatMod(event, target) {
+    const { DialogV2 } = foundry.applications.api;
+    const opts = Object.entries(STAT_MOD_LABELS).map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+    const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
+      <select class="bdh-stat-key" name="stat">${opts}</select>
+      <input class="bdh-num" name="amount" type="number" placeholder="±X"/>
+    </div></div>`;
+    const result = await DialogV2.prompt({
+      window: { title: "Add Stat Modifier" }, position: { width: 320 }, content, rejectClose: false,
+      ok: { label: "Add", callback: (ev, button) => {
+        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
+        const amount = parseInt(f.amount, 10) || 0;
+        if (!f.stat || !STAT_MOD_LABELS[f.stat] || !amount) return null;
+        return { stat: f.stat, amount };
+      } }
+    });
+    if (!result) return;
+    const statMods = foundry.utils.deepClone(this.document.system.statMods);
+    statMods.push(result);
+    await this.document.update({ "system.statMods": statMods });
+  }
+
+  /** Action: remove a derived-stat modifier by index. */
+  static async #onRemoveStatMod(event, target) {
+    const statMods = foundry.utils.deepClone(this.document.system.statMods);
+    statMods.splice(Number(target.dataset.index), 1);
+    await this.document.update({ "system.statMods": statMods });
+  }
+
   /** Action: remove an installed mod by index. */
   static async #onRemoveMod(event, target) {
     const mods = foundry.utils.deepClone(this.document.system.mods);
@@ -124,6 +160,8 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude,
       addBonus: DarkHeresyItemSheet.#onAddBonus,
       removeBonus: DarkHeresyItemSheet.#onRemoveBonus,
+      addStatMod: DarkHeresyItemSheet.#onAddStatMod,
+      removeStatMod: DarkHeresyItemSheet.#onRemoveStatMod,
     }
   };
 
@@ -204,6 +242,13 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         const tag = b.situational ? "situational" : "always";
         return { index: i, display: `${game.i18n.localize(lbl)} ${b.amount >= 0 ? "+" : ""}${b.amount} (${tag})` };
       });
+    }
+
+    if (context.isCybernetic) {
+      context.statModList = (system.statMods ?? []).map((m, i) => ({
+        index: i,
+        display: `${STAT_MOD_LABELS[m.stat] ?? m.stat} ${m.amount >= 0 ? "+" : ""}${m.amount}`
+      }));
     }
 
     return context;
