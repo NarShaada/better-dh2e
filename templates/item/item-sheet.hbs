@@ -87,6 +87,18 @@
     </div>
   {{/if}}
 
+  {{#if showGrants}}
+    <div class="bdh-section bdh-grants">
+      <div class="bdh-section-head">Granted Items <span class="bdh-hint">— drag an item here, or create one</span></div>
+      {{#each grantList as |g|}}
+        <div class="bdh-item-row"><span class="bdh-name">{{g.name}} <span class="bdh-tag">{{g.type}}</span></span>
+          <a data-action="grantRemove" data-index="{{g.index}}" title="Remove">✖</a></div>
+      {{/each}}
+      {{#unless grantList.length}}<div class="bdh-empty">No granted items.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="grantCreate">＋ Create</button></div>
+    </div>
+  {{/if}}
+
   {{#if isWeaponMod}}
     <div class="bdh-fields">
       <label>Attack Mod</label><input type="number" name="system.attackMod" value="{{system.attackMod}}"/>
