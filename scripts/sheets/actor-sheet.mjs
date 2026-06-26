@@ -752,13 +752,17 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       return { ...t, cost, valid, purchased: tsys.purchased ?? false };
     });
     context.advancementLog = sys.advancementLog;
-    const curSize = this.actor.system.size ?? 4;
+    // The Custom-mode dropdown edits the stored BASE size; the display shows the EFFECTIVE size
+    // (base + any installed-cybernetic size mod). Binding the dropdown to the derived value would
+    // write base+mod back to source and double-apply the mod on the next derive.
+    const baseSize = this.actor._source.system.size ?? 4;
+    const effSize = this.actor.system.size ?? 4;
     context.sizeOptions = Object.entries(BDH.sizes).map(([n, name]) => ({
-      value: Number(n), label: `${name} (${n})`, selected: Number(n) === curSize,
+      value: Number(n), label: `${name} (${n})`, selected: Number(n) === baseSize,
     }));
     context.canEditSize = context.isCustom;
-    context.sizeName = BDH.sizes[curSize] ?? "Average";
-    context.sizeValue = curSize;
+    context.sizeName = BDH.sizes[effSize] ?? "Average";
+    context.sizeValue = effSize;
     return context;
   }
 
