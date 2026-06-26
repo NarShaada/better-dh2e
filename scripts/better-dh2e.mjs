@@ -27,6 +27,7 @@ import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
 import { clearAllCover, coverMechanicsEnabled } from "./canvas/cover.mjs";
 import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
+import { registerGrantHooks } from "./cybernetics/grants.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -184,6 +185,7 @@ Hooks.once("ready", () => {
   applyUiTheme(game.settings.get("better-dh2e", "uiTheme"));
   registerCoverAutomation();
   initCoverOverlay();
+  registerGrantHooks();
 });
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));

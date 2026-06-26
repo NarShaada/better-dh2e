@@ -18,3 +18,12 @@ export function bonusesField() {
     situational: new fields.BooleanField({ required: true, initial: false })
   }));
 }
+
+/** Shared schema fragment: references to real Item documents granted while the host is active (cybernetic/armour). */
+export function grantsField() {
+  return new fields.ArrayField(new fields.SchemaField({
+    uuid: new fields.StringField({ required: true, blank: false }),
+    name: new fields.StringField({ required: true, initial: "" }),
+    type: new fields.StringField({ required: true, initial: "" })
+  }));
+}

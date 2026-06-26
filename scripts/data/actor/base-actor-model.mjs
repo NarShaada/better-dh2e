@@ -4,6 +4,7 @@ import { characteristicTotal, characteristicBonus, skillTotal, fatigueMax, movem
 import { effectiveAgilityCap, applyImpairments } from "../../helpers/impairment-data.mjs";
 import { applyCharacteristicDamage } from "../../helpers/char-damage.mjs";
 import { gatherActiveBonusEntries, applyPersistentBonuses } from "../../helpers/item-bonuses.mjs";
+import { gatherCyberStatMods, sumStatMods, applyMovementMods } from "../../helpers/cyber-stats.mjs";
 
 const fields = foundry.data.fields;
 
@@ -116,8 +117,13 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
     applyPersistentBonuses(this.characteristics, gatherActiveBonusEntries(this.parent.items));
     // Characteristic damage (temporary, from injuries) — before fatigue max + impairments.
     applyCharacteristicDamage(this.characteristics, this.injuries);
+    // Installed-cybernetic derived-stat modifiers (flat; effective mutations, stored bases untouched).
+    const cyberSums = sumStatMods(gatherCyberStatMods(this.parent.items));
+    this.size = (this.size ?? 4) + cyberSums.size;            // before movement() + size-dependent calcs
+    this.wounds.max = (this.wounds.max ?? 0) + cyberSums.wounds;
     // Fatigue max derives from the (char-damage-reduced) Toughness/Willpower bonuses; fatigue halving must not shrink it.
-    this.fatigue.max = this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus);
+    this.fatigue.max = (this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus)) + cyberSums.fatigue;
+    this.carryMod = cyberSums.carry;                          // read by the sheet's carry computation
     // Impairment: armour Agility cap + fatigue halving (mutates this.characteristics, sets `impaired`).
     const equippedArmour = this.parent.items.filter((i) => i.type === "armour" && i.system.equipped).map((i) => i.system);
     applyImpairments(this.characteristics, this.fatigue.value, effectiveAgilityCap(equippedArmour));
@@ -130,6 +136,6 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
         skill.total = skillTotal(charTotal, skill.rank);
       }
     }
-    this.movement = movement(this.characteristics.agility.bonus, this.size);
+    this.movement = applyMovementMods(movement(this.characteristics.agility.bonus, this.size), cyberSums);
   }
 }

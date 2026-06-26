@@ -4,6 +4,14 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { filterQualityChoices } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
+import { canGrant } from "../helpers/grants-data.mjs";
+import { grantsFolder } from "../cybernetics/grants.mjs";
+
+const STAT_MOD_LABELS = {
+  moveAll: "Movement (all bands)", moveHalf: "Movement: Half", moveFull: "Movement: Full",
+  moveCharge: "Movement: Charge", moveRun: "Movement: Run",
+  wounds: "Wounds", size: "Size", fatigue: "Fatigue threshold", carry: "Carry"
+};
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -89,6 +97,36 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     await this.document.update({ "system.bonuses": bonuses });
   }
 
+  /** Action: add a derived-stat modifier via a small dialog. */
+  static async #onAddStatMod(event, target) {
+    const { DialogV2 } = foundry.applications.api;
+    const opts = Object.entries(STAT_MOD_LABELS).map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
+    const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
+      <select class="bdh-stat-key" name="stat">${opts}</select>
+      <input class="bdh-num" name="amount" type="number" placeholder="±X"/>
+    </div></div>`;
+    const result = await DialogV2.prompt({
+      window: { title: "Add Stat Modifier" }, position: { width: 320 }, content, rejectClose: false,
+      ok: { label: "Add", callback: (ev, button) => {
+        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
+        const amount = parseInt(f.amount, 10) || 0;
+        if (!f.stat || !STAT_MOD_LABELS[f.stat] || !amount) return null;
+        return { stat: f.stat, amount };
+      } }
+    });
+    if (!result) return;
+    const statMods = foundry.utils.deepClone(this.document.system.statMods);
+    statMods.push(result);
+    await this.document.update({ "system.statMods": statMods });
+  }
+
+  /** Action: remove a derived-stat modifier by index. */
+  static async #onRemoveStatMod(event, target) {
+    const statMods = foundry.utils.deepClone(this.document.system.statMods);
+    statMods.splice(Number(target.dataset.index), 1);
+    await this.document.update({ "system.statMods": statMods });
+  }
+
   /** Action: remove an installed mod by index. */
   static async #onRemoveMod(event, target) {
     const mods = foundry.utils.deepClone(this.document.system.mods);
@@ -124,6 +162,11 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude,
       addBonus: DarkHeresyItemSheet.#onAddBonus,
       removeBonus: DarkHeresyItemSheet.#onRemoveBonus,
+      addStatMod: DarkHeresyItemSheet.#onAddStatMod,
+      removeStatMod: DarkHeresyItemSheet.#onRemoveStatMod,
+      grantCreate: DarkHeresyItemSheet.#onGrantCreate,
+      grantRemove: DarkHeresyItemSheet.#onGrantRemove,
+      grantEdit: DarkHeresyItemSheet.#onGrantEdit,
     }
   };
 
@@ -206,6 +249,22 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       });
     }
 
+    if (context.isCybernetic) {
+      context.statModList = (system.statMods ?? []).map((m, i) => ({
+        index: i,
+        display: `${STAT_MOD_LABELS[m.stat] ?? m.stat} ${m.amount >= 0 ? "+" : ""}${m.amount}`
+      }));
+    }
+
+    context.showGrants = context.isCybernetic || context.isArmour;
+    if (context.showGrants) {
+      context.grantList = (system.grants ?? []).map((g, i) => {
+        let src = null;
+        try { src = fromUuidSync(g.uuid); } catch { src = null; }   // live name/type from the source (the master)
+        return { index: i, uuid: g.uuid, name: src?.name ?? g.name ?? g.uuid, type: src?.type ?? g.type ?? "", missing: !src };
+      });
+    }
+
     return context;
   }
 
@@ -225,6 +284,9 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     if (this.document.type === "weapon") {
       this.element.addEventListener("dragover", (event) => event.preventDefault());
       this.element.addEventListener("drop", this.#onDropMod.bind(this));
+    } else if (this.document.type === "cybernetic" || this.document.type === "armour") {
+      this.element.addEventListener("dragover", (event) => event.preventDefault());
+      this.element.addEventListener("drop", this.#onDropGrant.bind(this));
     }
   }
 
@@ -243,5 +305,57 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       special: item.system.special
     });
     await this.document.update({ "system.mods": mods });
+  }
+
+  /** Add a dropped item as a grant reference (validated against the host's grant rules). */
+  async #onDropGrant(event) {
+    const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
+    if (data?.type !== "Item") return;
+    const item = await Item.implementation.fromDropData(data);
+    if (!item) return;
+    if (!canGrant(this.document.type, item.type)) {
+      ui.notifications.warn(`A ${this.document.type} can't grant a ${item.type}.`);
+      return;
+    }
+    const grants = foundry.utils.deepClone(this.document.system.grants);
+    if (grants.some((g) => g.uuid === item.uuid)) return;   // no duplicate references
+    grants.push({ uuid: item.uuid, name: item.name, type: item.type });
+    await this.document.update({ "system.grants": grants });
+  }
+
+  /** Action: create a new real Item of an allowed type in the Granted Items folder and reference it. */
+  static async #onGrantCreate(event, target) {
+    const hostType = this.document.type;
+    const TYPES = ["talent", "trait", "gear", "weapon", "armour", "forceField", "psychicPower"].filter((t) => canGrant(hostType, t));
+    const opts = TYPES.map((t) => `<option value="${t}">${game.i18n.localize(`TYPES.Item.${t}`)}</option>`).join("");
+    const type = await DialogV2.prompt({
+      window: { title: "Create Granted Item" }, position: { width: 320 },
+      content: `<div class="bdh-add-dialog"><div class="bdh-add-line"><label>Type</label><select name="type">${opts}</select></div></div>`,
+      ok: { label: "Create", callback: (ev, b) => new foundry.applications.ux.FormDataExtended(b.form).object.type },
+      rejectClose: false
+    });
+    if (!type) return;
+    const folder = await grantsFolder();
+    const created = await getDocumentClass("Item").create({ name: `New ${game.i18n.localize(`TYPES.Item.${type}`)}`, type, folder: folder.id });
+    if (!created) return;
+    const grants = foundry.utils.deepClone(this.document.system.grants);
+    grants.push({ uuid: created.uuid, name: created.name, type: created.type });
+    await this.document.update({ "system.grants": grants });
+    created.sheet.render(true);
+  }
+
+  /** Action: remove a grant reference by index. */
+  static async #onGrantRemove(event, target) {
+    const grants = foundry.utils.deepClone(this.document.system.grants);
+    grants.splice(Number(target.dataset.index), 1);
+    await this.document.update({ "system.grants": grants });
+  }
+
+  /** Action: open the source item of a grant (the editable master; the actor copy is read-only). */
+  static async #onGrantEdit(event, target) {
+    const uuid = target.closest("[data-grant-uuid]")?.dataset.grantUuid;
+    const src = uuid ? await fromUuid(uuid) : null;
+    if (src) src.sheet.render(true);
+    else ui.notifications.warn("Grant source not found (it may have been deleted).");
   }
 }
