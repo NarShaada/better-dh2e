@@ -56,7 +56,7 @@ export function registerGrantHooks() {
     if ("installed" in sys || "equipped" in sys || "grants" in sys) reconcileGrants(item);
   });
   Hooks.on("deleteItem", (item, options, userId) => {
-    if (userId !== game.user.id || !grantHostType(item)) return;
+    if (userId !== game.user.id || !grantHostType(item) || item.getFlag(NS, "grantedBy")) return;   // a granted item is never a host
     if (item.parent instanceof Actor) removeHostGrants(item, item.parent);
   });
 }
