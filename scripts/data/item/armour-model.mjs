@@ -1,5 +1,5 @@
 // scripts/data/item/armour-model.mjs
-import { BaseItemModel, bonusesField } from "./base-item-model.mjs";
+import { BaseItemModel, bonusesField, grantsField } from "./base-item-model.mjs";
 import { BDH } from "../../config.mjs";
 
 const fields = foundry.data.fields;
@@ -19,7 +19,8 @@ export class ArmourModel extends BaseItemModel {
       weight:        new fields.NumberField({ required: true, initial: 0, min: 0 }),
       equipped:      new fields.BooleanField({ required: true, initial: false }),
       maxAgility:    new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
-      bonuses:       bonusesField()
+      bonuses:       bonusesField(),
+      grants:        grantsField()
     };
   }
 }

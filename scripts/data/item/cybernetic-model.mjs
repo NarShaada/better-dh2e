@@ -1,5 +1,5 @@
 // scripts/data/item/cybernetic-model.mjs
-import { BaseItemModel, bonusesField } from "./base-item-model.mjs";
+import { BaseItemModel, bonusesField, grantsField } from "./base-item-model.mjs";
 import { BDH } from "../../config.mjs";
 
 const fields = foundry.data.fields;
@@ -15,7 +15,8 @@ export class CyberneticModel extends BaseItemModel {
       statMods:      new fields.ArrayField(new fields.SchemaField({
         stat:   new fields.StringField({ required: true, blank: true, initial: "", choices: ["moveAll","moveHalf","moveFull","moveCharge","moveRun","wounds","size","fatigue","carry"] }),
         amount: new fields.NumberField({ required: true, integer: true, initial: 0 })
-      }))
+      })),
+      grants:        grantsField()
     };
   }
 }
