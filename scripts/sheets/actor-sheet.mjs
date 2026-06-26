@@ -621,7 +621,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       if (i.type === "weapon" || i.type === "armour" || i.type === "forceField") return sum + w;
       return sum;
     }, 0);
-    const encSum = (this.document.system.characteristics.strength.bonus ?? 0) + (this.document.system.characteristics.toughness.bonus ?? 0);
+    const encSum = (this.document.system.characteristics.strength.bonus ?? 0) + (this.document.system.characteristics.toughness.bonus ?? 0) + (this.document.system.carryMod ?? 0);
     const limits = carryLimits(encSum);
     context.carryLimit = limits.carry;
     context.liftLimit = limits.lift;
