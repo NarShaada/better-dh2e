@@ -91,7 +91,7 @@
     <div class="bdh-section bdh-grants">
       <div class="bdh-section-head">Granted Items <span class="bdh-hint">— drag an item here, or create one</span></div>
       {{#each grantList as |g|}}
-        <div class="bdh-item-row"><span class="bdh-name">{{g.name}} <span class="bdh-tag">{{g.type}}</span></span>
+        <div class="bdh-item-row" data-grant-uuid="{{g.uuid}}"><span class="bdh-name" data-action="grantEdit" title="Edit the source item">{{g.name}}{{#if g.missing}} <span class="bdh-warn">(missing)</span>{{/if}} <span class="bdh-tag">{{g.type}}</span></span>
           <a data-action="grantRemove" data-index="{{g.index}}" title="Remove">✖</a></div>
       {{/each}}
       {{#unless grantList.length}}<div class="bdh-empty">No granted items.</div>{{/unless}}

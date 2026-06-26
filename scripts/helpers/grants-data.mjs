@@ -29,3 +29,17 @@ export function grantDiff(desiredUuids, existing) {
   const toRemoveIds = (existing ?? []).filter((e) => !desired.has(e.uuid)).map((e) => e.id);
   return { toCreateUuids, toRemoveIds };
 }
+
+/** 3-way reconcile plan: desired uuids vs existing granted items [{id, uuid}].
+ *  - toCreateUuids: desired with no existing copy (create from source)
+ *  - toUpdateUuidToId: { uuid: existingId } for desired that already have a copy (refresh from source)
+ *  - toRemoveIds: existing copies no longer desired (delete) */
+export function grantPlan(desiredUuids, existing) {
+  const desired = desiredUuids ?? [];
+  const desiredSet = new Set(desired);
+  const byUuid = new Map((existing ?? []).map((e) => [e.uuid, e.id]));
+  const toCreateUuids = desired.filter((u) => !byUuid.has(u));
+  const toUpdateUuidToId = Object.fromEntries(desired.filter((u) => byUuid.has(u)).map((u) => [u, byUuid.get(u)]));
+  const toRemoveIds = (existing ?? []).filter((e) => !desiredSet.has(e.uuid)).map((e) => e.id);
+  return { toCreateUuids, toUpdateUuidToId, toRemoveIds };
+}

@@ -1,5 +1,21 @@
 import { describe, it, expect } from "vitest";
-import { grantHostType, isGrantHostActive, canGrant, grantDiff } from "../scripts/helpers/grants-data.mjs";
+import { grantHostType, isGrantHostActive, canGrant, grantDiff, grantPlan } from "../scripts/helpers/grants-data.mjs";
+
+describe("grantPlan", () => {
+  it("partitions into create / update / remove keyed by uuid", () => {
+    const existing = [{ id: "a", uuid: "U1" }, { id: "b", uuid: "U2" }];
+    const r = grantPlan(["U2", "U3"], existing);
+    expect(r.toCreateUuids).toEqual(["U3"]);
+    expect(r.toUpdateUuidToId).toEqual({ U2: "b" });
+    expect(r.toRemoveIds).toEqual(["a"]);
+  });
+  it("inactive host (empty desired) removes all, creates/updates none", () => {
+    expect(grantPlan([], [{ id: "a", uuid: "U1" }])).toEqual({ toCreateUuids: [], toUpdateUuidToId: {}, toRemoveIds: ["a"] });
+  });
+  it("handles nullish input", () => {
+    expect(grantPlan(undefined, undefined)).toEqual({ toCreateUuids: [], toUpdateUuidToId: {}, toRemoveIds: [] });
+  });
+});
 
 describe("grantHostType", () => {
   it("identifies cybernetic and armour hosts, null otherwise", () => {

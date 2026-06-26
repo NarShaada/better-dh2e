@@ -166,6 +166,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       removeStatMod: DarkHeresyItemSheet.#onRemoveStatMod,
       grantCreate: DarkHeresyItemSheet.#onGrantCreate,
       grantRemove: DarkHeresyItemSheet.#onGrantRemove,
+      grantEdit: DarkHeresyItemSheet.#onGrantEdit,
     }
   };
 
@@ -257,7 +258,11 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
 
     context.showGrants = context.isCybernetic || context.isArmour;
     if (context.showGrants) {
-      context.grantList = (system.grants ?? []).map((g, i) => ({ index: i, name: g.name || g.uuid, type: g.type }));
+      context.grantList = (system.grants ?? []).map((g, i) => {
+        let src = null;
+        try { src = fromUuidSync(g.uuid); } catch { src = null; }   // live name/type from the source (the master)
+        return { index: i, uuid: g.uuid, name: src?.name ?? g.name ?? g.uuid, type: src?.type ?? g.type ?? "", missing: !src };
+      });
     }
 
     return context;
@@ -344,5 +349,13 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     const grants = foundry.utils.deepClone(this.document.system.grants);
     grants.splice(Number(target.dataset.index), 1);
     await this.document.update({ "system.grants": grants });
+  }
+
+  /** Action: open the source item of a grant (the editable master; the actor copy is read-only). */
+  static async #onGrantEdit(event, target) {
+    const uuid = target.closest("[data-grant-uuid]")?.dataset.grantUuid;
+    const src = uuid ? await fromUuid(uuid) : null;
+    if (src) src.sheet.render(true);
+    else ui.notifications.warn("Grant source not found (it may have been deleted).");
   }
 }

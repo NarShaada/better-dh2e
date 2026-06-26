@@ -143,7 +143,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** Action: open an owned item's sheet for editing. */
   static #onEditItem(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
-    this.actor.items.get(id)?.sheet.render(true);
+    const item = this.actor.items.get(id);
+    if (item?.getFlag("better-dh2e", "grantedBy")) {
+      ui.notifications.info("This item is granted — edit it on the cybernetic/armour that grants it.");
+      return;
+    }
+    item?.sheet.render(true);
   }
 
   /** Action: delete an owned item (granted items can't be deleted here — remove them from the granting item). */
