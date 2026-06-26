@@ -253,7 +253,7 @@
             {{else if t.valid}}<button type="button" class="bdh-buy" data-action="buyTalent">Buy {{t.cost}}</button>
             {{else}}<span class="bdh-warn">set tier + 2 aptitudes</span>{{/if}}
           {{else}}{{#unless t.purchased}}<span class="bdh-warn">unpaid</span>{{/unless}}{{/if}}
-          {{#unless @root.isPlay}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}
+          {{#unless @root.isPlay}}{{#unless t.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{/unless}}{{#if t.granted}}<span class="bdh-tag bdh-granted" title="Granted by cybernetic/armour">⚙</span>{{/if}}
         </div>
       {{/each}}
       {{#unless talents.length}}<div class="bdh-empty">No talents — drag one in or press ＋.</div>{{/unless}}
@@ -266,7 +266,7 @@
           <a class="bdh-fav {{#if tr.favourite}}on{{/if}}" data-action="toggleFavourite" title="Favourite">★</a>
           <span class="bdh-name" data-action="editItem">{{tr.name}}</span>
           <span class="bdh-desc-line">{{tr.desc}}</span>
-          {{#unless @root.isPlay}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}
+          {{#unless @root.isPlay}}{{#unless tr.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{/unless}}{{#if tr.granted}}<span class="bdh-tag bdh-granted" title="Granted by cybernetic/armour">⚙</span>{{/if}}
         </div>
       {{/each}}
       {{#unless traits.length}}<div class="bdh-empty">No traits.</div>{{/unless}}
@@ -283,7 +283,7 @@
           <span class="bdh-name" data-action="editItem">{{w.name}}</span>
           <span class="bdh-desc-line">{{w.summary}}</span>
           {{#if w.usesAmmo}}<span class="bdh-clip">Clip {{w.clip}}</span>{{/if}}
-          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+          {{#unless w.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{#if w.granted}}<span class="bdh-tag bdh-granted" title="Granted by cybernetic/armour">⚙</span>{{/if}}
         </div>
       {{/each}}
       {{#unless weapons.length}}<div class="bdh-empty">No weapons.</div>{{/unless}}
@@ -297,7 +297,7 @@
           <a class="bdh-eq {{#if a.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if a.equipped}}✓{{else}}○{{/if}}</a>
           <span class="bdh-name" data-action="editItem">{{a.name}}{{#if a.additive}} <span class="bdh-tag">additive</span>{{/if}}</span>
           <span class="bdh-desc-line">{{a.ap}}</span>
-          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+          {{#unless a.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{#if a.granted}}<span class="bdh-tag bdh-granted" title="Granted by cybernetic/armour">⚙</span>{{/if}}
         </div>
       {{/each}}
       {{#unless armour.length}}<div class="bdh-empty">No armour.</div>{{/unless}}
@@ -307,7 +307,7 @@
           <a class="bdh-eq {{#if f.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if f.equipped}}✓{{else}}○{{/if}}</a>
           <span class="bdh-name" data-action="editItem">{{f.name}}</span>
           <span class="bdh-desc-line">PR {{f.pr}} · Overload {{f.overload}}</span>
-          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+          {{#unless f.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{#if f.granted}}<span class="bdh-tag bdh-granted" title="Granted by cybernetic/armour">⚙</span>{{/if}}
         </div>
       {{/each}}
       {{#unless forceFields.length}}<div class="bdh-empty">No force fields.</div>{{/unless}}
@@ -321,7 +321,7 @@
           <span class="bdh-desc-line">{{g.desc}}</span>
           <span class="bdh-craft">{{g.craft}}</span>
           <span class="bdh-qty-wrap">×<input type="number" class="bdh-qty" value="{{g.quantity}}" min="0"/></span>
-          <a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>
+          {{#unless g.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{#if g.granted}}<span class="bdh-tag bdh-granted" title="Granted by cybernetic/armour">⚙</span>{{/if}}
         </div>
       {{/each}}
       {{#unless gear.length}}<div class="bdh-empty">No gear.</div>{{/unless}}

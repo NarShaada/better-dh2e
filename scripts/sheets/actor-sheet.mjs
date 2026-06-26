@@ -146,10 +146,15 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     this.actor.items.get(id)?.sheet.render(true);
   }
 
-  /** Action: delete an owned item. */
+  /** Action: delete an owned item (granted items can't be deleted here — remove them from the granting item). */
   static async #onDeleteItem(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
-    await this.actor.items.get(id)?.delete();
+    const item = this.actor.items.get(id);
+    if (item?.getFlag("better-dh2e", "grantedBy")) {
+      ui.notifications.warn("This item is granted by a cybernetic/armour — remove it from that item instead.");
+      return;
+    }
+    await item?.delete();
   }
 
   /** Action: toggle a talent/trait favourite (max 3 of each type). */
@@ -583,10 +588,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     };
     context.talents = items.filter((i) => i.type === "talent").map((t) => ({
       id: t.id, name: t.name, favourite: t.system.favourite, tier: t.system.tier,
-      desc: firstLine(t.system.description)
+      desc: firstLine(t.system.description), granted: !!t.getFlag("better-dh2e", "grantedBy")
     }));
     context.traits = items.filter((i) => i.type === "trait").map((t) => ({
-      id: t.id, name: t.name, desc: firstLine(t.system.description), favourite: t.system.favourite
+      id: t.id, name: t.name, desc: firstLine(t.system.description), favourite: t.system.favourite,
+      granted: !!t.getFlag("better-dh2e", "grantedBy")
     }));
     const LOC = { head: "Head", body: "Body", rightArm: "R Arm", leftArm: "L Arm", rightLeg: "R Leg", leftLeg: "L Leg" };
     context.weapons = items.filter((i) => i.type === "weapon").map((w) => {
@@ -601,19 +607,23 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       if (flags.usesAmmo) parts.push(`RoF ${s.rateOfFire.single}/${s.rateOfFire.short}/${s.rateOfFire.long}`);
       return {
         id: w.id, name: w.name, equipped: s.equipped, summary: parts.join(" · "),
-        usesAmmo: flags.usesAmmo, clip: `${s.clip.value}/${s.clip.max}`
+        usesAmmo: flags.usesAmmo, clip: `${s.clip.value}/${s.clip.max}`,
+        granted: !!w.getFlag("better-dh2e", "grantedBy")
       };
     });
     context.armour = items.filter((i) => i.type === "armour").map((a) => ({
       id: a.id, name: a.name, equipped: a.system.equipped, additive: a.system.additive,
-      ap: Object.entries(a.system.locations).filter(([, v]) => v > 0).map(([k, v]) => `${LOC[k]} ${v}`).join(", ") || "—"
+      ap: Object.entries(a.system.locations).filter(([, v]) => v > 0).map(([k, v]) => `${LOC[k]} ${v}`).join(", ") || "—",
+      granted: !!a.getFlag("better-dh2e", "grantedBy")
     }));
     context.forceFields = items.filter((i) => i.type === "forceField").map((f) => ({
-      id: f.id, name: f.name, equipped: f.system.equipped, pr: f.system.protectionRating, overload: f.system.overload
+      id: f.id, name: f.name, equipped: f.system.equipped, pr: f.system.protectionRating, overload: f.system.overload,
+      granted: !!f.getFlag("better-dh2e", "grantedBy")
     }));
     context.gear = items.filter((i) => i.type === "gear").map((g) => ({
       id: g.id, name: g.name, desc: firstLine(g.system.description),
-      craft: BDH.craftsmanship[g.system.craftsmanship] ?? g.system.craftsmanship, quantity: g.system.quantity
+      craft: BDH.craftsmanship[g.system.craftsmanship] ?? g.system.craftsmanship, quantity: g.system.quantity,
+      granted: !!g.getFlag("better-dh2e", "grantedBy")
     }));
     context.carriedWeight = items.reduce((sum, i) => {
       const w = i.system.weight ?? 0;
