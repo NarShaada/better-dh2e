@@ -70,13 +70,11 @@ function grantActors() {
  *  references it, and refresh the host's cached grant name/type so its open sheet updates without reopening. */
 export async function reconcileHostsReferencing(uuid) {
   const src = await fromUuid(uuid);
-  let hosts = 0;
   for (const actor of grantActors()) {
     for (const it of actor.items) {
       if (!grantHostType(it) || it.getFlag(NS, "grantedBy")) continue;
       const grants = it.system.grants ?? [];
       if (!grants.some((g) => g.uuid === uuid)) continue;
-      hosts++;
       await reconcileGrants(it);
       if (src) {
         const updated = grants.map((g) => g.uuid === uuid ? { ...g, name: src.name, type: src.type } : g);
@@ -86,7 +84,6 @@ export async function reconcileHostsReferencing(uuid) {
       }
     }
   }
-  console.debug(`better-dh2e | grant source ${uuid} edited → re-synced ${hosts} host(s)`);
 }
 
 /** Remove every item granted by `host` from the actor (host deleted/disabled). */
