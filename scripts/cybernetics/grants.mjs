@@ -59,15 +59,24 @@ export async function reconcileGrants(host) {
   if (toCreate.length) await actor.createEmbeddedDocuments("Item", toCreate);
 }
 
+/** Every actor that could host grants: world actors + unlinked token actors on the canvas. */
+function grantActors() {
+  const set = new Set(game.actors);
+  for (const t of (canvas?.tokens?.placeables ?? [])) if (t.actor) set.add(t.actor);
+  return set;
+}
+
 /** A world grant-source item was edited → re-sync granted copies on every host (across actors) that
  *  references it, and refresh the host's cached grant name/type so its open sheet updates without reopening. */
 export async function reconcileHostsReferencing(uuid) {
   const src = await fromUuid(uuid);
-  for (const actor of game.actors) {
+  let hosts = 0;
+  for (const actor of grantActors()) {
     for (const it of actor.items) {
       if (!grantHostType(it) || it.getFlag(NS, "grantedBy")) continue;
       const grants = it.system.grants ?? [];
       if (!grants.some((g) => g.uuid === uuid)) continue;
+      hosts++;
       await reconcileGrants(it);
       if (src) {
         const updated = grants.map((g) => g.uuid === uuid ? { ...g, name: src.name, type: src.type } : g);
@@ -77,6 +86,7 @@ export async function reconcileHostsReferencing(uuid) {
       }
     }
   }
+  console.debug(`better-dh2e | grant source ${uuid} edited → re-synced ${hosts} host(s)`);
 }
 
 /** Remove every item granted by `host` from the actor (host deleted/disabled). */
