@@ -303,6 +303,19 @@ async function applySpray(message, html) {
   for (const uuid of checked) {
     const actor = await fromUuid(uuid);
     if (!actor) continue;
+    if (actor.type === "horde") {
+      const d5 = (await safeRoll("1d5", "spray hits"))?.total ?? 1;
+      const nHits = hordeSprayHits(weapon.system.range, d5) + hordeExtraHits(f.damageType, qualities);
+      const effs = [];
+      for (let i = 0; i < nHits; i++) {
+        effs.push(await applyHitToToken(actor, { damageTotal, penetration, damageType: f.damageType, qualities, location: "body" }));
+      }
+      const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+      const mag = Math.max(0, (actor.system.magnitude ?? 0) - loss);
+      if (loss) await actor.update({ "system.magnitude": mag });
+      lines.push(`${actor.name}: ${effs[0] ?? 0} dmg × ${nHits} hits (Magnitude −${loss})`);
+      continue;
+    }
     const dealt = await applyHitToToken(actor, {
       damageTotal, penetration, damageType: f.damageType, qualities, location: "body",
     });
@@ -593,6 +606,20 @@ async function applyDamage(message) {
     for (const uuid of f.poolUuids ?? []) {
       const actor = await fromUuid(uuid);
       if (!actor) continue;
+      if (actor.type === "horde") {
+        const nHits = (f.blast || 1) + hordeExtraHits(f.damageType, f.qualities ?? []);
+        const effs = [];
+        for (let i = 0; i < nHits; i++) {
+          effs.push(await applyHitToToken(actor, {
+            damageTotal: f.damageTotal, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location: "body",
+          }));
+        }
+        const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+        const mag = Math.max(0, (actor.system.magnitude ?? 0) - loss);
+        if (loss) await actor.update({ "system.magnitude": mag });
+        lines.push(`${actor.name}: ${effs[0] ?? 0} dmg × ${nHits} hits (Magnitude −${loss})`);
+        continue;
+      }
       const location = hitLocation((await safeRoll("1d100", "hit location"))?.total ?? 50);
       const dealt = await applyHitToToken(actor, {
         damageTotal: f.damageTotal, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location,
