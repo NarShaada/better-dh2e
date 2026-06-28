@@ -7,6 +7,7 @@ import { bindCardButtons } from "./rolls/attack.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
+import { HordeModel } from "./data/actor/horde-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
 import { WeaponModModel } from "./data/item/weapon-mod-model.mjs";
 import { GearModel } from "./data/item/gear-model.mjs";
@@ -54,6 +55,7 @@ Hooks.once("init", () => {
   // Data models
   CONFIG.Actor.dataModels.acolyte = AcolyteModel;
   CONFIG.Actor.dataModels.npc = NpcModel;
+  CONFIG.Actor.dataModels.horde = HordeModel;
   CONFIG.Item.dataModels.weapon = WeaponModel;
   CONFIG.Item.dataModels.weaponMod = WeaponModModel;
   CONFIG.Item.dataModels.gear = GearModel;
