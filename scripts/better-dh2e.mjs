@@ -146,6 +146,16 @@ Hooks.once("init", () => {
     default: false,
   });
 
+  game.settings.register("better-dh2e", "reverseWounds", {
+    name: "Reverse wounds display (HP style)",
+    hint: "Display wounds as remaining health (full = 9/9) instead of wounds suffered (0/9). Cosmetic only — no rules change.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
+  });
+
   registerTokenPrefix();
 
   // Conditions — replace Foundry's default set with our DH2e set.

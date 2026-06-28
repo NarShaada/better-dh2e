@@ -1,5 +1,6 @@
 // scripts/sheets/actor-sheet.mjs
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
+import { woundsShown, woundsStored, reverseWoundsEnabled } from "../helpers/wounds-display.mjs";
 import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
 import { rollAttack } from "../rolls/attack.mjs";
 import { clearStunned } from "../rolls/conditions.mjs";
@@ -581,6 +582,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.characteristics = buildCharacteristics(system.characteristics);
     context.skills = buildSkills(system.skills);
     context.fatiguePct = fatiguePercent(system.fatigue?.value ?? 0, system.fatigue?.max ?? 0);
+    context.woundsShown = woundsShown(system.wounds?.value ?? 0, system.wounds?.max ?? 0, reverseWoundsEnabled());
     context.hideUntrained = this._hideUntrained;
     // >1 tab group => context.tabs is not auto-injected; prepare both groups explicitly.
     context.tabs = this._prepareTabs("primary");
@@ -784,6 +786,13 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   async _onRender(context, options) {
     await super._onRender(context, options);
     // Gear quantity: a no-name input that updates the embedded item directly (so it isn't part of the actor form submit).
+    for (const input of this.element.querySelectorAll(".bdh-wounds-value")) {
+      input.addEventListener("change", (event) => {
+        const max = this.actor.system.wounds?.max ?? 0;
+        const typed = Math.floor(Number(event.currentTarget.value) || 0);
+        this.actor.update({ "system.wounds.value": woundsStored(typed, max, reverseWoundsEnabled()) });
+      });
+    }
     for (const input of this.element.querySelectorAll(".bdh-qty")) {
       input.addEventListener("change", (event) => {
         const id = event.currentTarget.closest("[data-item-id]")?.dataset.itemId;
