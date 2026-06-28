@@ -1186,6 +1186,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
+  const stormHail = storm && at.hits?.mode === "multi";   // Storm only doubles automatic fire, never a single shot
   const aimMod = hasInaccurate(weapon.system.qualities) ? 0 : (BDH.aimOptions[choice.aim]?.mod ?? 0);
   const rangeMod = isRanged ? (BDH.rangeOptions[choice.range]?.mod ?? 0) : 0;
   const manual = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
@@ -1198,7 +1199,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
 
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
-  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (storm ? 2 : 1);
+  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (stormHail ? 2 : 1);
   // Only gate on ammo when we'd actually consume it — a Fate reroll re-resolves the same (already-fired) shot.
   if (consumeAmmo && usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
     ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
@@ -1236,8 +1237,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const hordeTarget = (opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null));
   const tgtIsHorde = hordeTarget?.type === "horde";
   const blastWeapon = (weapon.system.qualities ?? []).some((q) => q.key === "blast");   // blast resolves horde hits in the blast flow, not the direct hit
-  let nHits = success ? computeHits(at, dos, storm ? Infinity : rofCap) : 0;
-  if (storm && success) nHits = Math.min(nHits * 2, rofCap);
+  let nHits = success ? computeHits(at, dos, stormHail ? Infinity : rofCap) : 0;
+  if (stormHail && success) nHits = Math.min(nHits * 2, rofCap);
   if (success && tgtIsHorde && !blastWeapon) nHits += hordeExtraHits(weapon.system.damageType, weapon.system.qualities);   // additive extras vs hordes
   const firstLoc = at.calledShot ? choice.calledShotLocation : hitLocation(roll.total);
   const locs = success ? (tgtIsHorde ? Array(nHits).fill("body") : locationSequence(firstLoc, nHits)) : [];
