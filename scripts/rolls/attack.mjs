@@ -471,6 +471,10 @@ async function rollDamage(message) {
   let weaponBase = baseFormula;
   if (strBonus) weaponBase = `${weaponBase} + ${strBonus}`;
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
+  if (actor.type === "horde" && weapon.system.hordeEquipped) {
+    const hd = hordeDamageBonusDice(actor.system.magnitude);   // +1d10 per 10 Magnitude, cap +2d10
+    if (hd) weaponBase = `${weaponBase} + ${hd}d10`;
+  }
   if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
   if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
   if (f.helpless) weaponBase = doubleDamageDice(weaponBase);   // every die term doubles for Helpless
