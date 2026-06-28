@@ -139,15 +139,6 @@ Hooks.once("init", () => {
     default: [],
   });
 
-  game.settings.register("better-dh2e", "homebrewQualities", {
-    name: "Homebrew Qualities",
-    hint: "Enable non-vanilla weapon qualities",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false,
-  });
-
   game.settings.register("better-dh2e", "reverseWounds", {
     name: "Reverse wounds display (HP style)",
     hint: "Display wounds as remaining health (full = 9/9) instead of wounds suffered (0/9). Cosmetic only — no rules change.",
@@ -156,6 +147,24 @@ Hooks.once("init", () => {
     type: Boolean,
     default: false,
     onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
+  });
+
+  // --- Homerules (kept last as a group) ---
+  game.settings.register("better-dh2e", "homebrewQualities", {
+    name: "Homebrew Qualities",
+    hint: "Enable non-vanilla weapon qualities",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+  });
+  game.settings.register("better-dh2e", "enableHordes", {
+    name: "Enable Hordes",
+    hint: "Enable Horde mechanics adapted from Black Crusade.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
   });
 
   registerTokenPrefix();
