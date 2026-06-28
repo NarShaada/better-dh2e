@@ -315,6 +315,16 @@ async function applySpray(message, html) {
   const damageTotal = roll.total + dieDelta;
   // Jam: natural 9 on ANY active d10 damage die — ignores Reliable/Unreliable.
   const jammed = roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 9));
+  // A horde caught in the spray takes many separate hits, each its own roll (like a burst); non-hordes take the one shared roll.
+  const sprayRolls = [];
+  const rollSprayHit = async () => {
+    const r = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+    if (!r) return null;
+    let delta = 0;
+    for (const d of r.dice) for (const res of d.results) if (res.active) delta += transform(res.result) - res.result;
+    sprayRolls.push(r);
+    return r.total + delta;
+  };
   const lines = [];
   for (const uuid of checked) {
     const actor = await fromUuid(uuid);
@@ -324,12 +334,14 @@ async function applySpray(message, html) {
       const nHits = hordeSprayHits(weapon.system.range, d5) + hordeExtraHits(f.damageType, qualities);
       const effs = [];
       for (let i = 0; i < nHits; i++) {
-        effs.push(await applyHitToToken(actor, { damageTotal, penetration, damageType: f.damageType, qualities, location: "body" }));
+        const total = await rollSprayHit();
+        if (total == null) continue;
+        effs.push(await applyHitToToken(actor, { damageTotal: total, penetration, damageType: f.damageType, qualities, location: "body" }));
       }
       const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
       const mag = Math.max(0, (actor.system.magnitude ?? 0) - loss);
       if (loss) await actor.update({ "system.magnitude": mag });
-      lines.push(`${actor.name}: ${effs[0] ?? 0} dmg × ${nHits} hits (Magnitude −${loss})`);
+      lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss})`);
       continue;
     }
     const dealt = await applyHitToToken(actor, {
@@ -347,7 +359,7 @@ async function applySpray(message, html) {
     snareValue(qualities) ? `<button type="button" class="bdh-qchip" data-bdh="snareTest"><span class="ic">&#128376;</span><b>Snare (${snareValue(qualities)})</b> Agility test or Immobilised</button>` : "",
   ].filter(Boolean).join("");
   await ChatMessage.create({
-    speaker: ChatMessage.getSpeaker(), rolls: [roll],
+    speaker: ChatMessage.getSpeaker(), rolls: [roll, ...sprayRolls],
     content: `<div class="bdh-card"><div class="bdh-card-head"><span class="t">${weapon.name} <span class="arrow">&mdash;</span> Spray damage</span><span class="sub">${damageTotal}</span></div>`
       + `<div class="bdh-card-line">${lines.join("<br>") || "No one hit."}</div>`
       + (jammed ? `<div class="bdh-card-line fail">&#9888; Jammed! (natural 9)</div>` : "")
@@ -417,6 +429,19 @@ async function rollDamage(message) {
     const dmgRoll = await safeRoll(weaponFormula, "weapon damage");
     if (!dmgRoll) return;
     const breakdown = formatRoll(dmgRoll);
+    // Hordes caught in the zone take MANY separate hits, each its own roll (like a burst); non-hordes take the one shared roll.
+    const blastHits = (Number(f.blast) || 1) + hordeExtraHits(f.damageType, qualities);
+    const hordeBlast = [];
+    const hordeRolls = [];
+    for (const t of pool) {
+      if (t.actor?.type !== "horde") continue;
+      const totals = [];
+      for (let i = 0; i < blastHits; i++) {
+        const r = await safeRoll(weaponFormula, "weapon damage");
+        if (r) { totals.push(r.total); hordeRolls.push(r); }
+      }
+      hordeBlast.push({ uuid: t.actor.uuid, name: t.name, totals });
+    }
     const cardData = {
       blast: true,
       weaponName: f.weaponName ?? weapon.name,
@@ -429,17 +454,21 @@ async function rollDamage(message) {
       // target, not the pool (multi-target quality conditions are a deferred slice).
       damageNotes: qualityNotes(qualities, "damage"),
     };
-    const content = await renderTemplate(DAMAGE_CARD, cardData);
+    const hordeNote = hordeBlast.length
+      ? `<div class="bdh-card"><div class="bdh-card-line">${hordeBlast.map((h) => `${h.name} — ${h.totals.length} hits: ${h.totals.join(", ")}`).join("<br>")}</div></div>`
+      : "";
+    const content = (await renderTemplate(DAMAGE_CARD, cardData)) + hordeNote;
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
       content,
-      rolls: [dmgRoll],
+      rolls: [dmgRoll, ...hordeRolls],
       flags: {
         [NS]: {
           ...f,
           blast: true,
           poolUuids: pool.map((t) => t.actor.uuid),
           damageTotal: dmgRoll.total,
+          hordeBlast,
           penetration: f.penetration,
           damageType: f.damageType,
           qualities: f.qualities ?? [],
@@ -631,21 +660,22 @@ async function applyDamage(message) {
   // --- Blast branch: soak each pooled token individually, per-token hit location ---
   if (f.blast) {
     const lines = [];
+    const hordeMap = new Map((f.hordeBlast ?? []).map((h) => [h.uuid, h]));
     for (const uuid of f.poolUuids ?? []) {
       const actor = await fromUuid(uuid);
       if (!actor) continue;
-      if (actor.type === "horde") {
-        const nHits = (f.blast || 1) + hordeExtraHits(f.damageType, f.qualities ?? []);
+      const h = hordeMap.get(uuid);
+      if (h) {   // horde: soak each of its separately-rolled hits independently
         const effs = [];
-        for (let i = 0; i < nHits; i++) {
+        for (const total of h.totals) {
           effs.push(await applyHitToToken(actor, {
-            damageTotal: f.damageTotal, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location: "body",
+            damageTotal: total, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location: "body",
           }));
         }
         const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
         const mag = Math.max(0, (actor.system.magnitude ?? 0) - loss);
         if (loss) await actor.update({ "system.magnitude": mag });
-        lines.push(`${actor.name}: ${effs[0] ?? 0} dmg × ${nHits} hits (Magnitude −${loss})`);
+        lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss})`);
         continue;
       }
       const location = hitLocation((await safeRoll("1d100", "hit location"))?.total ?? 50);
