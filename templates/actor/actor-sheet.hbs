@@ -189,11 +189,19 @@
 
         <div class="bdh-combat-col">
           <div class="bdh-section">
+            {{#if isHorde}}
+            <div class="bdh-section-head">Magnitude</div>
+            <div class="bdh-wounds">
+              <label>Magnitude</label><span class="bdh-wval"><input type="number" name="system.magnitude" value="{{system.magnitude}}" min="0"/></span>
+              <label>Size</label><span class="bdh-wval"><b class="bdh-ro">{{sizeName}} ({{sizeValue}})</b></span>
+            </div>
+            {{else}}
             <div class="bdh-section-head">Wounds</div>
             <div class="bdh-wounds">
-              <label>Wounds</label><span class="bdh-wval"><input type="number" name="system.wounds.value" value="{{system.wounds.value}}"/> / {{#if isCustom}}<input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>{{else}}<b class="bdh-ro">{{system.wounds.max}}</b>{{/if}}</span>
+              <label>Wounds</label><span class="bdh-wval"><input class="bdh-wounds-value" type="number" value="{{woundsShown}}" min="0"/> / {{#if isCustom}}<input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>{{else}}<b class="bdh-ro">{{system.wounds.max}}</b>{{/if}}</span>
               <label>Critical</label><input type="number" name="system.wounds.critical" value="{{system.wounds.critical}}"/>
             </div>
+            {{/if}}
           </div>
           <div class="bdh-section">
             <div class="bdh-section-head">Crits &amp; Char Damage <button type="button" class="bdh-add" data-action="addInjury">＋</button></div>
@@ -279,7 +287,7 @@
       <div class="bdh-section-head">⚔ Weapons <button type="button" class="bdh-add" data-action="createItem" data-type="weapon">＋</button></div>
       {{#each weapons as |w|}}
         <div class="bdh-item-row" data-item-id="{{w.id}}">
-          <a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if w.equipped}}✓{{else}}○{{/if}}</a>
+          {{#if @root.isHorde}}<a class="bdh-eq {{#if w.hordeEquipped}}on horde{{else}}{{#if w.equipped}}on{{/if}}{{/if}}" data-action="toggleEquipped" title="{{#if w.hordeEquipped}}Horde-Equipped{{else}}{{#if w.equipped}}Equipped{{else}}Not Equipped{{/if}}{{/if}}">{{#if w.hordeEquipped}}✦{{else}}{{#if w.equipped}}✓{{else}}○{{/if}}{{/if}}</a>{{else}}<a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if w.equipped}}✓{{else}}○{{/if}}</a>{{/if}}
           <span class="bdh-name" data-action="editItem">{{w.name}}</span>
           <span class="bdh-desc-line">{{w.summary}}</span>
           {{#if w.usesAmmo}}<span class="bdh-clip">Clip {{w.clip}}</span>{{/if}}

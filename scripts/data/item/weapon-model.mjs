@@ -39,7 +39,8 @@ export class WeaponModel extends BaseItemModel {
         penMod:    new fields.NumberField({ required: true, integer: true, initial: 0 }),
         special:   new fields.StringField({ required: true, initial: "" })
       })),
-      equipped: new fields.BooleanField({ required: true, initial: false })
+      equipped: new fields.BooleanField({ required: true, initial: false }),
+      hordeEquipped: new fields.BooleanField({ required: true, initial: false })
     };
   }
 }

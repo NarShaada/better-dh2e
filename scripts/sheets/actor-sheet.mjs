@@ -1,5 +1,6 @@
 // scripts/sheets/actor-sheet.mjs
 import { buildCharacteristics, buildSkills, fatiguePercent } from "../helpers/sheet-data.mjs";
+import { woundsShown, woundsStored, reverseWoundsEnabled } from "../helpers/wounds-display.mjs";
 import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
 import { rollAttack } from "../rolls/attack.mjs";
 import { clearStunned } from "../rolls/conditions.mjs";
@@ -230,6 +231,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const id = target.closest("[data-item-id]")?.dataset.itemId;
     const item = this.actor.items.get(id);
     if (!item) return;
+    if (item.type === "weapon" && this.actor.type === "horde") {
+      const cur = item.system.hordeEquipped ? "hordeEquipped" : (item.system.equipped ? "equipped" : "none");
+      const nextState = cur === "none" ? "equipped" : cur === "equipped" ? "hordeEquipped" : "none";
+      await item.update({ "system.equipped": nextState !== "none", "system.hordeEquipped": nextState === "hordeEquipped" });
+      return;
+    }
     const next = !item.system.equipped;
     if (item.type === "armour" && next && !item.system.additive) {
       const others = this.actor.items.filter(
@@ -581,6 +588,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.characteristics = buildCharacteristics(system.characteristics);
     context.skills = buildSkills(system.skills);
     context.fatiguePct = fatiguePercent(system.fatigue?.value ?? 0, system.fatigue?.max ?? 0);
+    context.woundsShown = woundsShown(system.wounds?.value ?? 0, system.wounds?.max ?? 0, reverseWoundsEnabled());
     context.hideUntrained = this._hideUntrained;
     // >1 tab group => context.tabs is not auto-injected; prepare both groups explicitly.
     context.tabs = this._prepareTabs("primary");
@@ -611,7 +619,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       if (flags.usesRange) parts.push(`Rng ${s.range}m`);
       if (flags.usesAmmo) parts.push(`RoF ${s.rateOfFire.single}/${s.rateOfFire.short}/${s.rateOfFire.long}`);
       return {
-        id: w.id, name: w.name, equipped: s.equipped, summary: parts.join(" · "),
+        id: w.id, name: w.name, equipped: s.equipped, hordeEquipped: s.hordeEquipped, summary: parts.join(" · "),
         usesAmmo: flags.usesAmmo, clip: `${s.clip.value}/${s.clip.max}`,
         granted: !!w.getFlag("better-dh2e", "grantedBy")
       };
@@ -735,6 +743,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.canBuyPsyRating = context.isSimple && pr >= 1;
     context.psyRatingNextCost = psyRatingCost(pr + 1);
     context.isNpc = this.document.type === "npc";
+    context.isHorde = this.document.type === "horde";
     context.availableAptitudes = BDH.aptitudes.filter((a) => !(this.document.system.aptitudes ?? []).includes(a));
     context.experience = {
       total: sys.experience.total, spent: sys.experience.spent,
@@ -775,7 +784,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.sizeOptions = Object.entries(BDH.sizes).map(([n, name]) => ({
       value: Number(n), label: `${name} (${n})`, selected: Number(n) === baseSize,
     }));
-    context.canEditSize = context.isCustom;
+    context.canEditSize = context.isCustom && !context.isHorde;
     context.sizeName = BDH.sizes[effSize] ?? "Average";
     context.sizeValue = effSize;
     return context;
@@ -784,6 +793,13 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   async _onRender(context, options) {
     await super._onRender(context, options);
     // Gear quantity: a no-name input that updates the embedded item directly (so it isn't part of the actor form submit).
+    for (const input of this.element.querySelectorAll(".bdh-wounds-value")) {
+      input.addEventListener("change", (event) => {
+        const max = this.actor.system.wounds?.max ?? 0;
+        const typed = Math.floor(Number(event.currentTarget.value) || 0);
+        this.actor.update({ "system.wounds.value": woundsStored(typed, max, reverseWoundsEnabled()) });
+      });
+    }
     for (const input of this.element.querySelectorAll(".bdh-qty")) {
       input.addEventListener("change", (event) => {
         const id = event.currentTarget.closest("[data-item-id]")?.dataset.itemId;

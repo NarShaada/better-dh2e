@@ -120,7 +120,7 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
     // Installed-cybernetic derived-stat modifiers (flat; effective mutations, stored bases untouched).
     const cyberSums = sumStatMods(gatherCyberStatMods(this.parent.items));
     this.size = (this.size ?? 4) + cyberSums.size;            // before movement() + size-dependent calcs
-    this.wounds.max = (this.wounds.max ?? 0) + cyberSums.wounds;
+    if (this.wounds) this.wounds.max = (this.wounds.max ?? 0) + cyberSums.wounds;
     // Fatigue max derives from the (char-damage-reduced) Toughness/Willpower bonuses; fatigue halving must not shrink it.
     this.fatigue.max = (this.fatigue.maxOverride ?? fatigueMax(this.characteristics.toughness.bonus, this.characteristics.willpower.bonus)) + cyberSums.fatigue;
     this.carryMod = cyberSums.carry;                          // read by the sheet's carry computation

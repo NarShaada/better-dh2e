@@ -1,12 +1,14 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
 import { battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
+import { hordesEnabled } from "./helpers/horde-data.mjs";
 import { themeChoices, themeBodyClasses, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
 import { registerTokenPrefix } from "./helpers/token-prefix.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
+import { HordeModel } from "./data/actor/horde-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
 import { WeaponModModel } from "./data/item/weapon-mod-model.mjs";
 import { GearModel } from "./data/item/gear-model.mjs";
@@ -54,6 +56,7 @@ Hooks.once("init", () => {
   // Data models
   CONFIG.Actor.dataModels.acolyte = AcolyteModel;
   CONFIG.Actor.dataModels.npc = NpcModel;
+  CONFIG.Actor.dataModels.horde = HordeModel;
   CONFIG.Item.dataModels.weapon = WeaponModel;
   CONFIG.Item.dataModels.weaponMod = WeaponModModel;
   CONFIG.Item.dataModels.gear = GearModel;
@@ -67,7 +70,7 @@ Hooks.once("init", () => {
   // Sheets (ApplicationV2 registration)
   foundry.documents.collections.Actors.unregisterSheet("core", foundry.appv1.sheets.ActorSheet);
   foundry.documents.collections.Actors.registerSheet("better-dh2e", DarkHeresyActorSheet, {
-    types: ["acolyte", "npc"],
+    types: ["acolyte", "npc", "horde"],
     makeDefault: true,
     label: "Better DH2e Actor Sheet"
   });
@@ -137,9 +140,28 @@ Hooks.once("init", () => {
     default: [],
   });
 
+  game.settings.register("better-dh2e", "reverseWounds", {
+    name: "Reverse wounds display (HP style)",
+    hint: "Display wounds as remaining health (full = 9/9) instead of wounds suffered (0/9). Cosmetic only — no rules change.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
+  });
+
+  // --- Homerules (kept last as a group) ---
   game.settings.register("better-dh2e", "homebrewQualities", {
     name: "Homebrew Qualities",
     hint: "Enable non-vanilla weapon qualities",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+  });
+  game.settings.register("better-dh2e", "enableHordes", {
+    name: "Enable Hordes",
+    hint: "Enable Horde mechanics adapted from Black Crusade.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -204,6 +226,35 @@ Hooks.on("getChatMessageContextOptions", (html, options) => {
     condition: (li) => canAddDoS(game.messages.get(idOf(li))),
     callback: (li) => { const m = game.messages.get(idOf(li)); if (m) addDoSFromFate(m); }
   });
+});
+
+Hooks.on("getActorContextOptions", (html, options) => {
+  const idOf = (li) => li?.dataset?.entryId ?? li?.getAttribute?.("data-entry-id") ?? li?.[0]?.dataset?.entryId;
+  options.push({
+    name: "Make a Horde",
+    icon: '<i class="fas fa-users"></i>',
+    condition: (li) => {
+      const actor = game.actors.get(idOf(li));
+      return game.user.isGM && actor?.type === "npc" && hordesEnabled();
+    },
+    callback: async (li) => {
+      const npc = game.actors.get(idOf(li));
+      if (!npc) return;
+      const data = npc.toObject();
+      delete data._id;
+      data.type = "horde";
+      data.name = `${npc.name} (Horde)`;
+      if (data.prototypeToken?.name === npc.name) data.prototypeToken.name = data.name;   // keep a tracking token name in sync
+      await getDocumentClass("Actor").create(data);   // HordeModel drops the inherited wounds, defaults magnitude to 0
+    }
+  });
+});
+
+// Keep a default (tracking) prototype-token name in sync when the actor is renamed; leave customised token names alone.
+Hooks.on("preUpdateActor", (actor, change) => {
+  if (typeof change.name === "string" && change.name !== actor.name && actor.prototypeToken?.name === actor.name) {
+    foundry.utils.setProperty(change, "prototypeToken.name", change.name);
+  }
 });
 
 // Battlemap: keep the Run condition in sync with per-turn movement. Runs once, on the mover's client.

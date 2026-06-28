@@ -14,6 +14,7 @@ import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { coverApFromInput } from "../helpers/cover.mjs";
 import { facingFromDelta } from "../helpers/facing.mjs";
+import { woundsShown, reverseWoundsEnabled } from "../helpers/wounds-display.mjs";
 import { coverPieceForTarget } from "../canvas/cover.mjs";
 import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
@@ -23,6 +24,7 @@ import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHel
 import { safeRoll } from "./dice.mjs";
 import { scatterDirection } from "../helpers/scatter.mjs";
 import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion } from "../canvas/region.mjs";
+import { hordeMagnitudeLoss, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../helpers/horde-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -233,15 +235,23 @@ async function rollToxicResist(message) {
     const roll = await new Roll("1d10").evaluate();
     const tb = defender.system.characteristics.toughness.bonus ?? 0;
     const dealt = Math.max(0, roll.total - tb);
-    const w = defender.system.wounds;
-    const res = applyWounds(w.value, w.max, dealt);
-    await defender.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
     const type = f.damageType ? `${f.damageType} ` : "";   // omit if unknown rather than mislabel
+    let statusLine = "";
+    if (defender.type === "horde") {   // a horde has no wounds — apply the Magnitude rule instead
+      const loss = hordeMagnitudeLoss(dealt);
+      const mag = Math.max(0, (defender.system.magnitude ?? 0) - loss);
+      if (loss) await defender.update({ "system.magnitude": mag });
+      statusLine = `<div class="bdh-card-line">Magnitude: ${mag} (−${loss})</div>`;
+    } else {
+      const w = defender.system.wounds;
+      const res = applyWounds(w.value, w.max, dealt);
+      await defender.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+    }
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: defender }),
       rolls: [roll],
       content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type}damage from Toxic</header>`
-        + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>`
+        + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div>${statusLine}</div>`
     });
   }
   return result;
@@ -257,6 +267,14 @@ async function rollRadPhageTest(message) {
   if (battlemapEnabled() && result && !result.success) {
     // Failed: 2d10 raw Toughness characteristic damage (no soak), stored as a charDamage injury entry.
     const roll = await new Roll("2d10").evaluate();
+    if (defender.type === "horde") {   // characteristic damage is meaningless on a Magnitude-only actor
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: defender }),
+        rolls: [roll],
+        content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} — Rad-Phage has no effect on a Horde</header></div>`
+      });
+      return result;
+    }
     const injuries = foundry.utils.deepClone(defender.system.injuries);
     injuries.push({ type: "charDamage", characteristic: "toughness", amount: roll.total, description: "Rad-Phage" });
     await defender.update({ "system.injuries": injuries });
@@ -297,10 +315,35 @@ async function applySpray(message, html) {
   const damageTotal = roll.total + dieDelta;
   // Jam: natural 9 on ANY active d10 damage die — ignores Reliable/Unreliable.
   const jammed = roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 9));
+  // A horde caught in the spray takes many separate hits, each its own roll (like a burst); non-hordes take the one shared roll.
+  const sprayRolls = [];
+  const rollSprayHit = async () => {
+    const r = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+    if (!r) return null;
+    let delta = 0;
+    for (const d of r.dice) for (const res of d.results) if (res.active) delta += transform(res.result) - res.result;
+    sprayRolls.push(r);
+    return r.total + delta;
+  };
   const lines = [];
   for (const uuid of checked) {
     const actor = await fromUuid(uuid);
     if (!actor) continue;
+    if (actor.type === "horde") {
+      const d5 = (await safeRoll("1d5", "spray hits"))?.total ?? 1;
+      const nHits = hordeSprayHits(weapon.system.range, d5) + hordeExtraHits(f.damageType, qualities);
+      const effs = [];
+      for (let i = 0; i < nHits; i++) {
+        const total = await rollSprayHit();
+        if (total == null) continue;
+        effs.push(await applyHitToToken(actor, { damageTotal: total, penetration, damageType: f.damageType, qualities, location: "body" }));
+      }
+      const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+      const mag = Math.max(0, (actor.system.magnitude ?? 0) - loss);
+      if (loss) await actor.update({ "system.magnitude": mag });
+      lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss})`);
+      continue;
+    }
     const dealt = await applyHitToToken(actor, {
       damageTotal, penetration, damageType: f.damageType, qualities, location: "body",
     });
@@ -316,7 +359,7 @@ async function applySpray(message, html) {
     snareValue(qualities) ? `<button type="button" class="bdh-qchip" data-bdh="snareTest"><span class="ic">&#128376;</span><b>Snare (${snareValue(qualities)})</b> Agility test or Immobilised</button>` : "",
   ].filter(Boolean).join("");
   await ChatMessage.create({
-    speaker: ChatMessage.getSpeaker(), rolls: [roll],
+    speaker: ChatMessage.getSpeaker(), rolls: [roll, ...sprayRolls],
     content: `<div class="bdh-card"><div class="bdh-card-head"><span class="t">${weapon.name} <span class="arrow">&mdash;</span> Spray damage</span><span class="sub">${damageTotal}</span></div>`
       + `<div class="bdh-card-line">${lines.join("<br>") || "No one hit."}</div>`
       + (jammed ? `<div class="bdh-card-line fail">&#9888; Jammed! (natural 9)</div>` : "")
@@ -330,13 +373,21 @@ async function applyOnFireDamage(message) {
   if (!target) { ui.notifications.warn("Select a token to apply fire damage."); return; }
   const tb = target.system.characteristics.toughness.bonus ?? 0;
   const dealt = Math.max(0, (f.damage ?? 0) - tb);   // ignore armour, toughness soaks
-  const w = target.system.wounds;
-  const res = applyWounds(w.value, w.max, dealt);
-  await target.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+  let statusLine = "";
+  if (target.type === "horde") {   // a horde has no wounds — apply the Magnitude rule instead
+    const loss = hordeMagnitudeLoss(dealt);
+    const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
+    if (loss) await target.update({ "system.magnitude": mag });
+    statusLine = `<div class="bdh-card-line">Magnitude: ${mag} (−${loss})</div>`;
+  } else {
+    const w = target.system.wounds;
+    const res = applyWounds(w.value, w.max, dealt);
+    await target.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+  }
   await addFatigue(target, 1);
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><header class="bdh-card-head">${target.name} takes ${dealt} Energy damage (Body) and 1 Fatigue from fire</header>`
-      + `<div class="bdh-card-line">1d10: ${f.damage} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>` });
+      + `<div class="bdh-card-line">1d10: ${f.damage} − Toughness ${tb} = ${dealt} (armour ignored)</div>${statusLine}</div>` });
 }
 async function rollOnFireWP(message) {
   const f = message.flags[NS];
@@ -378,6 +429,19 @@ async function rollDamage(message) {
     const dmgRoll = await safeRoll(weaponFormula, "weapon damage");
     if (!dmgRoll) return;
     const breakdown = formatRoll(dmgRoll);
+    // Hordes caught in the zone take MANY separate hits, each its own roll (like a burst); non-hordes take the one shared roll.
+    const blastHits = (Number(f.blast) || 1) + hordeExtraHits(f.damageType, qualities);
+    const hordeBlast = [];
+    const hordeRolls = [];
+    for (const t of pool) {
+      if (t.actor?.type !== "horde") continue;
+      const totals = [];
+      for (let i = 0; i < blastHits; i++) {
+        const r = await safeRoll(weaponFormula, "weapon damage");
+        if (r) { totals.push(r.total); hordeRolls.push(r); }
+      }
+      hordeBlast.push({ uuid: t.actor.uuid, name: t.name, totals });
+    }
     const cardData = {
       blast: true,
       weaponName: f.weaponName ?? weapon.name,
@@ -390,17 +454,21 @@ async function rollDamage(message) {
       // target, not the pool (multi-target quality conditions are a deferred slice).
       damageNotes: qualityNotes(qualities, "damage"),
     };
-    const content = await renderTemplate(DAMAGE_CARD, cardData);
+    const hordeNote = hordeBlast.length
+      ? `<div class="bdh-card"><div class="bdh-card-line">${hordeBlast.map((h) => `${h.name} — ${h.totals.length} hits: ${h.totals.join(", ")}`).join("<br>")}</div></div>`
+      : "";
+    const content = (await renderTemplate(DAMAGE_CARD, cardData)) + hordeNote;
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
       content,
-      rolls: [dmgRoll],
+      rolls: [dmgRoll, ...hordeRolls],
       flags: {
         [NS]: {
           ...f,
           blast: true,
           poolUuids: pool.map((t) => t.actor.uuid),
           damageTotal: dmgRoll.total,
+          hordeBlast,
           penetration: f.penetration,
           damageType: f.damageType,
           qualities: f.qualities ?? [],
@@ -456,6 +524,10 @@ async function rollDamage(message) {
   let weaponBase = baseFormula;
   if (strBonus) weaponBase = `${weaponBase} + ${strBonus}`;
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
+  if (actor.type === "horde" && weapon.system.hordeEquipped) {
+    const hd = hordeDamageBonusDice(actor.system.magnitude);   // +1d10 per 10 Magnitude, cap +2d10
+    if (hd) weaponBase = `${weaponBase} + ${hd}d10`;
+  }
   if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
   if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
   if (f.helpless) weaponBase = doubleDamageDice(weaponBase);   // every die term doubles for Helpless
@@ -566,6 +638,7 @@ async function rollEvade(message) {
  */
 async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location, coverAp = 0 }) {
   const sys = actor.system;
+  if (actor.type === "horde") location = "body";   // hordes always hit in Body
   const tb = sys.characteristics.toughness.bonus;
   const equipped = actor.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
   const ap = computeArmour(equipped, 0);   // pure per-location AP (tb=0 so TB isn't folded in)
@@ -574,6 +647,7 @@ async function applyHitToToken(actor, { damageTotal, penetration, damageType, qu
   const graviton = hasGraviton(qualities);
   const locAp = (ap[location] ?? 0) + coverAp;   // cover stacks as armour; penetration reduces the combined total
   const eff = soak(damageTotal + (graviton ? locAp : 0), locAp, penetration, tbEff);
+  if (actor.type === "horde") return eff;   // no wounds on a horde — caller reduces Magnitude
   const w = sys.wounds;
   const res = applyWounds(w.value, w.max, eff);
   await actor.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
@@ -586,9 +660,24 @@ async function applyDamage(message) {
   // --- Blast branch: soak each pooled token individually, per-token hit location ---
   if (f.blast) {
     const lines = [];
+    const hordeMap = new Map((f.hordeBlast ?? []).map((h) => [h.uuid, h]));
     for (const uuid of f.poolUuids ?? []) {
       const actor = await fromUuid(uuid);
       if (!actor) continue;
+      const h = hordeMap.get(uuid);
+      if (h) {   // horde: soak each of its separately-rolled hits independently
+        const effs = [];
+        for (const total of h.totals) {
+          effs.push(await applyHitToToken(actor, {
+            damageTotal: total, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location: "body",
+          }));
+        }
+        const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+        const mag = Math.max(0, (actor.system.magnitude ?? 0) - loss);
+        if (loss) await actor.update({ "system.magnitude": mag });
+        lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss})`);
+        continue;
+      }
       const location = hitLocation((await safeRoll("1d100", "hit location"))?.total ?? 50);
       const dealt = await applyHitToToken(actor, {
         damageTotal: f.damageTotal, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location,
@@ -625,6 +714,23 @@ async function applyDamage(message) {
     if (!choice) return;   // cancelled → abort the whole apply, change nothing
     coverAp = coverApFromInput(choice.cover);
   }
+  if (target.type === "horde") {
+    const effs = [];
+    for (const h of f.hits) {
+      effs.push(await applyHitToToken(target, {
+        damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: "body", coverAp,
+      }));
+    }
+    const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+    const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
+    if (loss) await target.update({ "system.magnitude": mag });
+    const hLines = effs.map((eff, i) => `Body: ${f.hits[i].total} → ${eff} dmg`);
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: target }),
+      content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${hLines.join("<br>")}</div><div class="bdh-card-line">Magnitude: ${mag} (−${loss})</div></div>`,
+    });
+    return;
+  }
   let prevCrit = sys.wounds.critical ?? 0;
   let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
   const lines = [];
@@ -653,7 +759,7 @@ async function applyDamage(message) {
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
-    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${wounds} / ${sys.wounds.max}</div></div>`
+    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${woundsShown(wounds, sys.wounds.max, reverseWoundsEnabled())} / ${sys.wounds.max}</div></div>`
   });
 }
 
@@ -903,10 +1009,22 @@ export async function rollAttack(actor, weaponId) {
   const isRanged = !isMelee;
   const charKey = isMelee ? "weaponSkill" : "ballisticSkill";
 
-  // Build option HTML for selects
+  // Build option HTML for selects.
+  // Ranged weapons can only fire in a mode whose RoF is > 0: single↔single, semi↔short, full↔long.
+  // (Safety net: a ranged weapon with NO RoF configured at all — 0/0/0 — still fires single shots.)
+  const rof = weapon.system.rateOfFire ?? {};
+  const rofConfigured = ((rof.single || 0) + (rof.short || 0) + (rof.long || 0)) > 0;
+  const rofAllows = (k) => {
+    if (isMelee) return true;
+    if (k === "semiAuto") return (rof.short || 0) > 0;
+    if (k === "fullAuto") return (rof.long || 0) > 0;
+    if (k === "standard" || k === "calledShot") return (rof.single || 0) > 0 || !rofConfigured;
+    return true;
+  };
   const typeOpts = Object.entries(BDH.attackTypes)
     .filter(([k, t]) => (t.scope === "any" || t.scope === (isMelee ? "melee" : "ranged"))
-      && !(k === "lightning" && hasUnwieldy(weapon.system.qualities)))
+      && !(k === "lightning" && hasUnwieldy(weapon.system.qualities))
+      && rofAllows(k))
     .map(([k, t]) => `<option value="${k}">${t.label}</option>`)
     .join("");
 
@@ -1068,6 +1186,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
 
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
+  const stormHail = storm && at.hits?.mode === "multi";   // Storm only doubles automatic fire, never a single shot
   const aimMod = hasInaccurate(weapon.system.qualities) ? 0 : (BDH.aimOptions[choice.aim]?.mod ?? 0);
   const rangeMod = isRanged ? (BDH.rangeOptions[choice.range]?.mod ?? 0) : 0;
   const manual = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
@@ -1080,7 +1199,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
 
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
-  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (storm ? 2 : 1);
+  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (stormHail ? 2 : 1);
   // Only gate on ammo when we'd actually consume it — a Fate reroll re-resolves the same (already-fired) shot.
   if (consumeAmmo && usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
     ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
@@ -1115,10 +1234,14 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const rofCap = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : Infinity;
 
   // Hit count and locations
-  let nHits = success ? computeHits(at, dos, storm ? Infinity : rofCap) : 0;
-  if (storm && success) nHits = Math.min(nHits * 2, rofCap);
+  const hordeTarget = (opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null));
+  const tgtIsHorde = hordeTarget?.type === "horde";
+  const blastWeapon = (weapon.system.qualities ?? []).some((q) => q.key === "blast");   // blast resolves horde hits in the blast flow, not the direct hit
+  let nHits = success ? computeHits(at, dos, stormHail ? Infinity : rofCap) : 0;
+  if (stormHail && success) nHits = Math.min(nHits * 2, rofCap);
+  if (success && tgtIsHorde && !blastWeapon) nHits += hordeExtraHits(weapon.system.damageType, weapon.system.qualities);   // additive extras vs hordes
   const firstLoc = at.calledShot ? choice.calledShotLocation : hitLocation(roll.total);
-  const locs = success ? locationSequence(firstLoc, nHits) : [];
+  const locs = success ? (tgtIsHorde ? Array(nHits).fill("body") : locationSequence(firstLoc, nHits)) : [];
 
   // Jam check
   const jammed = checkJam(roll.total, success, isRanged, effectiveJamFloor(weapon.system.qualities, weapon.system.craftsmanship));
