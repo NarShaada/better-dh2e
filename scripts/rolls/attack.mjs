@@ -1193,9 +1193,10 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // Hit count and locations
   const hordeTarget = (opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null));
   const tgtIsHorde = hordeTarget?.type === "horde";
+  const blastWeapon = (weapon.system.qualities ?? []).some((q) => q.key === "blast");   // blast resolves horde hits in the blast flow, not the direct hit
   let nHits = success ? computeHits(at, dos, storm ? Infinity : rofCap) : 0;
   if (storm && success) nHits = Math.min(nHits * 2, rofCap);
-  if (success && tgtIsHorde) nHits += hordeExtraHits(weapon.system.damageType, weapon.system.qualities);   // additive extras vs hordes
+  if (success && tgtIsHorde && !blastWeapon) nHits += hordeExtraHits(weapon.system.damageType, weapon.system.qualities);   // additive extras vs hordes
   const firstLoc = at.calledShot ? choice.calledShotLocation : hitLocation(roll.total);
   const locs = success ? (tgtIsHorde ? Array(nHits).fill("body") : locationSequence(firstLoc, nHits)) : [];
 
