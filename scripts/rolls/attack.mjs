@@ -1136,10 +1136,13 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const rofCap = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : Infinity;
 
   // Hit count and locations
+  const hordeTarget = (opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null));
+  const tgtIsHorde = hordeTarget?.type === "horde";
   let nHits = success ? computeHits(at, dos, storm ? Infinity : rofCap) : 0;
   if (storm && success) nHits = Math.min(nHits * 2, rofCap);
+  if (success && tgtIsHorde) nHits += hordeExtraHits(weapon.system.damageType, weapon.system.qualities);   // additive extras vs hordes
   const firstLoc = at.calledShot ? choice.calledShotLocation : hitLocation(roll.total);
-  const locs = success ? locationSequence(firstLoc, nHits) : [];
+  const locs = success ? (tgtIsHorde ? Array(nHits).fill("body") : locationSequence(firstLoc, nHits)) : [];
 
   // Jam check
   const jammed = checkJam(roll.total, success, isRanged, effectiveJamFloor(weapon.system.qualities, weapon.system.craftsmanship));
