@@ -24,6 +24,7 @@ import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHel
 import { safeRoll } from "./dice.mjs";
 import { scatterDirection } from "../helpers/scatter.mjs";
 import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion } from "../canvas/region.mjs";
+import { hordeMagnitudeLoss, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../helpers/horde-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -567,6 +568,7 @@ async function rollEvade(message) {
  */
 async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location, coverAp = 0 }) {
   const sys = actor.system;
+  if (actor.type === "horde") location = "body";   // hordes always hit in Body
   const tb = sys.characteristics.toughness.bonus;
   const equipped = actor.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
   const ap = computeArmour(equipped, 0);   // pure per-location AP (tb=0 so TB isn't folded in)
@@ -575,6 +577,7 @@ async function applyHitToToken(actor, { damageTotal, penetration, damageType, qu
   const graviton = hasGraviton(qualities);
   const locAp = (ap[location] ?? 0) + coverAp;   // cover stacks as armour; penetration reduces the combined total
   const eff = soak(damageTotal + (graviton ? locAp : 0), locAp, penetration, tbEff);
+  if (actor.type === "horde") return eff;   // no wounds on a horde — caller reduces Magnitude
   const w = sys.wounds;
   const res = applyWounds(w.value, w.max, eff);
   await actor.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
@@ -625,6 +628,23 @@ async function applyDamage(message) {
     });
     if (!choice) return;   // cancelled → abort the whole apply, change nothing
     coverAp = coverApFromInput(choice.cover);
+  }
+  if (target.type === "horde") {
+    const effs = [];
+    for (const h of f.hits) {
+      effs.push(await applyHitToToken(target, {
+        damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: "body", coverAp,
+      }));
+    }
+    const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+    const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
+    if (loss) await target.update({ "system.magnitude": mag });
+    const hLines = effs.map((eff, i) => `Body: ${f.hits[i].total} → ${eff} dmg`);
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: target }),
+      content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${hLines.join("<br>")}</div><div class="bdh-card-line">Magnitude: ${mag} (−${loss})</div></div>`,
+    });
+    return;
   }
   let prevCrit = sys.wounds.critical ?? 0;
   let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
