@@ -1009,10 +1009,22 @@ export async function rollAttack(actor, weaponId) {
   const isRanged = !isMelee;
   const charKey = isMelee ? "weaponSkill" : "ballisticSkill";
 
-  // Build option HTML for selects
+  // Build option HTML for selects.
+  // Ranged weapons can only fire in a mode whose RoF is > 0: single↔single, semi↔short, full↔long.
+  // (Safety net: a ranged weapon with NO RoF configured at all — 0/0/0 — still fires single shots.)
+  const rof = weapon.system.rateOfFire ?? {};
+  const rofConfigured = ((rof.single || 0) + (rof.short || 0) + (rof.long || 0)) > 0;
+  const rofAllows = (k) => {
+    if (isMelee) return true;
+    if (k === "semiAuto") return (rof.short || 0) > 0;
+    if (k === "fullAuto") return (rof.long || 0) > 0;
+    if (k === "standard" || k === "calledShot") return (rof.single || 0) > 0 || !rofConfigured;
+    return true;
+  };
   const typeOpts = Object.entries(BDH.attackTypes)
     .filter(([k, t]) => (t.scope === "any" || t.scope === (isMelee ? "melee" : "ranged"))
-      && !(k === "lightning" && hasUnwieldy(weapon.system.qualities)))
+      && !(k === "lightning" && hasUnwieldy(weapon.system.qualities))
+      && rofAllows(k))
     .map(([k, t]) => `<option value="${k}">${t.label}</option>`)
     .join("");
 
