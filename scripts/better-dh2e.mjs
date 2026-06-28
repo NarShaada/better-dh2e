@@ -1,6 +1,7 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
 import { battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
+import { hordesEnabled } from "./helpers/horde-data.mjs";
 import { themeChoices, themeBodyClasses, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
 import { registerTokenPrefix } from "./helpers/token-prefix.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
@@ -224,6 +225,27 @@ Hooks.on("getChatMessageContextOptions", (html, options) => {
     icon: '<i class="fas fa-plus-circle"></i>',
     condition: (li) => canAddDoS(game.messages.get(idOf(li))),
     callback: (li) => { const m = game.messages.get(idOf(li)); if (m) addDoSFromFate(m); }
+  });
+});
+
+Hooks.on("getActorContextOptions", (html, options) => {
+  const idOf = (li) => li?.dataset?.entryId ?? li?.getAttribute?.("data-entry-id") ?? li?.[0]?.dataset?.entryId;
+  options.push({
+    name: "Make a Horde",
+    icon: '<i class="fas fa-users"></i>',
+    condition: (li) => {
+      const actor = game.actors.get(idOf(li));
+      return game.user.isGM && actor?.type === "npc" && hordesEnabled();
+    },
+    callback: async (li) => {
+      const npc = game.actors.get(idOf(li));
+      if (!npc) return;
+      const data = npc.toObject();
+      delete data._id;
+      data.type = "horde";
+      data.name = `${npc.name} (Horde)`;
+      await getDocumentClass("Actor").create(data);   // HordeModel drops the inherited wounds, defaults magnitude to 0
+    }
   });
 });
 
