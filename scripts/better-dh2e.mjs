@@ -70,7 +70,7 @@ Hooks.once("init", () => {
   // Sheets (ApplicationV2 registration)
   foundry.documents.collections.Actors.unregisterSheet("core", foundry.appv1.sheets.ActorSheet);
   foundry.documents.collections.Actors.registerSheet("better-dh2e", DarkHeresyActorSheet, {
-    types: ["acolyte", "npc"],
+    types: ["acolyte", "npc", "horde"],
     makeDefault: true,
     label: "Better DH2e Actor Sheet"
   });
