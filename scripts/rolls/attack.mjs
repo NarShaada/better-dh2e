@@ -235,15 +235,23 @@ async function rollToxicResist(message) {
     const roll = await new Roll("1d10").evaluate();
     const tb = defender.system.characteristics.toughness.bonus ?? 0;
     const dealt = Math.max(0, roll.total - tb);
-    const w = defender.system.wounds;
-    const res = applyWounds(w.value, w.max, dealt);
-    await defender.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
     const type = f.damageType ? `${f.damageType} ` : "";   // omit if unknown rather than mislabel
+    let statusLine = "";
+    if (defender.type === "horde") {   // a horde has no wounds — apply the Magnitude rule instead
+      const loss = hordeMagnitudeLoss(dealt);
+      const mag = Math.max(0, (defender.system.magnitude ?? 0) - loss);
+      if (loss) await defender.update({ "system.magnitude": mag });
+      statusLine = `<div class="bdh-card-line">Magnitude: ${mag} (−${loss})</div>`;
+    } else {
+      const w = defender.system.wounds;
+      const res = applyWounds(w.value, w.max, dealt);
+      await defender.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+    }
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: defender }),
       rolls: [roll],
       content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type}damage from Toxic</header>`
-        + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>`
+        + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div>${statusLine}</div>`
     });
   }
   return result;
@@ -259,6 +267,14 @@ async function rollRadPhageTest(message) {
   if (battlemapEnabled() && result && !result.success) {
     // Failed: 2d10 raw Toughness characteristic damage (no soak), stored as a charDamage injury entry.
     const roll = await new Roll("2d10").evaluate();
+    if (defender.type === "horde") {   // characteristic damage is meaningless on a Magnitude-only actor
+      await ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: defender }),
+        rolls: [roll],
+        content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} — Rad-Phage has no effect on a Horde</header></div>`
+      });
+      return result;
+    }
     const injuries = foundry.utils.deepClone(defender.system.injuries);
     injuries.push({ type: "charDamage", characteristic: "toughness", amount: roll.total, description: "Rad-Phage" });
     await defender.update({ "system.injuries": injuries });
@@ -345,13 +361,21 @@ async function applyOnFireDamage(message) {
   if (!target) { ui.notifications.warn("Select a token to apply fire damage."); return; }
   const tb = target.system.characteristics.toughness.bonus ?? 0;
   const dealt = Math.max(0, (f.damage ?? 0) - tb);   // ignore armour, toughness soaks
-  const w = target.system.wounds;
-  const res = applyWounds(w.value, w.max, dealt);
-  await target.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+  let statusLine = "";
+  if (target.type === "horde") {   // a horde has no wounds — apply the Magnitude rule instead
+    const loss = hordeMagnitudeLoss(dealt);
+    const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
+    if (loss) await target.update({ "system.magnitude": mag });
+    statusLine = `<div class="bdh-card-line">Magnitude: ${mag} (−${loss})</div>`;
+  } else {
+    const w = target.system.wounds;
+    const res = applyWounds(w.value, w.max, dealt);
+    await target.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+  }
   await addFatigue(target, 1);
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><header class="bdh-card-head">${target.name} takes ${dealt} Energy damage (Body) and 1 Fatigue from fire</header>`
-      + `<div class="bdh-card-line">1d10: ${f.damage} − Toughness ${tb} = ${dealt} (armour ignored)</div></div>` });
+      + `<div class="bdh-card-line">1d10: ${f.damage} − Toughness ${tb} = ${dealt} (armour ignored)</div>${statusLine}</div>` });
 }
 async function rollOnFireWP(message) {
   const f = message.flags[NS];
