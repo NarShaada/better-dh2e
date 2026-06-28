@@ -231,6 +231,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const id = target.closest("[data-item-id]")?.dataset.itemId;
     const item = this.actor.items.get(id);
     if (!item) return;
+    if (item.type === "weapon" && this.actor.type === "horde") {
+      const cur = item.system.hordeEquipped ? "hordeEquipped" : (item.system.equipped ? "equipped" : "none");
+      const nextState = cur === "none" ? "equipped" : cur === "equipped" ? "hordeEquipped" : "none";
+      await item.update({ "system.equipped": nextState !== "none", "system.hordeEquipped": nextState === "hordeEquipped" });
+      return;
+    }
     const next = !item.system.equipped;
     if (item.type === "armour" && next && !item.system.additive) {
       const others = this.actor.items.filter(
@@ -613,7 +619,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       if (flags.usesRange) parts.push(`Rng ${s.range}m`);
       if (flags.usesAmmo) parts.push(`RoF ${s.rateOfFire.single}/${s.rateOfFire.short}/${s.rateOfFire.long}`);
       return {
-        id: w.id, name: w.name, equipped: s.equipped, summary: parts.join(" · "),
+        id: w.id, name: w.name, equipped: s.equipped, hordeEquipped: s.hordeEquipped, summary: parts.join(" · "),
         usesAmmo: flags.usesAmmo, clip: `${s.clip.value}/${s.clip.max}`,
         granted: !!w.getFlag("better-dh2e", "grantedBy")
       };

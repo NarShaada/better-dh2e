@@ -287,7 +287,7 @@
       <div class="bdh-section-head">⚔ Weapons <button type="button" class="bdh-add" data-action="createItem" data-type="weapon">＋</button></div>
       {{#each weapons as |w|}}
         <div class="bdh-item-row" data-item-id="{{w.id}}">
-          <a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if w.equipped}}✓{{else}}○{{/if}}</a>
+          {{#if @root.isHorde}}<a class="bdh-eq {{#if w.hordeEquipped}}on horde{{else}}{{#if w.equipped}}on{{/if}}{{/if}}" data-action="toggleEquipped" title="{{#if w.hordeEquipped}}Horde-Equipped{{else}}{{#if w.equipped}}Equipped{{else}}Not Equipped{{/if}}{{/if}}">{{#if w.hordeEquipped}}✦{{else}}{{#if w.equipped}}✓{{else}}○{{/if}}{{/if}}</a>{{else}}<a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if w.equipped}}✓{{else}}○{{/if}}</a>{{/if}}
           <span class="bdh-name" data-action="editItem">{{w.name}}</span>
           <span class="bdh-desc-line">{{w.summary}}</span>
           {{#if w.usesAmmo}}<span class="bdh-clip">Clip {{w.clip}}</span>{{/if}}
