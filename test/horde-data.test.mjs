@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hordeSize } from "../scripts/helpers/horde-data.mjs";
+import { hordeSize, hordeMagnitudeLoss, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../scripts/helpers/horde-data.mjs";
 
 describe("hordeSize", () => {
   it("starts at 6 below 30 magnitude", () => {
@@ -19,5 +19,49 @@ describe("hordeSize", () => {
   it("tolerates nullish magnitude", () => {
     expect(hordeSize(undefined)).toBe(6);
     expect(hordeSize(null)).toBe(6);
+  });
+});
+
+describe("hordeMagnitudeLoss", () => {
+  it("is 1 at exactly 15 and above, 0 below", () => {
+    expect(hordeMagnitudeLoss(14)).toBe(0);
+    expect(hordeMagnitudeLoss(15)).toBe(1);
+    expect(hordeMagnitudeLoss(50)).toBe(1);
+    expect(hordeMagnitudeLoss(undefined)).toBe(0);
+  });
+});
+
+describe("hordeExtraHits", () => {
+  it("adds +1 for explosive damage type", () => {
+    expect(hordeExtraHits("explosive", [])).toBe(1);
+    expect(hordeExtraHits("impact", [])).toBe(0);
+  });
+  it("adds +1 for the powerField quality", () => {
+    expect(hordeExtraHits("impact", [{ key: "powerField" }])).toBe(1);
+  });
+  it("stacks both", () => {
+    expect(hordeExtraHits("explosive", [{ key: "powerField" }])).toBe(2);
+  });
+  it("tolerates nullish qualities", () => {
+    expect(hordeExtraHits("impact", null)).toBe(0);
+  });
+});
+
+describe("hordeDamageBonusDice", () => {
+  it("is +1d10 per 10 magnitude, capped at 2", () => {
+    expect(hordeDamageBonusDice(9)).toBe(0);
+    expect(hordeDamageBonusDice(10)).toBe(1);
+    expect(hordeDamageBonusDice(25)).toBe(2);
+    expect(hordeDamageBonusDice(100)).toBe(2);
+    expect(hordeDamageBonusDice(undefined)).toBe(0);
+  });
+});
+
+describe("hordeSprayHits", () => {
+  it("is ceil(range/4) + the rolled d5, floored at 1 base hit", () => {
+    expect(hordeSprayHits(24, 3)).toBe(9);   // ceil(24/4)=6 + 3
+    expect(hordeSprayHits(10, 1)).toBe(4);   // ceil(10/4)=3 + 1
+    expect(hordeSprayHits(0, 2)).toBe(3);    // max(1,0)=1 + 2
+    expect(hordeSprayHits(undefined, 0)).toBe(1);
   });
 });
