@@ -189,11 +189,19 @@
 
         <div class="bdh-combat-col">
           <div class="bdh-section">
+            {{#if isHorde}}
+            <div class="bdh-section-head">Magnitude</div>
+            <div class="bdh-wounds">
+              <label>Magnitude</label><span class="bdh-wval"><input type="number" name="system.magnitude" value="{{system.magnitude}}" min="0"/></span>
+              <label>Size</label><span class="bdh-wval"><b class="bdh-ro">{{sizeName}} ({{sizeValue}})</b></span>
+            </div>
+            {{else}}
             <div class="bdh-section-head">Wounds</div>
             <div class="bdh-wounds">
               <label>Wounds</label><span class="bdh-wval"><input class="bdh-wounds-value" type="number" value="{{woundsShown}}" min="0"/> / {{#if isCustom}}<input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>{{else}}<b class="bdh-ro">{{system.wounds.max}}</b>{{/if}}</span>
               <label>Critical</label><input type="number" name="system.wounds.critical" value="{{system.wounds.critical}}"/>
             </div>
+            {{/if}}
           </div>
           <div class="bdh-section">
             <div class="bdh-section-head">Crits &amp; Char Damage <button type="button" class="bdh-add" data-action="addInjury">＋</button></div>

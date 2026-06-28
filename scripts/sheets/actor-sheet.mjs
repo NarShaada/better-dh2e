@@ -737,6 +737,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.canBuyPsyRating = context.isSimple && pr >= 1;
     context.psyRatingNextCost = psyRatingCost(pr + 1);
     context.isNpc = this.document.type === "npc";
+    context.isHorde = this.document.type === "horde";
     context.availableAptitudes = BDH.aptitudes.filter((a) => !(this.document.system.aptitudes ?? []).includes(a));
     context.experience = {
       total: sys.experience.total, spent: sys.experience.spent,
@@ -777,7 +778,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.sizeOptions = Object.entries(BDH.sizes).map(([n, name]) => ({
       value: Number(n), label: `${name} (${n})`, selected: Number(n) === baseSize,
     }));
-    context.canEditSize = context.isCustom;
+    context.canEditSize = context.isCustom && !context.isHorde;
     context.sizeName = BDH.sizes[effSize] ?? "Average";
     context.sizeValue = effSize;
     return context;
