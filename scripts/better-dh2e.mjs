@@ -244,9 +244,17 @@ Hooks.on("getActorContextOptions", (html, options) => {
       delete data._id;
       data.type = "horde";
       data.name = `${npc.name} (Horde)`;
+      if (data.prototypeToken?.name === npc.name) data.prototypeToken.name = data.name;   // keep a tracking token name in sync
       await getDocumentClass("Actor").create(data);   // HordeModel drops the inherited wounds, defaults magnitude to 0
     }
   });
+});
+
+// Keep a default (tracking) prototype-token name in sync when the actor is renamed; leave customised token names alone.
+Hooks.on("preUpdateActor", (actor, change) => {
+  if (typeof change.name === "string" && change.name !== actor.name && actor.prototypeToken?.name === actor.name) {
+    foundry.utils.setProperty(change, "prototypeToken.name", change.name);
+  }
 });
 
 // Battlemap: keep the Run condition in sync with per-turn movement. Runs once, on the mover's client.
