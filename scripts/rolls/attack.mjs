@@ -14,6 +14,7 @@ import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { coverApFromInput } from "../helpers/cover.mjs";
 import { facingFromDelta } from "../helpers/facing.mjs";
+import { woundsShown, reverseWoundsEnabled } from "../helpers/wounds-display.mjs";
 import { coverPieceForTarget } from "../canvas/cover.mjs";
 import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
@@ -653,7 +654,7 @@ async function applyDamage(message) {
   const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
-    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${wounds} / ${sys.wounds.max}</div></div>`
+    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${woundsShown(wounds, sys.wounds.max, reverseWoundsEnabled())} / ${sys.wounds.max}</div></div>`
   });
 }
 
