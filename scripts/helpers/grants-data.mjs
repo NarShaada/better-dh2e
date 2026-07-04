@@ -30,6 +30,19 @@ export function grantDiff(desiredUuids, existing) {
   return { toCreateUuids, toRemoveIds };
 }
 
+/** Plan the cleanup when a grant SOURCE (`uuid`) is deleted, for one actor's items.
+ *  `items`: [{ id, grantedUuid, isHost, grants }] where `grantedUuid` is set only on granted copies,
+ *  `isHost` is true for a grant-host item that is not itself a granted copy, and `grants` is its grant list.
+ *  Returns orphan copy ids (their source is gone → delete) and per-host filtered grant lists (drop the dead uuid). */
+export function purgeSourcePlan(items, uuid) {
+  const list = items ?? [];
+  const orphanIds = list.filter((i) => i.grantedUuid === uuid).map((i) => i.id);
+  const hostGrantUpdates = list
+    .filter((i) => i.isHost && (i.grants ?? []).some((g) => g.uuid === uuid))
+    .map((i) => ({ id: i.id, grants: i.grants.filter((g) => g.uuid !== uuid) }));
+  return { orphanIds, hostGrantUpdates };
+}
+
 /** 3-way reconcile plan: desired uuids vs existing granted items [{id, uuid}].
  *  - toCreateUuids: desired with no existing copy (create from source)
  *  - toUpdateUuidToId: { uuid: existingId } for desired that already have a copy (refresh from source)

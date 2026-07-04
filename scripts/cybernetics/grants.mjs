@@ -1,5 +1,5 @@
 // scripts/cybernetics/grants.mjs — transfer granted items onto the actor when a host (cybernetic/armour) is active.
-import { grantHostType, isGrantHostActive, grantPlan } from "../helpers/grants-data.mjs";
+import { grantHostType, isGrantHostActive, grantPlan, purgeSourcePlan } from "../helpers/grants-data.mjs";
 
 const NS = "better-dh2e";
 const GRANT_FOLDER = "Granted Items";
@@ -94,6 +94,26 @@ export async function removeHostGrants(host, actor) {
   if (ids.length) await a.deleteEmbeddedDocuments("Item", ids);
 }
 
+/** A grant-source item (world or compendium) was DELETED → remove its orphaned granted copies everywhere
+ *  and drop the now-dangling grant entry from each host that referenced it. Deletion is a definite signal,
+ *  so we purge here rather than in reconcileGrants (whose `fromUuid` miss may be a transient/unloaded source). */
+export async function purgeDeletedGrantSource(uuid) {
+  if (!uuid) return;
+  for (const actor of grantActors()) {
+    const items = actor.items.map((i) => ({
+      id: i.id,
+      grantedUuid: i.getFlag(NS, "grantedUuid"),
+      isHost: !!grantHostType(i) && !i.getFlag(NS, "grantedBy"),   // a granted item is never a host
+      grants: i.system.grants ?? [],
+    }));
+    const { orphanIds, hostGrantUpdates } = purgeSourcePlan(items, uuid);
+    if (orphanIds.length) await actor.deleteEmbeddedDocuments("Item", orphanIds);
+    for (const upd of hostGrantUpdates) {
+      await actor.items.get(upd.id).update({ "system.grants": upd.grants });
+    }
+  }
+}
+
 /** Register grant-reconcile hooks. Call once at ready. Only the triggering user reconciles (avoids races). */
 export function registerGrantHooks() {
   Hooks.on("createItem", (item, options, userId) => {
@@ -112,7 +132,11 @@ export function registerGrantHooks() {
     if (!(item.parent instanceof Actor)) reconcileHostsReferencing(item.uuid);
   });
   Hooks.on("deleteItem", (item, options, userId) => {
-    if (userId !== game.user.id || !grantHostType(item) || item.getFlag(NS, "grantedBy")) return;   // a granted item is never a host
-    if (item.parent instanceof Actor) removeHostGrants(item, item.parent);
+    if (userId !== game.user.id || item.getFlag(NS, "grantedBy")) return;   // deleting a granted copy is not a trigger
+    if (item.parent instanceof Actor) {
+      if (grantHostType(item)) removeHostGrants(item, item.parent);   // host removed → drop the items it granted
+    } else {
+      purgeDeletedGrantSource(item.uuid);   // world/compendium grant source deleted → purge orphans + dead host entries
+    }
   });
 }

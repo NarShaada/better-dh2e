@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { grantHostType, isGrantHostActive, canGrant, grantDiff, grantPlan } from "../scripts/helpers/grants-data.mjs";
+import { grantHostType, isGrantHostActive, canGrant, grantDiff, grantPlan, purgeSourcePlan } from "../scripts/helpers/grants-data.mjs";
 
 describe("grantPlan", () => {
   it("partitions into create / update / remove keyed by uuid", () => {
@@ -14,6 +14,38 @@ describe("grantPlan", () => {
   });
   it("handles nullish input", () => {
     expect(grantPlan(undefined, undefined)).toEqual({ toCreateUuids: [], toUpdateUuidToId: {}, toRemoveIds: [] });
+  });
+});
+
+describe("purgeSourcePlan", () => {
+  // A world source "S1" was deleted. HostA granted a copy of it (orphan) and lists it in grants;
+  // HostB lists S1 alongside a surviving grant S2; an unrelated granted copy of S2 must be left alone.
+  const items = [
+    { id: "hostA", isHost: true, grants: [{ uuid: "S1" }] },
+    { id: "copyA", grantedUuid: "S1" },
+    { id: "hostB", isHost: true, grants: [{ uuid: "S1" }, { uuid: "S2" }] },
+    { id: "copyS2", grantedUuid: "S2" },
+  ];
+  it("deletes orphaned copies of the dead source and drops the dead uuid from every host", () => {
+    const r = purgeSourcePlan(items, "S1");
+    expect(r.orphanIds).toEqual(["copyA"]);
+    expect(r.hostGrantUpdates).toEqual([
+      { id: "hostA", grants: [] },
+      { id: "hostB", grants: [{ uuid: "S2" }] },
+    ]);
+  });
+  it("leaves surviving grants and their copies untouched", () => {
+    const r = purgeSourcePlan(items, "S2");
+    expect(r.orphanIds).toEqual(["copyS2"]);
+    expect(r.hostGrantUpdates).toEqual([{ id: "hostB", grants: [{ uuid: "S1" }] }]);
+  });
+  it("never treats a granted copy as a host, even if it carries a grants array", () => {
+    const copyHost = [{ id: "c", grantedUuid: "S1", isHost: false, grants: [{ uuid: "S1" }] }];
+    expect(purgeSourcePlan(copyHost, "S1")).toEqual({ orphanIds: ["c"], hostGrantUpdates: [] });
+  });
+  it("no match / nullish input yields empty plan", () => {
+    expect(purgeSourcePlan(items, "S9")).toEqual({ orphanIds: [], hostGrantUpdates: [] });
+    expect(purgeSourcePlan(undefined, "S1")).toEqual({ orphanIds: [], hostGrantUpdates: [] });
   });
 });
 
