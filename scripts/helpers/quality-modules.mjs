@@ -70,6 +70,7 @@ export function fellingValue(qualities) { return qualityValue(qualities, "fellin
 export function hallucinogenicValue(qualities) { return qualityValue(qualities, "hallucinogenic"); }
 export function primitiveValue(qualities) { return qualityValue(qualities, "primitive"); }
 export function provenValue(qualities) { return qualityValue(qualities, "proven"); }
+export function devastatingValue(qualities) { return qualityValue(qualities, "devastating"); }
 
 /** Primitive caps a damage die at X; Proven floors it at X (exclusive; Primitive wins if both somehow set). */
 export function transformDamageDie(result, { primitiveX = 0, provenX = 0 } = {}) {

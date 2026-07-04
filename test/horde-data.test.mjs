@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hordeSize, hordeMagnitudeLoss, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../scripts/helpers/horde-data.mjs";
+import { hordeSize, hordeMagnitudeLoss, hordeMagnitudeLossTotal, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../scripts/helpers/horde-data.mjs";
 
 describe("hordeSize", () => {
   it("starts at 6 below 30 magnitude", () => {
@@ -28,6 +28,28 @@ describe("hordeMagnitudeLoss", () => {
     expect(hordeMagnitudeLoss(15)).toBe(1);
     expect(hordeMagnitudeLoss(50)).toBe(1);
     expect(hordeMagnitudeLoss(undefined)).toBe(0);
+  });
+});
+
+describe("hordeMagnitudeLossTotal", () => {
+  it("counts one per hit dealing >=15, NOT one per 15 damage", () => {
+    // Regression: a burst dealing 14 / 25 / 35 after mitigation loses 2 Magnitude (the 25 and the 35),
+    // never 3 (which a per-15 reading of the 35 would give).
+    expect(hordeMagnitudeLossTotal([14, 25, 35])).toBe(2);
+    expect(hordeMagnitudeLossTotal([50])).toBe(1);
+    expect(hordeMagnitudeLossTotal([14])).toBe(0);
+  });
+  it("adds Devastating X for every hit, on top of the 15+ rule", () => {
+    // Devastating 2, two hits of 12 and 16 after mitigation:
+    // 2 (Dev) + 2 (Dev) + 1 (the 16 is >=15) = 5.
+    expect(hordeMagnitudeLossTotal([12, 16], 2)).toBe(5);
+    // Devastating applies even to hits that don't reach 15.
+    expect(hordeMagnitudeLossTotal([10, 10], 1)).toBe(2);
+  });
+  it("tolerates nullish / blank Devastating and empty hit lists", () => {
+    expect(hordeMagnitudeLossTotal([20, 20], undefined)).toBe(2);
+    expect(hordeMagnitudeLossTotal([], 3)).toBe(0);
+    expect(hordeMagnitudeLossTotal(null, 3)).toBe(0);
   });
 });
 

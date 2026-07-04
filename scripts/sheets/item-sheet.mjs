@@ -191,7 +191,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.craftChoices = BDH.craftsmanship;
     context.availChoices = BDH.availability;
     context.tierChoices = { 1: "Tier 1", 2: "Tier 2", 3: "Tier 3" };
-    // Quality cog: only shown when Homebrew Qualities is enabled — black = Core, red = Homebrew.
+    // Quality cog: only shown when Non-Vanilla Qualities is enabled — black = Core, red = Non-Vanilla.
     context.showQualityCogs = homebrewQualitiesEnabled();
     if (context.isTalent) {
       context.availableAptitudes = BDH.aptitudes.filter((a) => !(system.aptitudes ?? []).includes(a));

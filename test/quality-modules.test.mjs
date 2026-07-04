@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, filterQualityChoices } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, filterQualityChoices } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -134,6 +134,14 @@ describe("primitiveValue / provenValue", () => {
     expect(provenValue([{ key: "proven", value: "3" }])).toBe(3);
     expect(primitiveValue(Q())).toBe(0);
     expect(provenValue([{ key: "proven", value: "" }])).toBe(0);
+  });
+});
+describe("devastatingValue", () => {
+  it("reads the numeric X (0 if absent/blank)", () => {
+    expect(devastatingValue([{ key: "devastating", value: "2" }])).toBe(2);
+    expect(devastatingValue([{ key: "devastating", value: "" }])).toBe(0);
+    expect(devastatingValue(Q())).toBe(0);
+    expect(devastatingValue(null)).toBe(0);
   });
 });
 describe("transformDamageDie", () => {

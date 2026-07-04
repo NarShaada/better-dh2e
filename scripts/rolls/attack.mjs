@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor, effectiveStrengthBonus } from "../helpers/item-bonuses.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
@@ -24,7 +24,7 @@ import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHel
 import { safeRoll } from "./dice.mjs";
 import { scatterDirection } from "../helpers/scatter.mjs";
 import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion } from "../canvas/region.mjs";
-import { hordeMagnitudeLoss, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../helpers/horde-data.mjs";
+import { hordeMagnitudeLoss, hordeMagnitudeLossTotal, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../helpers/horde-data.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -338,10 +338,11 @@ async function applySpray(message, html) {
         if (total == null) continue;
         effs.push(await applyHitToToken(actor, { damageTotal: total, penetration, damageType: f.damageType, qualities, location: "body" }));
       }
-      const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+      const devX = homebrewQualitiesEnabled() ? devastatingValue(qualities) : 0;
+      const loss = hordeMagnitudeLossTotal(effs, devX);
       const mag = Math.max(0, (actor.system.magnitude ?? 0) - loss);
       if (loss) await actor.update({ "system.magnitude": mag });
-      lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss})`);
+      lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss}${devX ? `, incl. Devastating ${devX}/hit` : ""})`);
       continue;
     }
     const dealt = await applyHitToToken(actor, {
@@ -672,10 +673,11 @@ async function applyDamage(message) {
             damageTotal: total, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location: "body",
           }));
         }
-        const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+        const devX = homebrewQualitiesEnabled() ? devastatingValue(f.qualities ?? []) : 0;
+        const loss = hordeMagnitudeLossTotal(effs, devX);
         const mag = Math.max(0, (actor.system.magnitude ?? 0) - loss);
         if (loss) await actor.update({ "system.magnitude": mag });
-        lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss})`);
+        lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss}${devX ? `, incl. Devastating ${devX}/hit` : ""})`);
         continue;
       }
       const location = hitLocation((await safeRoll("1d100", "hit location"))?.total ?? 50);
@@ -721,13 +723,14 @@ async function applyDamage(message) {
         damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: "body", coverAp,
       }));
     }
-    const loss = effs.filter((e) => hordeMagnitudeLoss(e)).length;
+    const devX = homebrewQualitiesEnabled() ? devastatingValue(qualities) : 0;
+    const loss = hordeMagnitudeLossTotal(effs, devX);
     const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
     if (loss) await target.update({ "system.magnitude": mag });
     const hLines = effs.map((eff, i) => `Body: ${f.hits[i].total} → ${eff} dmg`);
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: target }),
-      content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${hLines.join("<br>")}</div><div class="bdh-card-line">Magnitude: ${mag} (−${loss})</div></div>`,
+      content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${hLines.join("<br>")}</div><div class="bdh-card-line">Magnitude: ${mag} (−${loss}${devX ? `, incl. Devastating ${devX}/hit` : ""})</div></div>`,
     });
     return;
   }

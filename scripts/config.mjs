@@ -148,8 +148,10 @@ BDH.qualities = {
   spray:      { label: "Spray", takesValue: false, automation: "full", noteOn: "attack" },
   toxic:      { label: "Toxic", takesValue: true, automation: "full" },
   vengeful:   { label: "Vengeful", takesValue: true, automation: "full" },
-  // --- Homebrew qualities (gated by the "Homebrew Qualities" world setting; hidden + inert when off) ---
+  // --- Non-vanilla qualities (homebrew + adapted from other lines; gated by the "Non-Vanilla Qualities"
+  //     world setting; hidden + inert when off). `homebrew: true` is the internal gate flag. ---
   radPhage:   { label: "Rad-Phage", takesValue: false, automation: "full", homebrew: true },
+  devastating:{ label: "Devastating", takesValue: true, automation: "full", homebrew: true },   // Black Crusade
 };
 
 /** Aim bonuses. */

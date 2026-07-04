@@ -11,9 +11,16 @@ export function hordesEnabled() {
   return game.settings.get("better-dh2e", "enableHordes") === true;
 }
 
-/** Magnitude lost from one hit: 1 if effective damage ≥ 15, else 0. */
+/** Magnitude lost from one hit: 1 if effective damage ≥ 15, else 0 (one per hit, NOT one per 15 damage). */
 export function hordeMagnitudeLoss(eff) {
   return (eff ?? 0) >= 15 ? 1 : 0;
+}
+
+/** Total Magnitude lost across an array of per-hit effective-damage values against a horde:
+ *  X (Devastating) for every hit, plus 1 for each hit dealing ≥ 15 after mitigation. */
+export function hordeMagnitudeLossTotal(effs, devastatingX = 0) {
+  const x = Number(devastatingX) || 0;
+  return (Array.isArray(effs) ? effs : []).reduce((sum, e) => sum + x + hordeMagnitudeLoss(e), 0);
 }
 
 /** Additive extra hits vs a horde: +1 Explosive (damage type), +1 Power Field (quality). */

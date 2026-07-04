@@ -134,7 +134,7 @@
       <div class="bdh-list-head">Qualities</div>
       {{#if psyIsAttack}}
         {{#each qualityList as |q|}}
-          <div class="bdh-list-row"><span>{{q.display}}{{#if @root.showQualityCogs}} <span class="bdh-auto{{#if q.isHomebrew}} homebrew{{/if}}" title="{{#if q.isHomebrew}}Homebrew{{else}}Core{{/if}}">⚙</span>{{/if}}</span>
+          <div class="bdh-list-row"><span>{{q.display}}{{#if @root.showQualityCogs}} <span class="bdh-auto{{#if q.isHomebrew}} homebrew{{/if}}" title="{{#if q.isHomebrew}}Non-Vanilla{{else}}Core{{/if}}">⚙</span>{{/if}}</span>
             <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
         {{/each}}
         <div class="bdh-add-row"><button type="button" data-action="addQuality">＋ Add</button></div>
@@ -164,7 +164,7 @@
     <div class="bdh-list-section">
       <div class="bdh-list-head">Qualities</div>
       {{#each qualityList as |q|}}
-        <div class="bdh-list-row"><span>{{q.display}}{{#if @root.showQualityCogs}} <span class="bdh-auto{{#if q.isHomebrew}} homebrew{{/if}}" title="{{#if q.isHomebrew}}Homebrew{{else}}Core{{/if}}">⚙</span>{{/if}}</span>
+        <div class="bdh-list-row"><span>{{q.display}}{{#if @root.showQualityCogs}} <span class="bdh-auto{{#if q.isHomebrew}} homebrew{{/if}}" title="{{#if q.isHomebrew}}Non-Vanilla{{else}}Core{{/if}}">⚙</span>{{/if}}</span>
           <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
       {{/each}}
       <div class="bdh-add-row"><button type="button" data-action="addQuality">＋ Add</button></div>

@@ -151,9 +151,10 @@ Hooks.once("init", () => {
   });
 
   // --- Homerules (kept last as a group) ---
+  // Storage key stays "homebrewQualities" so existing worlds keep their choice; only the label changed.
   game.settings.register("better-dh2e", "homebrewQualities", {
-    name: "Homebrew Qualities",
-    hint: "Enable non-vanilla weapon qualities",
+    name: "Non-Vanilla Qualities",
+    hint: "Enable non-vanilla weapon qualities (homebrew + qualities adapted from other 40k lines, e.g. Devastating).",
     scope: "world",
     config: true,
     type: Boolean,
