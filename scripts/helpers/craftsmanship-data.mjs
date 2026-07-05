@@ -21,3 +21,13 @@ export function meleeCraftToHit(craftsmanship) {
 export function meleeCraftDamageBonus(craftsmanship) {
   return craftsmanship === "best" ? 1 : 0;
 }
+
+/** Coerce a possibly-legacy craftsmanship value to a valid tier. Classic Dark Heresy stored
+ *  "common" for what this system calls "normal"; blanks and anything unrecognised also fall back
+ *  to "normal" so migrated/legacy items self-heal instead of failing the choices-constrained
+ *  schema field (which would throw on load and cascade into a broken combat tracker).
+ *  Mirrors craft() in tools/migrate-world.mjs. */
+export function normalizeCraftsmanship(value) {
+  const v = String(value ?? "").toLowerCase();
+  return (v === "poor" || v === "good" || v === "best") ? v : "normal";
+}

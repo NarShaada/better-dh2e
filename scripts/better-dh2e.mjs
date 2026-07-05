@@ -49,9 +49,13 @@ Hooks.once("init", () => {
   // Combat-tracker initiative: 1d10 + the actor's chosen initiative-characteristic bonus (see DarkHeresyActor#getRollData).
   CONFIG.Combat.initiative = { formula: "1d10 + @initiativeBonus", decimals: 0 };
 
-  // Document classes
+  // Document classes — MUST be set at init. Foundry caches the document-class ↔ collection wiring
+  // before "setup", so swapping CONFIG.Combat.documentClass in a later hook leaves a session-fresh
+  // Combat bound to a different class identity than the CombatEncounters collection validates against
+  // → "You may only push instances of Combat" on Start Combat (a reload rebuilds it consistently and hides it).
   CONFIG.Actor.documentClass = DarkHeresyActor;
   CONFIG.Item.documentClass = DarkHeresyItem;
+  if (CONFIG.Combat?.documentClass) CONFIG.Combat.documentClass = makeDHCombat(CONFIG.Combat.documentClass);
 
   // Data models
   CONFIG.Actor.dataModels.acolyte = AcolyteModel;
@@ -194,7 +198,6 @@ Hooks.once("init", () => {
 Hooks.once("setup", () => {
   const Base = CONFIG.Token?.rulerClass ?? foundry.canvas?.placeables?.tokens?.TokenRuler;
   if (Base) CONFIG.Token.rulerClass = makeDHTokenRuler(Base);
-  if (CONFIG.Combat?.documentClass) CONFIG.Combat.documentClass = makeDHCombat(CONFIG.Combat.documentClass);
 });
 
 /** Swap the theme classes on <body>. Pure CSS switch — no re-render needed; live chat cards re-skin instantly. */

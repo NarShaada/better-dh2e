@@ -1,4 +1,6 @@
 // scripts/data/item/base-item-model.mjs
+import { normalizeCraftsmanship } from "../../helpers/craftsmanship-data.mjs";
+
 const fields = foundry.data.fields;
 
 export class BaseItemModel extends foundry.abstract.TypeDataModel {
@@ -6,6 +8,16 @@ export class BaseItemModel extends foundry.abstract.TypeDataModel {
     return {
       description: new fields.StringField({ required: true, initial: "" })
     };
+  }
+
+  /** Runs before validation on every construction (incl. the strict re-init a combat update triggers).
+   *  Classic-DH / legacy items store craftsmanship "common" (renamed "normal" here); the
+   *  choices-constrained field would otherwise THROW and cascade into Foundry's
+   *  "You may only push instances of Combat" error, breaking the initiative tracker. Coerce so
+   *  such worlds self-heal on load. Harmless for item types without a craftsmanship field. */
+  static migrateData(source) {
+    if (source && "craftsmanship" in source) source.craftsmanship = normalizeCraftsmanship(source.craftsmanship);
+    return super.migrateData(source);
   }
 }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../scripts/helpers/craftsmanship-data.mjs";
+import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus, normalizeCraftsmanship } from "../scripts/helpers/craftsmanship-data.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 
@@ -37,5 +37,24 @@ describe("meleeCraftDamageBonus", () => {
     expect(meleeCraftDamageBonus("best")).toBe(1);
     expect(meleeCraftDamageBonus("good")).toBe(0);
     expect(meleeCraftDamageBonus("normal")).toBe(0);
+  });
+});
+describe("normalizeCraftsmanship", () => {
+  it("maps legacy classic-DH 'common' (and blanks/unknowns) to 'normal'", () => {
+    // The bug: migrated items carry craftsmanship "common", which is not a valid choice and
+    // throws during actor init — cascading into the broken combat tracker.
+    expect(normalizeCraftsmanship("common")).toBe("normal");
+    expect(normalizeCraftsmanship("")).toBe("normal");
+    expect(normalizeCraftsmanship(null)).toBe("normal");
+    expect(normalizeCraftsmanship(undefined)).toBe("normal");
+    expect(normalizeCraftsmanship("bespoke")).toBe("normal");
+  });
+  it("keeps the valid tiers, case-insensitively", () => {
+    expect(normalizeCraftsmanship("poor")).toBe("poor");
+    expect(normalizeCraftsmanship("good")).toBe("good");
+    expect(normalizeCraftsmanship("best")).toBe("best");
+    expect(normalizeCraftsmanship("normal")).toBe("normal");
+    expect(normalizeCraftsmanship("Poor")).toBe("poor");
+    expect(normalizeCraftsmanship("BEST")).toBe("best");
   });
 });
