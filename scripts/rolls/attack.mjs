@@ -747,7 +747,9 @@ async function applyDamage(message) {
     maxApplied = Math.max(maxApplied, eff);
     lines.push(`${h.label}: ${h.total} → ${eff} dmg${hitCrit > 0 ? ` (${hitCrit} critical)` : ""}`);
   }
-  const totalCrit = (target.system.wounds.critical ?? 0) - (sys.wounds.critical ?? 0);
+  // The character's TOTAL accumulated critical damage (parallels the Wounds line below); each hit's
+  // own contribution is shown per-line above in "(N critical)".
+  const critTotal = target.system.wounds.critical ?? 0;
   const wounds = target.system.wounds.value;
   // Concussive: a single blow exceeding the target's Strength Bonus knocks it Prone.
   if (battlemapEnabled() && qualities.some((q) => q.key === "concussive")
@@ -759,7 +761,7 @@ async function applyDamage(message) {
   if (battlemapEnabled() && toxPot > 0 && maxApplied >= 1) {
     await applyToxic(target, toxPot, f.damageType ?? "");
   }
-  const crit = totalCrit > 0 ? `<div class="bdh-card-line fail">Critical damage: ${totalCrit}</div>` : "";
+  const crit = critTotal > 0 ? `<div class="bdh-card-line fail">Critical damage: ${critTotal}</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${woundsShown(wounds, sys.wounds.max, reverseWoundsEnabled())} / ${sys.wounds.max}</div></div>`
