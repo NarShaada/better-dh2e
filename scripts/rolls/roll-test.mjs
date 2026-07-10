@@ -23,7 +23,7 @@ function bonusNote(auto, applied) {
  * Show the modifier dialog (plus an optional characteristic picker).
  * @returns {Promise<{modifier:string, characteristicKey:(string|null)}|null>} null if cancelled.
  */
-export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [] }) {
+export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [], info = [] }) {
   let picker = "";
   if (characteristics) {
     const opts = characteristics.map((c) =>
@@ -38,7 +38,12 @@ export async function promptTest({ title, characteristics = null, defaultModifie
       situational.map((s) => `<label class="bdh-sit"><input type="checkbox" name="sit_${s.id}"/> ${s.label}</label>`).join("") +
       `</div></div>`;
   }
-  const content = `${picker}${checks}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
+  // Read-only breakdown rows (e.g. Manoeuvrability, Untrained −20) shown ABOVE the modifier field —
+  // these are inherent to the test and are NOT part of the "on top" modifier the user types.
+  const infoRows = info.length
+    ? info.map((r) => `<div class="form-group"><label>${r.label}</label><span class="bdh-roll-info">${r.value}</span></div>`).join("")
+    : "";
+  const content = `${picker}${checks}${infoRows}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
     <input type="text" name="modifier" value="${defaultModifier}" autofocus/></div>`;
 
   return DialogV2.prompt({

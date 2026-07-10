@@ -9,6 +9,7 @@ import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fa
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
 import { HordeModel } from "./data/actor/horde-model.mjs";
+import { VehicleModel } from "./data/actor/vehicle-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
 import { WeaponModModel } from "./data/item/weapon-mod-model.mjs";
 import { GearModel } from "./data/item/gear-model.mjs";
@@ -21,6 +22,7 @@ import { ArmourModel } from "./data/item/armour-model.mjs";
 import { DarkHeresyActor } from "./documents/actor.mjs";
 import { DarkHeresyItem } from "./documents/item.mjs";
 import { DarkHeresyActorSheet } from "./sheets/actor-sheet.mjs";
+import { VehicleSheet } from "./sheets/vehicle-sheet.mjs";
 import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
 import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 import { makeDHCombat } from "./documents/combat.mjs";
@@ -61,6 +63,7 @@ Hooks.once("init", () => {
   CONFIG.Actor.dataModels.acolyte = AcolyteModel;
   CONFIG.Actor.dataModels.npc = NpcModel;
   CONFIG.Actor.dataModels.horde = HordeModel;
+  CONFIG.Actor.dataModels.vehicle = VehicleModel;
   CONFIG.Item.dataModels.weapon = WeaponModel;
   CONFIG.Item.dataModels.weaponMod = WeaponModModel;
   CONFIG.Item.dataModels.gear = GearModel;
@@ -77,6 +80,11 @@ Hooks.once("init", () => {
     types: ["acolyte", "npc", "horde"],
     makeDefault: true,
     label: "Better DH2e Actor Sheet"
+  });
+  foundry.documents.collections.Actors.registerSheet("better-dh2e", VehicleSheet, {
+    types: ["vehicle"],
+    makeDefault: true,
+    label: "Better DH2e Vehicle Sheet"
   });
 
   foundry.documents.collections.Items.unregisterSheet("core", foundry.appv1.sheets.ItemSheet);

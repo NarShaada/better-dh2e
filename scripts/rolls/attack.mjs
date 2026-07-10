@@ -30,6 +30,13 @@ const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
 const { renderTemplate } = foundry.applications.handlebars;
 
+/** Resolve a message's weapon from the acting actor's items, falling back to its stored UUID when the
+ *  actor doesn't own it — vehicle-mounted weapons are fired by a seat's occupant (a different actor).
+ *  Normal attacks hit `items.get` first, so their behaviour is unchanged. */
+async function resolveWeapon(actor, f) {
+  return actor?.items.get(f?.weaponId) ?? (f?.weaponUuid ? await fromUuid(f.weaponUuid) : null);
+}
+
 /** Comma-joined "Label (value)" for the weapon qualities whose config noteOn matches `on` (red card note). */
 function qualityNotes(qualities, on, { maximal = false } = {}) {
   const items = (qualities ?? [])
@@ -298,7 +305,7 @@ async function rollSprayAgTest(message, uuid) {
 async function applySpray(message, html) {
   const f = message.flags[NS];
   const attacker = await fromUuid(f.actorUuid);
-  const weapon = attacker?.items.get(f.weaponId);
+  const weapon = await resolveWeapon(attacker, f);
   if (!weapon) { ui.notifications.warn("Weapon not found."); return; }
   const checked = [...html.querySelectorAll(".bdh-spray-hit:checked")].map((c) => c.dataset.uuid);
   const qualities = weapon.system.qualities ?? [];
@@ -417,7 +424,7 @@ async function rollDamage(message) {
     }
     // Build the weapon formula the same way the normal path does (no RoF loop, no per-hit bonus).
     const actor = await fromUuid(f.actorUuid);
-    const weapon = actor?.items.get(f.weaponId);
+    const weapon = await resolveWeapon(actor, f);
     if (!weapon) return;
     const baseFormula = weapon.system.damage;
     const qualities = f.qualities ?? weapon.system.qualities ?? [];
@@ -482,7 +489,7 @@ async function rollDamage(message) {
 
   const actor = await fromUuid(f.actorUuid);
   const psychic = !!f.psychic;
-  const weapon = psychic ? null : actor?.items.get(f.weaponId);
+  const weapon = psychic ? null : await resolveWeapon(actor, f);
   if (!psychic && !weapon) return;
   const baseFormula = psychic ? (f.damage || "0") : weapon.system.damage;   // e.g. "1d10+3" or PR-substituted formula
   const weaponDisplayName = f.weaponName ?? weapon?.name;
@@ -771,7 +778,7 @@ async function applyDamage(message) {
 async function rollOverheatDrop(message) {
   const f = message.flags[NS];
   const attacker = await fromUuid(f.actorUuid);
-  const weapon = attacker?.items.get(f.weaponId);
+  const weapon = await resolveWeapon(attacker, f);
   if (!weapon) return;
   await weapon.update({ "system.equipped": false });
   await ChatMessage.create({
@@ -783,7 +790,7 @@ async function rollOverheatDrop(message) {
 async function rollOverheatDamage(message) {
   const f = message.flags[NS];
   const attacker = await fromUuid(f.actorUuid);
-  const weapon = attacker?.items.get(f.weaponId);
+  const weapon = await resolveWeapon(attacker, f);
   if (!weapon) return;
   const hand = await DialogV2.prompt({
     window: { title: "Overheat — which hand?" },
@@ -861,7 +868,7 @@ async function rollSpray(actor, weapon) {
   const content = await renderTemplate("systems/better-dh2e/templates/chat/spray-card.hbs", cardData);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }), content,
-    flags: { [NS]: { kind: "spray", actorUuid: actor.uuid, weaponId: weapon.id, regionUuid: rows.length ? region.uuid : null,
+    flags: { [NS]: { kind: "spray", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, regionUuid: rows.length ? region.uuid : null,
       caughtUuids: rows.map((r) => r.uuid), damageType: weapon.system.damageType } },
   });
 }
@@ -929,7 +936,7 @@ async function rollSuppressingFire(actor, weapon, mode) {
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
       content: await renderTemplate("systems/better-dh2e/templates/chat/suppress-hit-card.hbs", { weaponName: weapon.name, rows, dos: effDeg }),
-      flags: { [NS]: { kind: "suppressHit", actorUuid: actor.uuid, weaponId: weapon.id, hits: rows.map((r) => ({ uuid: r.uuid, locKeys: r.locKeys })) } },
+      flags: { [NS]: { kind: "suppressHit", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, hits: rows.map((r) => ({ uuid: r.uuid, locKeys: r.locKeys })) } },
     });
   }
   await deleteRegionByUuid(region.uuid);   // existing line — keep it AFTER the BS/hit block
@@ -972,7 +979,7 @@ async function rollSuppressEvade(message, uuid) {
 async function applySuppressDamage(message, uuid) {
   const f = message.flags[NS];
   const attacker = await fromUuid(f.actorUuid);
-  const weapon = attacker?.items.get(f.weaponId);
+  const weapon = await resolveWeapon(attacker, f);
   const hit = (f.hits ?? []).find((h) => h.uuid === uuid);
   const target = await fromUuid(uuid);
   if (!weapon || !hit || !target) { ui.notifications.warn("Hit/weapon/target not found."); return; }
@@ -1005,8 +1012,8 @@ async function applySuppressDamage(message, uuid) {
     content: `<div class="bdh-card"><header class="bdh-card-head">${target.name} takes suppressing hits</header><div class="bdh-card-line">${lines.join("<br>")}</div></div>` });
 }
 
-export async function rollAttack(actor, weaponId) {
-  const weapon = actor.items.get(weaponId);
+export async function rollAttack(actor, weaponId, { weapon: weaponOverride = null } = {}) {
+  const weapon = weaponOverride ?? actor.items.get(weaponId);
   if (!weapon) return null;
 
   const isSpray = (weapon.system.qualities ?? []).some((q) => q.key === "spray");
@@ -1310,6 +1317,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       type: "attack",
       actorUuid: actor.uuid,
       weaponId: weapon.id,
+      weaponUuid: weapon.uuid,
       isRanged,
       maximal,
       penetration,
@@ -1325,7 +1333,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       jammed,
       scatterDmg,
       helpless: vsHelpless,
-      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, choice, targetUuid, targetName, roll: roll.total, success, dosBonus },
+      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, choice, targetUuid, targetName, roll: roll.total, success, dosBonus },
       ...(blastFlags ?? {})
     }
   };

@@ -315,3 +315,17 @@ body.bdh-themed .chat-message:has(.bdh-card) .message-metadata,
 body.bdh-themed .chat-message:has(.bdh-card) .message-timestamp { color:var(--t-faint); }
 body.bdh-themed .chat-message:has(.bdh-card) .message-header a,
 body.bdh-themed .chat-message:has(.bdh-card) .message-delete { color:var(--t-muted); }
+
+/* --- Vehicle sheet (themed) --- */
+body.bdh-themed .better-dh2e .veh-field,
+body.bdh-themed .better-dh2e .veh-role { background:var(--t-panel); border-color:var(--t-line2); border-radius:2px; }
+body.bdh-themed .better-dh2e .veh-field label,
+body.bdh-themed .better-dh2e .veh-role-name { font-family:var(--t-cond); color:var(--t-ink2); }
+body.bdh-themed .better-dh2e .veh-field .veh-unit { color:var(--t-muted); }
+body.bdh-themed .better-dh2e .veh-role-head { background:var(--t-panel2); color:var(--t-ink2); border-bottom:1px solid var(--t-line); }
+body.bdh-themed .better-dh2e .veh-role-name-in { color:var(--t-ink2); font-family:var(--t-cond); background:var(--t-field); border-color:var(--t-line2); }
+body.bdh-themed .better-dh2e .veh-badge { background:var(--t-gold2); color:var(--t-bg); }
+body.bdh-themed .better-dh2e .veh-roll { background:var(--t-gold2); color:var(--t-bg); border-radius:2px; }
+body.bdh-themed .better-dh2e .veh-seat { background:var(--t-field); border-color:var(--t-line2); }
+body.bdh-themed .better-dh2e .veh-seat .veh-occ { color:var(--t-gold); }
+body.bdh-themed .better-dh2e .veh-wdrop { border-color:var(--t-line2); color:var(--t-muted); }

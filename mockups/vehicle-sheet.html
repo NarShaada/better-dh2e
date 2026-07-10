@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Vehicle Sheet — mockup</title>
+  <!-- Real system styles (relative to /mockups/) so all three themes + bundled fonts render exactly as in Foundry. -->
+  <link rel="stylesheet" href="../styles/better-dh2e.css"/>
+  <link rel="stylesheet" href="../styles/bdh-themes.css"/>
+  <style>
+    /* --- Mockup chrome only (not part of the system) --- */
+    body { margin:0; background:#3a3a3a; font-family:system-ui, sans-serif; }
+    .mock-toolbar { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px;
+      background:#1c1c1c; color:#ddd; padding:8px 14px; font-size:13px; border-bottom:1px solid #000; }
+    .mock-toolbar button { font:inherit; background:#333; color:#ddd; border:1px solid #555; border-radius:4px; padding:4px 12px; cursor:pointer; }
+    .mock-toolbar button.on { background:#b8902f; color:#111; border-color:#b8902f; font-weight:bold; }
+    .mock-toolbar .sp { margin-left:auto; opacity:.6; font-size:12px; }
+    .mock-window { max-width:640px; margin:22px auto; box-shadow:0 8px 40px rgba(0,0,0,.5); border-radius:6px; overflow:hidden; }
+    /* Foundry gives .window-content a height; emulate the scroll container */
+    .mock-window .window-content { max-height:none; }
+
+    /* --- Vehicle-specific bits (would move into better-dh2e.css / bdh-themes.css) --- */
+    .better-dh2e .veh-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; padding:8px 14px; }
+    .better-dh2e .veh-field { display:flex; align-items:center; gap:8px; background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:5px; padding:5px 10px; }
+    .better-dh2e .veh-field label { flex:0 0 auto; font-variant:small-caps; letter-spacing:1px; color:var(--bdh-maroon); font-weight:bold; font-size:12px; }
+    .better-dh2e .veh-field .veh-v { margin-left:auto; font-weight:bold; }
+    .better-dh2e .veh-field input, .better-dh2e .veh-field select { margin-left:auto; }
+    .better-dh2e .veh-field input[type="number"] { width:56px; text-align:center; }
+    .better-dh2e .veh-roll { flex:0 0 auto; background:var(--bdh-maroon); color:var(--bdh-parch); border:none; border-radius:3px; font-size:11px; padding:3px 9px; cursor:pointer; font-variant:small-caps; letter-spacing:.5px; }
+
+    /* Crew role cards */
+    .better-dh2e .veh-role { margin:8px 14px; background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:6px; overflow:hidden; }
+    .better-dh2e .veh-role-head { display:flex; align-items:center; gap:8px; background:var(--bdh-brown); color:var(--bdh-parch); padding:3px 10px; font-variant:small-caps; letter-spacing:1px; font-size:13px; }
+    .better-dh2e .veh-role-head .veh-role-name { font-weight:bold; }
+    .better-dh2e .veh-role-head .veh-badge { font-size:9px; letter-spacing:1px; text-transform:uppercase; background:var(--bdh-parch); color:var(--bdh-maroon); border-radius:8px; padding:0 6px; }
+    .better-dh2e .veh-role-head .veh-del { margin-left:auto; color:var(--bdh-parch); cursor:pointer; opacity:.8; }
+    .better-dh2e .veh-role-body { padding:6px 10px; }
+    /* Occupant seat / drop slot */
+    .better-dh2e .veh-seat { display:flex; align-items:center; gap:8px; border:1px dashed var(--bdh-brown); border-radius:5px; padding:5px 8px; background:#fff6df; }
+    .better-dh2e .veh-seat img { width:34px; height:34px; border:2px solid var(--bdh-gold); border-radius:5px; object-fit:cover; }
+    .better-dh2e .veh-seat .veh-occ { font-weight:bold; color:var(--bdh-maroon); }
+    .better-dh2e .veh-seat .veh-occ small { display:block; font-weight:normal; color:var(--bdh-muted); font-size:11px; }
+    .better-dh2e .veh-seat.empty { color:var(--bdh-muted); font-style:italic; justify-content:center; }
+    .better-dh2e .veh-seat .veh-unlink { margin-left:auto; color:#7a1f1f; cursor:pointer; }
+    /* Driver operate row */
+    .better-dh2e .veh-drive-row { display:flex; align-items:center; gap:8px; margin-top:6px; font-size:12px; }
+    .better-dh2e .veh-drive-row label { color:var(--bdh-muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; }
+    /* Seat weapons */
+    .better-dh2e .veh-wlabel { display:flex; align-items:center; gap:6px; margin:8px 0 3px; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--bdh-muted); }
+    .better-dh2e .veh-wlabel::after { content:""; flex:1; height:1px; background:#cbb88c; }
+    .better-dh2e .veh-wrow { display:flex; align-items:center; gap:8px; padding:3px 6px; border-bottom:1px dotted #cbb88c; font-size:12px; }
+    .better-dh2e .veh-wrow:last-child { border-bottom:none; }
+    .better-dh2e .veh-wdrop { text-align:center; font-style:italic; color:var(--bdh-muted); border:1px dashed var(--bdh-brown); border-radius:4px; padding:4px; font-size:11px; margin-top:3px; }
+
+    /* Themed-mode overrides for the vehicle-only bits (mirror the pattern in bdh-themes.css) */
+    body.bdh-themed .better-dh2e .veh-field,
+    body.bdh-themed .better-dh2e .veh-role { background:var(--t-panel); border-color:var(--t-line2); border-radius:2px; }
+    body.bdh-themed .better-dh2e .veh-field label,
+    body.bdh-themed .better-dh2e .veh-role-head .veh-role-name { font-family:var(--t-cond); color:var(--t-ink2); }
+    body.bdh-themed .better-dh2e .veh-role-head { background:var(--t-panel2); color:var(--t-ink2); border-bottom:1px solid var(--t-line); }
+    body.bdh-themed .better-dh2e .veh-role-head .veh-badge { background:var(--t-gold2); color:var(--t-bg); }
+    body.bdh-themed .better-dh2e .veh-roll { background:var(--t-gold2); color:var(--t-bg); border-radius:2px; }
+    body.bdh-themed .better-dh2e .veh-seat { background:var(--t-field); border-color:var(--t-line2); }
+    body.bdh-themed .better-dh2e .veh-seat .veh-occ { color:var(--t-gold); }
+    body.bdh-themed .better-dh2e .veh-wdrop { border-color:var(--t-line2); }
+  </style>
+</head>
+<body>
+  <div class="mock-toolbar">
+    <span>Theme:</span>
+    <button data-theme="classic" class="on">Classic</button>
+    <button data-theme="dataslate">Dataslate</button>
+    <button data-theme="dossier">Dossier</button>
+    <span class="sp">Vehicle sheet mockup — static, non-interactive</span>
+  </div>
+
+  <div class="mock-window">
+    <div class="better-dh2e actor vehicle">
+      <div class="window-content">
+        <form>
+
+          <!-- ============ HEADER: name · type · availability · integrity ============ -->
+          <header class="bdh-header">
+            <div class="portrait"><img src="../reference/sheet-visuals/acolyte1.jpg" onerror="this.style.visibility='hidden'" alt="vehicle"/></div>
+            <div class="id-block">
+              <div class="nm"><input type="text" value="Rhino APC"/></div>
+              <div class="bio-row">
+                <label class="bio"><b>Type</b>
+                  <select>
+                    <option>Wheeled</option><option selected>Tracked</option>
+                    <option>Walker</option><option>Flyer</option><option>Skimmer</option>
+                  </select>
+                </label>
+                <label class="bio"><b>Availability</b>
+                  <select>
+                    <option>Ubiquitous</option><option>Common</option><option>Average</option>
+                    <option selected>Scarce</option><option>Rare</option><option>Very Rare</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </header>
+
+          <!-- ============ TABS ============ -->
+          <nav class="tabs">
+            <a class="item active" data-tab="overview">Overview</a>
+            <a class="item" data-tab="crew">Crew</a>
+          </nav>
+
+          <!-- ============ OVERVIEW ============ -->
+          <section class="tab active" data-tab="overview">
+
+            <!-- Armour facings (Front / Left / Right / Rear) — same look as acolyte armour, no Toughness strip -->
+            <div class="bdh-armour-row">
+              <div class="bdh-armloc"><div class="bdh-armap">30</div><div class="bdh-armlbl">Front</div></div>
+              <div class="bdh-armloc"><div class="bdh-armap">22</div><div class="bdh-armlbl">Left</div></div>
+              <div class="bdh-armloc"><div class="bdh-armap">22</div><div class="bdh-armlbl">Right</div></div>
+              <div class="bdh-armloc"><div class="bdh-armap">16</div><div class="bdh-armlbl">Rear</div></div>
+            </div>
+
+            <!-- Integrity — stored current/max, like acolyte wounds (no automation) -->
+            <div class="bdh-wounds">
+              <label>Integrity</label>
+              <span class="bdh-wval"><input type="number" value="28" min="0"/> / <input type="number" value="35" min="0"/></span>
+            </div>
+
+            <!-- Vehicle stats -->
+            <div class="veh-grid">
+              <div class="veh-field"><label>Size</label>
+                <select>
+                  <option>6 — Enormous</option><option selected>7 — Massive</option>
+                  <option>8 — Immense</option><option>9 — Monumental</option>
+                </select>
+              </div>
+              <div class="veh-field"><label>Carrying</label><span class="veh-v">10 seats</span></div>
+              <div class="veh-field"><label>Manoeuvrability</label><span class="veh-v">+0</span></div>
+              <div class="veh-field"><label>Tactical Speed</label><span class="veh-v">12 m</span></div>
+              <div class="veh-field"><label>Cruising Speed</label><span class="veh-v">70 kph</span></div>
+            </div>
+
+            <!-- Conditions — stores criticals, same as the acolyte's Crits panel (free text, no automation) -->
+            <div class="bdh-section" style="margin:8px 14px;">
+              <div class="bdh-section-head">Conditions <button type="button" class="bdh-add" style="margin-left:auto;">＋</button></div>
+              <div class="bdh-item-row"><input type="text" class="bdh-injury" value="Motive systems crippled — Tactical Speed halved"/><a class="bdh-del" title="Remove">✖</a></div>
+              <div class="bdh-item-row"><input type="text" class="bdh-injury" value="Weapon destroyed: Pintle Heavy Bolter"/><a class="bdh-del" title="Remove">✖</a></div>
+              <div class="bdh-item-row"><input type="text" class="bdh-injury" value="On fire! (spreading)"/><a class="bdh-del" title="Remove">✖</a></div>
+            </div>
+
+            <!-- Special rules — free string -->
+            <div class="bdh-section" style="margin:8px 14px;">
+              <div class="bdh-section-head">Special Rules</div>
+              <textarea class="bdh-notes" style="min-height:70px; margin:8px;" placeholder="e.g. Enclosed, Tracked, Ramming, Rugged, Open-Topped…">Enclosed, Tracked, Rugged, Sacred Machine Spirit</textarea>
+            </div>
+
+          </section>
+
+          <!-- ============ CREW ============ -->
+          <section class="tab" data-tab="crew">
+
+            <div class="bdh-section" style="margin:8px 14px 4px; background:transparent; border:none;">
+              <div class="bdh-section-head" style="border-radius:5px;">Crew &amp; Roles
+                <button type="button" class="bdh-add" style="margin-left:auto;">＋ Add Role</button>
+              </div>
+            </div>
+
+            <!-- DRIVER — always present, has Operate-spec + Manoeuvre roll -->
+            <div class="veh-role">
+              <div class="veh-role-head">
+                <span class="veh-role-name">Driver</span>
+                <span class="veh-badge">fixed</span>
+              </div>
+              <div class="veh-role-body">
+                <div class="veh-seat">
+                  <img src="../reference/sheet-visuals/acolyte2.jpg" onerror="this.style.visibility='hidden'" alt=""/>
+                  <div class="veh-occ">Brother Castellan<small>Operate (Surface) 42</small></div>
+                  <a class="veh-unlink" title="Remove occupant">✖</a>
+                </div>
+                <div class="veh-drive-row">
+                  <label>Operate</label>
+                  <select>
+                    <option selected>Operate (Surface) — 42</option>
+                    <option>Operate (Aeronautica) — 31</option>
+                  </select>
+                  <button type="button" class="veh-roll" style="margin-left:auto;">Manoeuvre</button>
+                </div>
+                <div class="veh-wlabel">Weapons</div>
+                <div class="veh-wrow"><button type="button" class="bdh-atk">⚔ BS</button><span class="bdh-name">Storm Bolter</span><span class="bdh-desc-line">Basic · 2d10+5 X · Pen 4 · Tearing, Storm</span></div>
+                <div class="veh-wdrop">Drag a weapon here to mount it to this seat</div>
+              </div>
+            </div>
+
+            <!-- GUNNER — a creatable role -->
+            <div class="veh-role">
+              <div class="veh-role-head">
+                <span class="veh-role-name">Gunner</span>
+                <a class="veh-del" title="Remove role">✖</a>
+              </div>
+              <div class="veh-role-body">
+                <div class="veh-seat">
+                  <img src="../reference/sheet-visuals/acolyte1.jpg" onerror="this.style.visibility='hidden'" alt=""/>
+                  <div class="veh-occ">Tech-Priest Vane<small>BS 38</small></div>
+                  <a class="veh-unlink" title="Remove occupant">✖</a>
+                </div>
+                <div class="veh-wlabel">Weapons</div>
+                <div class="veh-wrow"><button type="button" class="bdh-atk">⚔ BS</button><span class="bdh-name">Pintle Heavy Bolter</span><span class="bdh-desc-line">Heavy · 3d10+8 X · Pen 5 · Tearing</span></div>
+                <div class="veh-wrow"><button type="button" class="bdh-atk">⚔ BS</button><span class="bdh-name">Hunter-Killer Missile</span><span class="bdh-desc-line">Heavy · 3d10+8 X · Pen 8 · Blast(4), one-shot</span></div>
+                <div class="veh-wdrop">Drag a weapon here to mount it to this seat</div>
+              </div>
+            </div>
+
+            <!-- Empty role example -->
+            <div class="veh-role">
+              <div class="veh-role-head">
+                <span class="veh-role-name">Passenger — Commander</span>
+                <a class="veh-del" title="Remove role">✖</a>
+              </div>
+              <div class="veh-role-body">
+                <div class="veh-seat empty">Drag an actor here to seat them</div>
+              </div>
+            </div>
+
+          </section>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme switch — toggles the same body classes the real system uses.
+    const THEME_CLASSES = { classic: [], dataslate: ["bdh-themed","bdh-theme-dataslate"], dossier: ["bdh-themed","bdh-theme-dossier"] };
+    const ALL = ["bdh-themed","bdh-theme-dataslate","bdh-theme-dossier"];
+    document.querySelectorAll(".mock-toolbar [data-theme]").forEach(btn => btn.addEventListener("click", () => {
+      document.body.classList.remove(...ALL);
+      document.body.classList.add(...THEME_CLASSES[btn.dataset.theme]);
+      document.querySelectorAll(".mock-toolbar [data-theme]").forEach(b => b.classList.toggle("on", b === btn));
+    }));
+    // Tab switch
+    document.querySelectorAll("nav.tabs .item").forEach(tab => tab.addEventListener("click", () => {
+      const name = tab.dataset.tab;
+      document.querySelectorAll("nav.tabs .item").forEach(t => t.classList.toggle("active", t === tab));
+      document.querySelectorAll(".tab").forEach(s => s.classList.toggle("active", s.dataset.tab === name));
+    }));
+  </script>
+</body>
+</html>

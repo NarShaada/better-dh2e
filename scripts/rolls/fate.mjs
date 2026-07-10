@@ -29,7 +29,7 @@ export async function rerollFromFate(message) {
   if (rr.kind === "test") {
     await performTest(actor, { label: rr.label, base: rr.base, modifier: rr.modifier, characteristic: rr.characteristic });
   } else if (rr.kind === "attack") {
-    const weapon = actor.items.get(rr.weaponId);
+    const weapon = actor.items.get(rr.weaponId) ?? (rr.weaponUuid ? await fromUuid(rr.weaponUuid) : null);
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName });
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
@@ -62,7 +62,7 @@ export async function addDoSFromFate(message) {
   if (rr.kind === "test") {
     await performTest(actor, { label: rr.label, base: rr.base, modifier: rr.modifier, characteristic: rr.characteristic, ...boost });
   } else if (rr.kind === "attack") {
-    const weapon = actor.items.get(rr.weaponId);
+    const weapon = actor.items.get(rr.weaponId) ?? (rr.weaponUuid ? await fromUuid(rr.weaponUuid) : null);
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);

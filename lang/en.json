@@ -2,6 +2,7 @@
   "TYPES.Actor.acolyte": "Acolyte",
   "TYPES.Actor.npc": "NPC",
   "TYPES.Actor.horde": "Horde",
+  "TYPES.Actor.vehicle": "Vehicle",
   "TYPES.Item.weapon": "Weapon",
   "TYPES.Item.gear": "Gear",
   "TYPES.Item.talent": "Talent",

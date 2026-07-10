@@ -1,9 +1,10 @@
 {
   "Actor": {
-    "types": ["acolyte", "npc", "horde"],
+    "types": ["acolyte", "npc", "horde", "vehicle"],
     "acolyte": {},
     "npc": {},
-    "horde": {}
+    "horde": {},
+    "vehicle": {}
   },
   "Item": {
     "types": ["weapon", "weaponMod", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"],

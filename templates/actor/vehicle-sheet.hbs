@@ -1,0 +1,125 @@
+{{!-- templates/actor/vehicle-sheet.hbs — Vehicle actor sheet (Phase 1). --}}
+{{!-- Root is a <div>: DocumentSheetV2 already makes the application a <form> (tag:"form"); a nested form would orphan our inputs and block saving. --}}
+<div class="better-dh2e {{#unless editable}}bdh-locked{{/unless}}">
+
+  {{!-- Header: portrait · name · type · availability --}}
+  <header class="bdh-header">
+    <div class="portrait"><img src="{{document.img}}" data-edit="img" alt="portrait"/></div>
+    <div class="id-block">
+      <div class="nm"><input type="text" name="name" value="{{document.name}}"/></div>
+      <div class="bio-row">
+        <label class="bio"><b>Type</b>
+          <select name="system.vehicleType">{{selectOptions vehicleTypes selected=system.vehicleType}}</select>
+        </label>
+        <label class="bio"><b>Availability</b>
+          <select name="system.availability">{{selectOptions availabilityChoices selected=system.availability}}</select>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs primary" data-group="primary">
+    {{#each tabs as |t|}}
+      <a class="item {{t.cssClass}}" data-action="tab" data-group="primary" data-tab="{{t.id}}">{{localize t.label}}</a>
+    {{/each}}
+  </nav>
+
+  {{!-- ============ OVERVIEW ============ --}}
+  <section class="tab {{tabs.overview.cssClass}}" data-group="primary" data-tab="overview">
+
+    {{!-- Armour facings (no Toughness strip) --}}
+    <div class="bdh-armour-row">
+      {{#each facings as |f|}}
+        <div class="bdh-armloc">
+          <div class="bdh-armap"><input type="number" name="system.armour.{{f.key}}" value="{{f.ap}}" min="0"/></div>
+          <div class="bdh-armlbl">{{f.label}}</div>
+        </div>
+      {{/each}}
+    </div>
+
+    {{!-- Integrity — stored current/max, like acolyte wounds --}}
+    <div class="bdh-wounds">
+      <label>Integrity</label>
+      <span class="bdh-wval">
+        <input type="number" class="bdh-integrity-value" value="{{integrityShown}}" min="0"/> /
+        <input type="number" name="system.integrity.max" value="{{system.integrity.max}}" min="0"/>
+      </span>
+    </div>
+
+    {{!-- Stats --}}
+    <div class="veh-grid">
+      <div class="veh-field"><label>Size</label><select name="system.size">{{selectOptions sizeChoices selected=system.size}}</select></div>
+      <div class="veh-field"><label>Manoeuvrability</label><input type="number" name="system.manoeuvrability" value="{{system.manoeuvrability}}"/></div>
+      <div class="veh-field"><label>Tactical Speed</label><span class="veh-unit"><input type="number" name="system.tacticalSpeed" value="{{system.tacticalSpeed}}" min="0"/> m</span></div>
+      <div class="veh-field"><label>Cruising Speed</label><span class="veh-unit"><input type="number" name="system.cruisingSpeed" value="{{system.cruisingSpeed}}" min="0"/> kph</span></div>
+      <div class="veh-field"><label>Carrying</label><span class="veh-unit"><input type="number" name="system.carrying" value="{{system.carrying}}" min="0"/> seats</span></div>
+    </div>
+
+    {{!-- Conditions — stores criticals (free text, no automation) --}}
+    <div class="bdh-section">
+      <div class="bdh-section-head">Conditions <button type="button" class="bdh-add" data-action="addCondition" title="Add">＋</button></div>
+      {{#each conditions as |c|}}
+        <div class="bdh-item-row">
+          <input type="text" class="bdh-injury" data-cond-index="{{c.index}}" value="{{c.text}}" placeholder="e.g. Weapon destroyed, Motive damage, On fire…"/>
+          <a class="bdh-del" data-action="removeCondition" data-index="{{c.index}}" title="Remove">✖</a>
+        </div>
+      {{/each}}
+      {{#unless conditions.length}}<div class="bdh-empty">None.</div>{{/unless}}
+    </div>
+
+    {{!-- Special rules --}}
+    <div class="bdh-section">
+      <div class="bdh-section-head">Special Rules</div>
+      <textarea class="bdh-notes" name="system.specialRules" style="min-height:70px;" placeholder="e.g. Enclosed, Tracked, Rugged, Open-Topped…">{{system.specialRules}}</textarea>
+    </div>
+
+  </section>
+
+  {{!-- ============ CREW ============ --}}
+  <section class="tab {{tabs.crew.cssClass}}" data-group="primary" data-tab="crew">
+
+    <div class="bdh-section-head" style="margin:8px 14px 0; border-radius:5px;">Crew &amp; Roles
+      <button type="button" class="bdh-add" data-action="addRole" title="Add role" style="margin-left:auto;">＋ Add Role</button>
+    </div>
+    {{#each crew as |seat|}}
+      <div class="veh-role" data-seat-index="{{seat.index}}">
+        <div class="veh-role-head">
+          {{#if seat.fixed}}<span class="veh-role-name">{{seat.role}}</span><span class="veh-badge">fixed</span>
+          {{else}}<input class="veh-role-name-in" type="text" data-veh-index="{{seat.index}}" data-veh-field="role" value="{{seat.role}}"/>
+            <a class="veh-del" data-action="removeRole" data-index="{{seat.index}}" title="Remove role">✖</a>{{/if}}
+        </div>
+        <div class="veh-role-body">
+          {{#if seat.occupant}}
+            <div class="veh-seat">
+              <img src="{{seat.occupant.img}}" alt=""/>
+              <div class="veh-occ">{{seat.occupant.name}}</div>
+              <a class="veh-unlink" data-action="unseat" data-index="{{seat.index}}" title="Remove occupant">✖</a>
+            </div>
+          {{else}}
+            <div class="veh-seat empty">Drag an actor here to seat them</div>
+          {{/if}}
+          {{#if seat.isDriver}}
+            <div class="veh-drive-row">
+              <label>Operate</label>
+              <select data-veh-index="{{seat.index}}" data-veh-field="operate">{{selectOptions seat.operateOptions selected=seat.operateSel}}</select>
+              <button type="button" class="veh-roll" data-action="rollManoeuvre" data-index="{{seat.index}}"{{#unless seat.hasDriver}} disabled title="Seat a driver first"{{/unless}}>Manoeuvre</button>
+            </div>
+          {{/if}}
+          <div class="veh-wlabel">Weapons</div>
+          {{#each seat.weapons as |w|}}
+            <div class="veh-wrow" data-item-id="{{w.id}}">
+              <button type="button" class="bdh-atk" data-action="fireSeatWeapon" data-seat="{{seat.index}}" data-item-id="{{w.id}}">⚔ {{w.attackChar}}</button>
+              <span class="bdh-name" data-action="editItem">{{w.name}}</span>
+              <span class="bdh-desc-line">{{w.summary}}</span>
+              {{#if w.usesAmmo}}<span class="bdh-clip">{{w.clip}}</span><button type="button" class="bdh-reload" data-action="reloadWeapon" title="Reload">⟳</button>{{/if}}
+              <a class="bdh-del" data-action="removeWeapon" data-seat="{{seat.index}}" data-item-id="{{w.id}}" title="Unmount">✖</a>
+            </div>
+          {{/each}}
+          <div class="veh-wdrop">Drag a weapon here to mount it to this seat</div>
+        </div>
+      </div>
+    {{/each}}
+
+  </section>
+
+</div>
