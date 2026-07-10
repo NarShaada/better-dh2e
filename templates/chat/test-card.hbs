@@ -10,6 +10,7 @@
     {{#if success}}{{localize "BDH.Roll.Success"}}{{else}}{{localize "BDH.Roll.Failure"}}{{/if}}
     {{#if degrees}}<span class="bdh-dos-pips">{{#times degrees}}<i></i>{{/times}}</span>{{/if}}
     <span class="deg">{{degrees}} {{#if success}}{{localize "BDH.Roll.DoS"}}{{else}}{{localize "BDH.Roll.DoF"}}{{/if}}</span>
+    {{#if unnaturalDoS}}<span class="bdh-fate-note">+{{unnaturalDoS}} DoS &middot; Unnatural</span>{{/if}}
     {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS &middot; Fate</span>{{/if}}
   </div>
 </div>

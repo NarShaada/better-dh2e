@@ -8,6 +8,7 @@ import {
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
 import { effectivePenetration } from "../helpers/quality-modules.mjs";
+import { unnaturalDoSBonus } from "../helpers/derived.mjs";
 import { battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { safeRoll } from "./dice.mjs";
 
@@ -104,7 +105,10 @@ export async function resolveManifest(actor, power, opts) {
   const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
   const result = evaluateTest({ base: focus.total, modifier: focusMod, roll: roll.total });
   const { success, degrees, target, modifier } = result;
-  const dos = success ? degrees + dosBonus : 0;
+  // Unnatural governing characteristic adds ceil(unnatural/2) extra DoS on a successful Focus test.
+  const focusCharKey = focus.kind === "characteristic" ? focus.key : (CONFIG.BDH.skills[focus.key]?.characteristic ?? null);
+  const unnaturalDoS = success && focusCharKey ? unnaturalDoSBonus(actor.system.characteristics?.[focusCharKey]?.unnatural) : 0;
+  const dos = success ? degrees + unnaturalDoS + dosBonus : 0;
   const doubles = isDoubles(roll.total);
 
   // Phenomena (keep the Roll objects so the dice sound/animation plays)

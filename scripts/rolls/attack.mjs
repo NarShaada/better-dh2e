@@ -18,7 +18,7 @@ import { woundsShown, reverseWoundsEnabled } from "../helpers/wounds-display.mjs
 import { coverPieceForTarget } from "../canvas/cover.mjs";
 import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { sizeToHitModifier } from "../helpers/derived.mjs";
+import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
@@ -146,7 +146,7 @@ async function rollShockTest(message) {
   const label = "Toughness (Shocking)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
   if (battlemapEnabled() && result && !result.success) {
     await applyStunned(defender, Math.ceil(result.degrees / 2));
     await addFatigue(defender, 1);
@@ -165,7 +165,7 @@ async function rollCastResist(message) {
   const label = `${oppLabel} (Resist ${f.powerName} — caster ${f.casterDoS ?? 0} DoS)`;
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  return performTest(defender, { label, base: tgt.total, modifier: choice.modifier });
+  return performTest(defender, { label, base: tgt.total, modifier: choice.modifier, characteristic: governingCharacteristic(f.opposedBy) });
 }
 async function rollConcussiveTest(message) {
   const f = message.flags[NS];
@@ -175,7 +175,7 @@ async function rollConcussiveTest(message) {
   const label = `Toughness (Concussive ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });   // penalty pre-filled, GM can adjust
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
   if (battlemapEnabled() && result && !result.success) await applyStunned(defender, result.degrees);
   return result;
 }
@@ -185,7 +185,7 @@ async function rollFlameTest(message) {
   const label = "Agility (Flame)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier, characteristic: "agility" });
   if (battlemapEnabled() && result && !result.success) await applyOnFire(defender);
   return result;
 }
@@ -197,7 +197,7 @@ async function rollHallucinogenicTest(message) {
   const label = `Toughness (Hallucinogenic ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
 }
 async function rollSnareTest(message) {
   const f = message.flags[NS];
@@ -207,7 +207,7 @@ async function rollSnareTest(message) {
   const label = `Agility (Snare ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier, characteristic: "agility" });
   if (battlemapEnabled() && result && !result.success) await applyHelpless(defender);
   return result;
 }
@@ -219,7 +219,7 @@ async function rollToxicTest(message) {
   const label = `Toughness (Toxic ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
-  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  return performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
 }
 async function rollToxicResist(message) {
   const f = message.flags[NS];
@@ -229,7 +229,7 @@ async function rollToxicResist(message) {
   const label = `Toughness (Toxic Resist ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
   if (battlemapEnabled() && result && !result.success) {
     // Failed resist: deal 1d10 of the stored damage type, soaked by Toughness Bonus only (no armour).
     const roll = await new Roll("1d10").evaluate();
@@ -263,7 +263,7 @@ async function rollRadPhageTest(message) {
   const label = "Toughness (Rad-Phage)";
   const choice = await promptTest({ title: label, defaultModifier: "+0" });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier });
+  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
   if (battlemapEnabled() && result && !result.success) {
     // Failed: 2d10 raw Toughness characteristic damage (no soak), stored as a charDamage injury entry.
     const roll = await new Roll("2d10").evaluate();
@@ -293,7 +293,7 @@ async function rollSprayAgTest(message, uuid) {
   const label = `Agility (Spray — ${target.name})`;
   const choice = await promptTest({ title: label, defaultModifier: "+0" });
   if (!choice) return null;
-  return performTest(target, { label, base: target.system.characteristics.agility.total, modifier: choice.modifier });
+  return performTest(target, { label, base: target.system.characteristics.agility.total, modifier: choice.modifier, characteristic: "agility" });
 }
 async function applySpray(message, html) {
   const f = message.flags[NS];
@@ -397,7 +397,7 @@ async function rollOnFireWP(message) {
   const label = "Willpower (On Fire)";
   const choice = await promptTest({ title: label, defaultModifier: "0" });
   if (!choice) return null;
-  return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier });
+  return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier, characteristic: "willpower" });
 }
 const DAMAGE_CARD = "systems/better-dh2e/templates/chat/damage-card.hbs";
 
@@ -624,11 +624,11 @@ async function rollEvade(message) {
     const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: i.system.qualities, craftsmanship: i.system.craftsmanship })));
     const base = defender.system.characteristics.weaponSkill.total;
     const label = pmod ? `Parry (WS, weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry (WS)";
-    return performTest(defender, { label, base, modifier: modifier + pmod + evadeCondMod });
+    return performTest(defender, { label, base, modifier: modifier + pmod + evadeCondMod, characteristic: "weaponSkill" });
   }
   const dodge = defender.system.skills.dodge;
   const base = defender.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
-  return performTest(defender, { label: "Dodge", base, modifier: modifier + evadeCondMod });
+  return performTest(defender, { label: "Dodge", base, modifier: modifier + evadeCondMod, characteristic: "agility" });
 }
 /**
  * Apply one hit's worth of damage to a token's actor: soak vs armour@location + toughness, then wounds.
@@ -897,6 +897,8 @@ async function rollSuppressingFire(actor, weapon, mode) {
   // Attacker's suppressing BS test (−20). Success → random burst hits, capped by RoF.
   const bsRoll = await new Roll("1d100").evaluate();
   const res = evaluateTest({ base: actor.system.characteristics.ballisticSkill.total, modifier: -20, roll: bsRoll.total });
+  // Unnatural BS adds ceil(unnatural/2) extra DoS on a hit (0 on a miss → effDeg = raw DoF).
+  const effDeg = res.degrees + (res.success ? unnaturalDoSBonus(actor.system.characteristics.ballisticSkill.unnatural) : 0);
   // BS result card — always printed (success or failure), with the roll.
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }), rolls: [bsRoll],
@@ -908,12 +910,12 @@ async function rollSuppressingFire(actor, weapon, mode) {
       +   `<div class="bdh-stat rolled"><b>${bsRoll.total}</b><span>Rolled</span></div>`
       + `</div>`
       + `<div class="bdh-card-result ${res.success ? "ok" : "fail"}">${res.success ? "Hit" : "Miss"}`
-      +   (res.degrees ? `<span class="bdh-dos-pips">${"<i></i>".repeat(res.degrees)}</span>` : "")
-      +   `<span class="deg">${res.degrees} ${res.degrees === 1 ? "Degree" : "Degrees"} of ${res.success ? "Success" : "Failure"}</span>`
+      +   (effDeg ? `<span class="bdh-dos-pips">${"<i></i>".repeat(effDeg)}</span>` : "")
+      +   `<span class="deg">${effDeg} ${effDeg === 1 ? "Degree" : "Degrees"} of ${res.success ? "Success" : "Failure"}</span>`
       + `</div></div>`,
   });
   if (res.success && caught.length) {
-    const nHits = Math.min(1 + Math.floor(res.degrees / 2), rof);
+    const nHits = Math.min(1 + Math.floor(effDeg / 2), rof);
     const locs = locationSequence(hitLocation(bsRoll.total), nHits);   // burst locations
     const byTarget = {};
     for (const loc of locs) {
@@ -926,7 +928,7 @@ async function rollSuppressingFire(actor, weapon, mode) {
     }));
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
-      content: await renderTemplate("systems/better-dh2e/templates/chat/suppress-hit-card.hbs", { weaponName: weapon.name, rows, dos: res.degrees }),
+      content: await renderTemplate("systems/better-dh2e/templates/chat/suppress-hit-card.hbs", { weaponName: weapon.name, rows, dos: effDeg }),
       flags: { [NS]: { kind: "suppressHit", actorUuid: actor.uuid, weaponId: weapon.id, hits: rows.map((r) => ({ uuid: r.uuid, locKeys: r.locKeys })) } },
     });
   }
@@ -940,7 +942,7 @@ async function rollSuppressWP(message, uuid) {
   const label = `Willpower (Suppressing — ${target.name})`;
   const choice = await promptTest({ title: label, defaultModifier: `${pen}` });
   if (!choice) return null;
-  return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier });
+  return performTest(target, { label, base: target.system.characteristics.willpower.total, modifier: choice.modifier, characteristic: "willpower" });
 }
 
 async function applySuppressPinned(message, html) {
@@ -964,7 +966,7 @@ async function rollSuppressEvade(message, uuid) {
   const evadeCondMod = battlemapEnabled() ? evadeConditionModifier(target.statuses) : 0;
   const dodge = target.system.skills.dodge;
   const base = target.system.characteristics.agility.total + (BDH.skillRanks[dodge.rank] ?? -20);
-  return performTest(target, { label, base, modifier: modifier + evadeCondMod });
+  return performTest(target, { label, base, modifier: modifier + evadeCondMod, characteristic: "agility" });
 }
 
 async function applySuppressDamage(message, uuid) {
@@ -1217,8 +1219,10 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // evaluateTest returns: { base, modifier (clamped), target, roll, success, degrees }
   let { success, degrees, target, modifier } = result;
 
-  // Degrees of success (0 on failure)
-  let dos = success ? degrees + dosBonus : 0;
+  // Degrees of success (0 on failure). Unnatural WS/BS adds ceil(unnatural/2) extra DoS on a hit
+  // (rare on attackers, but RAW: any test using an unnatural characteristic).
+  const unnaturalDoS = unnaturalDoSBonus(actor.system.characteristics[charKey]?.unnatural);
+  let dos = success ? degrees + dosBonus + unnaturalDoS : 0;
 
   // Helpless target: melee attacks auto-succeed with DoS = attacker WS bonus
   const vsHelpless = isMelee && battlemapEnabled() && (condTarget?.statuses?.has?.("helpless") ?? false);

@@ -1,7 +1,7 @@
 // scripts/rolls/roll-test.mjs
 // Foundry-coupled roll service: dialog -> d100 -> chat card. Validated by loading in Foundry.
 import { parseModifier, evaluateTest } from "./test-logic.mjs";
-import { skillTotal, sizeStealthModifier } from "../helpers/derived.mjs";
+import { skillTotal, sizeStealthModifier, unnaturalDoSBonus } from "../helpers/derived.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor } from "../helpers/item-bonuses.mjs";
 
 const NS = "better-dh2e";
@@ -56,18 +56,24 @@ export async function promptTest({ title, characteristics = null, defaultModifie
   });
 }
 
-/** Roll d100 against base+modifier and post the chat card. */
-export async function performTest(actor, { label, base, modifier, fixedRoll = null, dosBonus = 0 }) {
+/** Roll d100 against base+modifier and post the chat card.
+ *  `characteristic` is the governing characteristic KEY — its Unnatural bonus adds ceil(unnatural/2)
+ *  extra DoS on success (rulebook: any test using an unnatural characteristic). Stored on the reroll
+ *  flags so Fate rerolls/boosts keep it. It's tracked separately from the Fate `dosBonus` so it neither
+ *  blocks nor is overwritten by the Fate "+1 DoS" button. */
+export async function performTest(actor, { label, base, modifier, fixedRoll = null, dosBonus = 0, characteristic = null }) {
   const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
   const result = evaluateTest({ base, modifier: parseModifier(modifier), roll: roll.total });
-  const dos = result.success ? result.degrees + dosBonus : 0;
+  const unnaturalDoS = result.success && characteristic
+    ? unnaturalDoSBonus(actor.system?.characteristics?.[characteristic]?.unnatural) : 0;
+  const dos = result.success ? result.degrees + unnaturalDoS + dosBonus : 0;
   const modifierLabel = `${result.modifier >= 0 ? "+" : ""}${result.modifier}`;
   // Show the boosted DoS on success; keep the raw degrees-of-failure on a miss.
-  const content = await renderTemplate(CARD, { label, ...result, degrees: result.success ? dos : result.degrees, modifierLabel, dosBonus });
+  const content = await renderTemplate(CARD, { label, ...result, degrees: result.success ? dos : result.degrees, modifierLabel, dosBonus, unnaturalDoS });
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }),
     content,
-    flags: { [NS]: { reroll: { kind: "test", actorUuid: actor.uuid, base, modifier, label, roll: roll.total, success: result.success, dosBonus } } }
+    flags: { [NS]: { reroll: { kind: "test", actorUuid: actor.uuid, base, modifier, label, roll: roll.total, success: result.success, dosBonus, characteristic } } }
   };
   if (fixedRoll == null) messageData.rolls = [roll];
   ChatMessage.applyRollMode(messageData, "roll");
@@ -85,7 +91,7 @@ export async function rollCharacteristic(actor, key) {
   const applied = situational.filter((s) => choice.situationalIds.includes(s.id));
   const bonusTotal = auto + applied.reduce((n, s) => n + s.amount, 0);
   const note = bonusNote(auto, applied);
-  return performTest(actor, { label: label + note, base: actor.system.characteristics[key].total, modifier: parseModifier(choice.modifier) + bonusTotal });
+  return performTest(actor, { label: label + note, base: actor.system.characteristics[key].total, modifier: parseModifier(choice.modifier) + bonusTotal, characteristic: key });
 }
 
 /** Skill test: dialog includes a characteristic picker defaulting to the skill's governing characteristic. */
@@ -119,7 +125,7 @@ export async function rollSkill(actor, key, specialtyIndex = null) {
   const applied = situational.filter((s) => choice.situationalIds.includes(s.id));
   const bonusTotal = auto + applied.reduce((n, s) => n + s.amount, 0);
   const note = bonusNote(auto, applied);
-  return performTest(actor, { label: `${label} (${short})${note}`, base, modifier: parseModifier(choice.modifier) + sizeStealth + bonusTotal });
+  return performTest(actor, { label: `${label} (${short})${note}`, base, modifier: parseModifier(choice.modifier) + sizeStealth + bonusTotal, characteristic: chosen });
 }
 
 /** Malignancy / Trauma test: a Willpower test with the track penalty pre-filled in the dialog. */
@@ -127,5 +133,5 @@ export async function rollAfflictionTest(actor, { label, penalty }) {
   const defaultModifier = `${penalty >= 0 ? "+" : ""}${penalty}`;
   const choice = await promptTest({ title: label, defaultModifier });
   if (!choice) return null;
-  return performTest(actor, { label, base: actor.system.characteristics.willpower.total, modifier: choice.modifier });
+  return performTest(actor, { label, base: actor.system.characteristics.willpower.total, modifier: choice.modifier, characteristic: "willpower" });
 }

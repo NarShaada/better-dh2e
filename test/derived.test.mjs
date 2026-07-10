@@ -7,9 +7,40 @@ import {
   fatigueMax,
   movement,
   sizeToHitModifier,
-  sizeStealthModifier
+  sizeStealthModifier,
+  unnaturalDoSBonus,
+  governingCharacteristic
 } from "../scripts/helpers/derived.mjs";
 
+describe("unnaturalDoSBonus", () => {
+  it("is ceil(unnatural/2) when the unnatural bonus is positive", () => {
+    // The rulebook example: Unnatural +3 → +2 DoS on a successful test using that characteristic.
+    expect(unnaturalDoSBonus(3)).toBe(2);
+    expect(unnaturalDoSBonus(1)).toBe(1);
+    expect(unnaturalDoSBonus(2)).toBe(1);
+    expect(unnaturalDoSBonus(4)).toBe(2);
+    expect(unnaturalDoSBonus(6)).toBe(3);
+  });
+  it("is 0 when there is no unnatural bonus", () => {
+    expect(unnaturalDoSBonus(0)).toBe(0);
+    expect(unnaturalDoSBonus(undefined)).toBe(0);
+    expect(unnaturalDoSBonus(null)).toBe(0);
+  });
+});
+describe("governingCharacteristic", () => {
+  it("maps a characteristic key to itself", () => {
+    expect(governingCharacteristic("strength")).toBe("strength");
+    expect(governingCharacteristic("willpower")).toBe("willpower");
+  });
+  it("maps a skill key to its governing characteristic", () => {
+    // athletics is Strength-based, dodge is Agility-based (per BDH.skills config).
+    expect(governingCharacteristic("athletics")).toBe("strength");
+    expect(governingCharacteristic("dodge")).toBe("agility");
+  });
+  it("returns null for an unknown key", () => {
+    expect(governingCharacteristic("nonsense")).toBe(null);
+  });
+});
 describe("characteristicTotal", () => {
   it("sums base and advance", () => {
     expect(characteristicTotal({ base: 30, advance: 5 })).toBe(35);

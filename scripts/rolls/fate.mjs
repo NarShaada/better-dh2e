@@ -27,7 +27,7 @@ export async function rerollFromFate(message) {
     content: `<div class="bdh-card"><header class="bdh-card-head">${actor.name} spends a Fate point to reroll.</header></div>`
   });
   if (rr.kind === "test") {
-    await performTest(actor, { label: rr.label, base: rr.base, modifier: rr.modifier });
+    await performTest(actor, { label: rr.label, base: rr.base, modifier: rr.modifier, characteristic: rr.characteristic });
   } else if (rr.kind === "attack") {
     const weapon = actor.items.get(rr.weaponId);
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName });
@@ -60,7 +60,7 @@ export async function addDoSFromFate(message) {
   });
   const boost = { fixedRoll: rr.roll, dosBonus: 1 };
   if (rr.kind === "test") {
-    await performTest(actor, { label: rr.label, base: rr.base, modifier: rr.modifier, ...boost });
+    await performTest(actor, { label: rr.label, base: rr.base, modifier: rr.modifier, characteristic: rr.characteristic, ...boost });
   } else if (rr.kind === "attack") {
     const weapon = actor.items.get(rr.weaponId);
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });

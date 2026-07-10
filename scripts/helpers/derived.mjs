@@ -13,6 +13,20 @@ export function characteristicBonus(characteristic) {
   return Math.floor(total / 10) + (characteristic.unnatural ?? 0);
 }
 
+/** Unnatural characteristics grant extra Degrees of Success on any SUCCESSFUL test that uses them:
+ *  ceil(unnatural / 2), else 0. No effect on failures — DoF is never modified. */
+export function unnaturalDoSBonus(unnatural) {
+  const u = unnatural ?? 0;
+  return u > 0 ? Math.ceil(u / 2) : 0;
+}
+
+/** The characteristic a test is governed by: a characteristic key maps to itself; a skill key maps to
+ *  its governing characteristic; anything unrecognised → null. Used to find the .unnatural for a test. */
+export function governingCharacteristic(key) {
+  if (BDH.characteristics?.[key]) return key;
+  return BDH.skills?.[key]?.characteristic ?? null;
+}
+
 /** skill total = governing characteristic total + flat rank bonus */
 export function skillTotal(characteristicTotalValue, rank) {
   const bonus = BDH.skillRanks[rank] ?? BDH.skillRanks.untrained;
