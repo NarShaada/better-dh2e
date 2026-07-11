@@ -148,9 +148,19 @@ function formatRoll(roll, subResult = null, dos = 0, transform = (v) => v) {
 async function resolveDefender(f) {
   return (f.targetUuid ? await fromUuid(f.targetUuid) : null) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
 }
+/** Vehicles can't make characteristic resist tests — they auto-pass. Post a note and stop. */
+async function autoPassIfVehicle(defender, label) {
+  if (defender?.type !== "vehicle") return false;
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: defender }),
+    content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} — ${label}: Target is a Vehicle</header></div>`
+  });
+  return true;
+}
 async function rollShockTest(message) {
   const defender = await resolveDefender(message.flags[NS]);
   if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  if (await autoPassIfVehicle(defender, "Shocking")) return;
   const label = "Toughness (Shocking)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
@@ -179,6 +189,7 @@ async function rollConcussiveTest(message) {
   const f = message.flags[NS];
   const defender = await resolveDefender(f);
   if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  if (await autoPassIfVehicle(defender, "Concussive")) return;
   const x = concussiveValue(f.qualities);
   const label = `Toughness (Concussive ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });   // penalty pre-filled, GM can adjust
@@ -190,6 +201,7 @@ async function rollConcussiveTest(message) {
 async function rollFlameTest(message) {
   const defender = await resolveDefender(message.flags[NS]);
   if (!defender) { ui.notifications.warn("Select a token to test Agility."); return; }
+  if (await autoPassIfVehicle(defender, "Flame")) return;
   const label = "Agility (Flame)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
@@ -201,6 +213,7 @@ async function rollHallucinogenicTest(message) {
   const f = message.flags[NS];
   const defender = await resolveDefender(f);
   if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  if (await autoPassIfVehicle(defender, "Hallucinogenic")) return;
   const x = hallucinogenicValue(f.qualities);
   const label = `Toughness (Hallucinogenic ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
@@ -211,6 +224,7 @@ async function rollSnareTest(message) {
   const f = message.flags[NS];
   const defender = await resolveDefender(f);
   if (!defender) { ui.notifications.warn("Select a token to test Agility."); return; }
+  if (await autoPassIfVehicle(defender, "Snare")) return;
   const x = snareValue(f.qualities);
   const label = `Agility (Snare ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
@@ -353,6 +367,7 @@ async function applySpray(message, html) {
       lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss}${devX ? `, incl. Devastating ${devX}/hit` : ""})`);
       continue;
     }
+    if (actor.type === "vehicle") { lines.push(await aoeVehicleLine(actor, damageTotal, penetration, aoeVehicleSide(attacker, actor))); continue; }
     const dealt = await applyHitToToken(actor, {
       damageTotal, penetration, damageType: f.damageType, qualities, location: "body",
     });
@@ -582,6 +597,7 @@ async function rollDamage(message) {
     return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown };
   });
   const cardData = { weaponName: weaponDisplayName, damageType: f.damageType, penetration: f.penetration, hits,
+    isVehicle: !!f.tgtIsVehicle,
     targetName: f.targetName, canApply: !!f.targetUuid, shocking: hasShocking(qualities),
     concussive: concussiveValue(qualities) || null,
     flame: hasFlame(qualities),
@@ -693,12 +709,36 @@ async function applyHitToToken(actor, { damageTotal, penetration, damageType, qu
   return eff;
 }
 
+/** The armour facing an AoE (blast/spray) strikes on a caught vehicle — from the attacker's position vs
+ *  the vehicle + its facing, exactly like a direct attack. Falls back to "front" if positions are unknown. */
+function aoeVehicleSide(attacker, vehicle) {
+  const at = attacker?.getActiveTokens?.()[0] ?? null;
+  const vt = vehicle?.getActiveTokens?.()[0] ?? null;
+  if (!at?.center || !vt?.center || at.scene?.id !== vt.scene?.id) return "front";
+  const facingDeg = Number(vt.document?.getFlag?.(NS, "facing") ?? 0) || 0;
+  return armourSideFromAttack(at.center.x - vt.center.x, at.center.y - vt.center.y, facingDeg) ?? "front";
+}
+
+/** Apply one AoE hit to a caught vehicle (facing-aware armour, Hull location — AoE can't roll one) and
+ *  return its card line with a vehicle-styled Integrity readout. */
+async function aoeVehicleLine(vehicle, total, penetration, side) {
+  const facing = side ?? "front";
+  const ap = vehicle.system.armour?.[facing] ?? 0;
+  const eff = soak(total, ap, penetration, 0);   // no Toughness
+  const max = vehicle.system.integrity?.max ?? 0;
+  const value = applyIntegrity(vehicle.system.integrity?.value ?? 0, max, eff);
+  await vehicle.update({ "system.integrity.value": value });
+  const shown = woundsShown(value, max, reverseWoundsEnabled());
+  return `${vehicle.name}: Hull — ${facing[0].toUpperCase() + facing.slice(1)} AP ${ap}: ${total} → ${eff} · Integrity ${shown} / ${max}`;
+}
+
 async function applyDamage(message) {
   const f = message.flags[NS];
 
   // --- Blast branch: soak each pooled token individually, per-token hit location ---
   if (f.blast) {
     const lines = [];
+    const attacker = f.actorUuid ? await fromUuid(f.actorUuid) : null;   // for vehicle armour-facing
     const hordeMap = new Map((f.hordeBlast ?? []).map((h) => [h.uuid, h]));
     for (const uuid of f.poolUuids ?? []) {
       const actor = await fromUuid(uuid);
@@ -718,6 +758,7 @@ async function applyDamage(message) {
         lines.push(`${actor.name}: ${effs.join(" / ") || 0} dmg across ${effs.length} hits (Magnitude −${loss}${devX ? `, incl. Devastating ${devX}/hit` : ""})`);
         continue;
       }
+      if (actor.type === "vehicle") { lines.push(await aoeVehicleLine(actor, f.damageTotal, f.penetration, aoeVehicleSide(attacker, actor))); continue; }
       const location = hitLocation((await safeRoll("1d100", "hit location"))?.total ?? 50);
       const dealt = await applyHitToToken(actor, {
         damageTotal: f.damageTotal, penetration: f.penetration, damageType: f.damageType, qualities: f.qualities ?? [], location,
@@ -746,11 +787,12 @@ async function applyDamage(message) {
     let integ = target.system.integrity?.value ?? 0;
     const lines = [];
     for (const h of f.hits ?? []) {
-      const side = h.location === "turret" ? "front" : facing;
+      const loc = h.location || "hull";   // default to Hull if a location couldn't be determined
+      const side = loc === "turret" ? "front" : facing;
       const ap = armour[side] ?? 0;
       const eff = soak(h.total, ap, f.penetration, 0);
       integ = applyIntegrity(integ, max, eff);
-      lines.push(`${VEHICLE_LOCATION_LABELS[h.location] ?? h.location} — ${side} AP ${ap}: ${h.total} → ${eff}`);
+      lines.push(`${VEHICLE_LOCATION_LABELS[loc] ?? loc} — ${side} AP ${ap}: ${h.total} → ${eff}`);
     }
     await target.update({ "system.integrity.value": integ });
     await ChatMessage.create({
@@ -918,7 +960,7 @@ async function rollSpray(actor, weapon) {
   if (!region) return;                                          // cancelled — no ammo spent
   if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - 1 });   // single shot fired
   const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
-  const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name }));
+  const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name, isVehicle: t.actor.type === "vehicle" }));
   if (!rows.length) await deleteRegionByUuid(region.uuid);   // caught no one → no apply step, clean up now
   const cardData = { weaponName: weapon.name, caught: rows, hasCaught: rows.length > 0, damageType: weapon.system.damageType };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/spray-card.hbs", cardData);

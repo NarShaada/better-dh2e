@@ -15,13 +15,23 @@
   {{/if}}
   {{#if damageNotes}}<div class="bdh-card-line"><span class="qn">{{damageNotes}}</span></div>{{/if}}
   <div class="bdh-qchip-row">
-    {{#if shocking}}<button type="button" class="bdh-qchip" data-bdh="shockTest"><span class="ic">&#9889;</span><b>Shocking</b> Toughness test or Stunned</button>{{/if}}
-    {{#if concussive}}<button type="button" class="bdh-qchip" data-bdh="concussiveTest"><span class="ic">&#9889;</span><b>Concussive ({{concussive}})</b> Toughness test or Stunned</button>{{/if}}
-    {{#if flame}}<button type="button" class="bdh-qchip" data-bdh="flameTest"><span class="ic">&#128293;</span><b>Flame</b> Agility test or set on fire</button>{{/if}}
-    {{#if hallucinogenic}}<button type="button" class="bdh-qchip" data-bdh="hallucinogenicTest"><span class="ic">&#9763;</span><b>Hallucinogenic ({{hallucinogenic}})</b> Toughness test</button>{{/if}}
-    {{#if snare}}<button type="button" class="bdh-qchip" data-bdh="snareTest"><span class="ic">&#128376;</span><b>Snare ({{snare}})</b> Agility test or Immobilised</button>{{/if}}
-    {{#if toxic}}<button type="button" class="bdh-qchip" data-bdh="toxicTest"><span class="ic">&#129514;</span><b>Toxic ({{toxic}})</b> Toughness test</button>{{/if}}
-    {{#if radPhage}}<button type="button" class="bdh-qchip" data-bdh="radPhageTest"><span class="ic">&#9762;</span><b>Rad-Phage</b> Toughness test or &minus;2d10 Toughness</button>{{/if}}
+    {{#if isVehicle}}
+      {{#if shocking}}<span class="bdh-qnote"><b>Shocking</b>: Target is a Vehicle</span>{{/if}}
+      {{#if concussive}}<span class="bdh-qnote"><b>Concussive ({{concussive}})</b>: Target is a Vehicle</span>{{/if}}
+      {{#if flame}}<span class="bdh-qnote"><b>Flame</b>: Target is a Vehicle</span>{{/if}}
+      {{#if hallucinogenic}}<span class="bdh-qnote"><b>Hallucinogenic ({{hallucinogenic}})</b>: Target is a Vehicle</span>{{/if}}
+      {{#if snare}}<span class="bdh-qnote"><b>Snare ({{snare}})</b>: Target is a Vehicle</span>{{/if}}
+      {{#if toxic}}<span class="bdh-qnote"><b>Toxic ({{toxic}})</b>: Target is a Vehicle</span>{{/if}}
+      {{#if radPhage}}<span class="bdh-qnote"><b>Rad-Phage</b>: Target is a Vehicle</span>{{/if}}
+    {{else}}
+      {{#if shocking}}<button type="button" class="bdh-qchip" data-bdh="shockTest"><span class="ic">&#9889;</span><b>Shocking</b> Toughness test or Stunned</button>{{/if}}
+      {{#if concussive}}<button type="button" class="bdh-qchip" data-bdh="concussiveTest"><span class="ic">&#9889;</span><b>Concussive ({{concussive}})</b> Toughness test or Stunned</button>{{/if}}
+      {{#if flame}}<button type="button" class="bdh-qchip" data-bdh="flameTest"><span class="ic">&#128293;</span><b>Flame</b> Agility test or set on fire</button>{{/if}}
+      {{#if hallucinogenic}}<button type="button" class="bdh-qchip" data-bdh="hallucinogenicTest"><span class="ic">&#9763;</span><b>Hallucinogenic ({{hallucinogenic}})</b> Toughness test</button>{{/if}}
+      {{#if snare}}<button type="button" class="bdh-qchip" data-bdh="snareTest"><span class="ic">&#128376;</span><b>Snare ({{snare}})</b> Agility test or Immobilised</button>{{/if}}
+      {{#if toxic}}<button type="button" class="bdh-qchip" data-bdh="toxicTest"><span class="ic">&#129514;</span><b>Toxic ({{toxic}})</b> Toughness test</button>{{/if}}
+      {{#if radPhage}}<button type="button" class="bdh-qchip" data-bdh="radPhageTest"><span class="ic">&#9762;</span><b>Rad-Phage</b> Toughness test or &minus;2d10 Toughness</button>{{/if}}
+    {{/if}}
   </div>
   {{#if blast}}<div class="bdh-card-actions"><button type="button" class="bdh-btn primary" data-bdh="applyDamage">Apply Blast Damage</button></div>{{/if}}
   {{#if canApply}}<div class="bdh-card-actions"><button type="button" class="bdh-btn primary" data-bdh="applyDamage">Apply Damage <span class="arrow">&#8594;</span> {{targetName}}</button></div>{{/if}}
