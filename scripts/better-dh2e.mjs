@@ -28,6 +28,7 @@ import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 import { makeDHCombat } from "./documents/combat.mjs";
 import { registerCoverAutomation } from "./canvas/cover.mjs";
 import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
+import { initVehicleFacing } from "./canvas/vehicle-facing.mjs";
 import { clearAllCover, coverMechanicsEnabled } from "./canvas/cover.mjs";
 import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
@@ -103,13 +104,15 @@ Hooks.once("init", () => {
     onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
   });
 
+  // Battlemap integration is now a default, always-on feature (v0.2.0). The setting is kept (so stored
+  // values stay valid) but hidden from the UI (config: false) and defaults to true; a ready-hook migration
+  // flips any world that had it off so nothing stays gated.
   game.settings.register("better-dh2e", "enableBattlemap", {
     name: "Enable battlemap integration",
-    hint: "token/grid automation(will be enabled by default in future versions)",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
-    default: false
+    default: true
   });
 
   game.settings.register("better-dh2e", "uiTheme", {
@@ -219,7 +222,13 @@ Hooks.once("ready", () => {
   applyUiTheme(game.settings.get("better-dh2e", "uiTheme"));
   registerCoverAutomation();
   initCoverOverlay();
+  initVehicleFacing();
   registerGrantHooks();
+  // Battlemap integration is default-on now — flip any existing world that still had it off so its
+  // token/grid automation isn't stuck disabled (the setting is hidden as of v0.2.0).
+  if (game.user.isGM && game.settings.get("better-dh2e", "enableBattlemap") !== true) {
+    game.settings.set("better-dh2e", "enableBattlemap", true);
+  }
 });
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));

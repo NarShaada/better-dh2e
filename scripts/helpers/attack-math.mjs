@@ -19,12 +19,16 @@ const resolveLoc = (generic, side) =>
   generic === "head" ? "head" : generic === "body" ? "body"
   : generic === "arm" ? `${side}Arm` : `${side}Leg`;
 
+/** Reverse a d100's two digits (34 → 43; 100 → 100; single digits pad, e.g. 7 → 70). */
+export function reverseD100(roll) {
+  const r = (roll ?? 0) % 100;          // 100 -> 0
+  const reversed = (r % 10) * 10 + Math.floor(r / 10);
+  return reversed === 0 ? 100 : reversed;
+}
+
 /** Hit location from a d100 roll by reversing its two digits onto the bands. */
 export function hitLocation(roll) {
-  const r = roll % 100;                 // 100 -> 0
-  let reversed = (r % 10) * 10 + Math.floor(r / 10);
-  if (reversed === 0) reversed = 100;
-  return HIT_BANDS.find((b) => reversed <= b.max).key;
+  return HIT_BANDS.find((b) => reverseD100(roll) <= b.max).key;
 }
 
 /** Total hits: single = 1; multi = 1 + floor(DoS / dosPer), capped at rof. */

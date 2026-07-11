@@ -2,7 +2,7 @@
 // Full to-hit flow: dialog → 1d100 → DoS/hits/locations/jam → attack chat card.
 import { evaluateTest } from "./test-logic.mjs";
 import { performTest, promptTest } from "./roll-test.mjs";
-import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds } from "../helpers/attack-math.mjs";
+import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100 } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
 import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
@@ -13,12 +13,13 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
 import { coverApFromInput } from "../helpers/cover.mjs";
-import { facingFromDelta } from "../helpers/facing.mjs";
+import { facingFromDelta, armourSideFromAttack } from "../helpers/facing.mjs";
 import { woundsShown, reverseWoundsEnabled } from "../helpers/wounds-display.mjs";
+import { vehicleHitLocation, VEHICLE_LOCATION_LABELS, applyIntegrity } from "../helpers/vehicle-data.mjs";
 import { coverPieceForTarget } from "../canvas/cover.mjs";
 import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic } from "../helpers/derived.mjs";
+import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
@@ -502,9 +503,12 @@ async function rollDamage(message) {
   const strSit = isMeleeDamage ? rollBonusesFor(gatherActiveBonusEntries(actor.items), "characteristic", "strength").situational : [];
   const strRow = strSit.length
     ? `<div class="form-group"><label>Bionic Strength</label><div>${strSit.map((s) => `<label class="bdh-sit"><input type="checkbox" name="sit_${s.id}"/> ${s.label} Str</label>`).join("")}</div></div>` : "";
+  // Vehicle target: let the GM confirm/override the struck armour facing (auto-suggested from geometry).
+  const facingRow = f.tgtIsVehicle
+    ? `<div class="form-group"><label>Armour facing</label><select name="facing">${["front", "left", "right", "rear"].map((s) => `<option value="${s}"${s === (f.vehSide ?? "front") ? " selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></div>` : "";
   const choice = await DialogV2.prompt({
     window: { title: `${weaponDisplayName} — Damage` },
-    content: `${hitCountRow}${strRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
+    content: `${hitCountRow}${facingRow}${strRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
     ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
     rejectClose: false
   });
@@ -591,16 +595,36 @@ async function rollDamage(message) {
     speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
     flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: f.penetration, damageType: f.damageType,
       qualities: f.qualities ?? [], coverApproach: f.coverApproach ?? null,
+      tgtIsVehicle: f.tgtIsVehicle ?? false, facing: choice.facing ?? f.vehSide ?? "front",
       hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf })) } }
   };
   ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
 }
+/** Jink: a vehicle's evade — the driver rolls their Operate (or Agility−20 if untrained), exactly like a
+ *  Dodge but with Operate instead of the Dodge skill. No manoeuvrability modifier. */
+async function rollJink(vehicle) {
+  const seat = (vehicle.system.crew ?? []).find((s) => s.role === "Driver") ?? vehicle.system.crew?.[0];
+  const occ = seat?.actorUuid ? await fromUuid(seat.actorUuid) : null;
+  if (!occ) { ui.notifications.warn("This vehicle has no driver to Jink."); return; }
+  const ag = occ.system?.characteristics?.agility?.total ?? 0;
+  const specs = occ.system?.skills?.operate?.specialties ?? [];
+  const spec = seat.operate ? specs.find((s) => s.name === seat.operate) : null;
+  let base, label, inherent, info;
+  if (spec) { base = skillTotal(ag, spec.rank); label = `Jink — Operate (${spec.name})`; inherent = 0; info = []; }
+  else { base = ag; label = "Jink — Agility (Operate, untrained)"; inherent = -20; info = [{ label: "Untrained (Agility)", value: "−20" }]; }
+  const choice = await promptTest({ title: label, defaultModifier: "+0", info });
+  if (!choice) return;
+  const modifier = inherent + (parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0);
+  return performTest(occ, { label, base, modifier, characteristic: "agility" });
+}
+
 async function rollEvade(message) {
   const f = message.flags[NS];
   // Defender: the bound target if available, else the user's controlled token, else their assigned character.
   const defender = (await fromUuid(f.targetUuid)) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
   if (!defender) { ui.notifications.warn("Select a token to evade with."); return; }
+  if (defender.type === "vehicle") return rollJink(defender);
   const meleeWeapons = defender.items.filter((i) => i.type === "weapon" && i.system.weaponClass === "melee" && i.system.equipped);
   const parryWeapons = meleeWeapons.filter((i) => !hasUnwieldy(i.system.qualities));
   const onlyUnwieldy = meleeWeapons.length > 0 && parryWeapons.length === 0;   // holding only Unwieldy melee
@@ -646,6 +670,13 @@ async function rollEvade(message) {
  */
 async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location, coverAp = 0 }) {
   const sys = actor.system;
+  if (actor.type === "vehicle") {
+    // Blast/spray fallback for a caught vehicle (the direct-attack path is facing-aware in applyDamage);
+    // soak with Front armour, no Toughness, and accumulate on Integrity.
+    const eff = soak(damageTotal, sys.armour?.front ?? 0, penetration, 0);
+    await actor.update({ "system.integrity.value": applyIntegrity(sys.integrity?.value ?? 0, sys.integrity?.max ?? 0, eff) });
+    return eff;
+  }
   if (actor.type === "horde") location = "body";   // hordes always hit in Body
   const tb = sys.characteristics.toughness.bonus;
   const equipped = actor.items.filter((i) => i.type === "armour" && i.system.equipped).map((a) => a.system);
@@ -706,6 +737,31 @@ async function applyDamage(message) {
   if (!target) { ui.notifications.warn("No target to apply damage to."); return; }
   const sys = target.system;
   const qualities = f.qualities ?? [];
+  // Vehicle: soak each hit with the struck facing's AP (no Toughness), Turret always uses Front, and
+  // apply to Integrity (accumulates like wounds). No cover / crits / conditions automation.
+  if (target.type === "vehicle") {
+    const facing = f.facing ?? "front";
+    const armour = target.system.armour ?? {};
+    const max = target.system.integrity?.max ?? 0;
+    let integ = target.system.integrity?.value ?? 0;
+    const lines = [];
+    for (const h of f.hits ?? []) {
+      const side = h.location === "turret" ? "front" : facing;
+      const ap = armour[side] ?? 0;
+      const eff = soak(h.total, ap, f.penetration, 0);
+      integ = applyIntegrity(integ, max, eff);
+      lines.push(`${VEHICLE_LOCATION_LABELS[h.location] ?? h.location} — ${side} AP ${ap}: ${h.total} → ${eff}`);
+    }
+    await target.update({ "system.integrity.value": integ });
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: target }),
+      content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>`
+        + `<div class="bdh-card-line">Facing: ${facing[0].toUpperCase() + facing.slice(1)}</div>`
+        + `<div class="bdh-card-line">${lines.join("<br>") || "No hits."}</div>`
+        + `<div class="bdh-card-line">Integrity: ${woundsShown(integ, max, reverseWoundsEnabled())} / ${max}</div></div>`,
+    });
+    return;
+  }
   // Cover: the prompt appears whenever the target is In Cover. Phase 2b only chooses the pre-filled value —
   // the piece's AP when the shot crossed a defended side AND struck a protected location, else 0 — and the
   // GM's confirmed value always applies (geometry never blocks the GM). Manual In Cover (no piece) pre-fills 0.
@@ -1252,12 +1308,20 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // Hit count and locations
   const hordeTarget = (opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null));
   const tgtIsHorde = hordeTarget?.type === "horde";
+  const tgtIsVehicle = hordeTarget?.type === "vehicle";
   const blastWeapon = (weapon.system.qualities ?? []).some((q) => q.key === "blast");   // blast resolves horde hits in the blast flow, not the direct hit
   let nHits = success ? computeHits(at, dos, stormHail ? Infinity : rofCap) : 0;
   if (stormHail && success) nHits = Math.min(nHits * 2, rofCap);
   if (success && tgtIsHorde && !blastWeapon) nHits += hordeExtraHits(weapon.system.damageType, weapon.system.qualities);   // additive extras vs hordes
   const firstLoc = at.calledShot ? choice.calledShotLocation : hitLocation(roll.total);
-  const locs = success ? (tgtIsHorde ? Array(nHits).fill("body") : locationSequence(firstLoc, nHits)) : [];
+  // Vehicle hit locations: first hit = reversed roll on the vehicle table; extra hits = fresh d100 rolls.
+  let locs;
+  if (!success) locs = [];
+  else if (tgtIsHorde) locs = Array(nHits).fill("body");
+  else if (tgtIsVehicle) {
+    locs = [vehicleHitLocation(reverseD100(roll.total))];
+    for (let i = 1; i < nHits; i++) locs.push(vehicleHitLocation((await safeRoll("1d100", "vehicle hit location"))?.total ?? 50));
+  } else locs = locationSequence(firstLoc, nHits);
 
   // Jam check
   const jammed = checkJam(roll.total, success, isRanged, effectiveJamFloor(weapon.system.qualities, weapon.system.craftsmanship));
@@ -1271,7 +1335,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const targetName = opts.targetName ?? liveTarget?.name ?? null;
 
   // Build hits array for the card and flags
-  const hits = locs.map((loc, i) => ({ index: i, location: loc, label: BDH.hitLocationLabels[loc] }));
+  const locLabel = (loc) => (tgtIsVehicle ? VEHICLE_LOCATION_LABELS[loc] : BDH.hitLocationLabels[loc]) ?? loc;
+  const hits = locs.map((loc, i) => ({ index: i, location: loc, label: locLabel(loc) }));
 
   // Blast(X) — place a circle Region on the target, scatter on miss
   let blastFlags = null, blastCaughtNames = "";
@@ -1311,6 +1376,14 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     ? facingFromDelta(attackerToken.center.x - targetToken.center.x, attackerToken.center.y - targetToken.center.y)
     : null;
 
+  // Vehicle armour facing: which side the shot strikes, from attacker→vehicle delta rotated by the
+  // vehicle's facing (melee + ranged). Auto-suggested at the shot; the GM can override on Roll Damage.
+  const vehFacing = tgtIsVehicle ? Number(targetToken?.document?.getFlag?.(NS, "facing") ?? 0) || 0 : 0;
+  const vehSide = (tgtIsVehicle && attackerToken?.center && targetToken?.center
+    && attackerToken.scene?.id === targetToken.scene?.id)
+    ? armourSideFromAttack(attackerToken.center.x - targetToken.center.x, attackerToken.center.y - targetToken.center.y, vehFacing)
+    : null;
+
   // Message flags (namespace "better-dh2e")
   const flags = {
     [NS]: {
@@ -1328,6 +1401,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       targetUuid,
       targetName,
       coverApproach,
+      tgtIsVehicle,
+      vehSide,
       hits,
       success,
       jammed,
