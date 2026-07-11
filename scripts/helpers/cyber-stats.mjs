@@ -1,12 +1,13 @@
-// scripts/helpers/cyber-stats.mjs — PURE. Derived-stat modifiers from installed cybernetics.
+// scripts/helpers/cyber-stats.mjs — PURE. Derived-stat modifiers from installed cybernetics + traits.
 
-const STAT_KEYS = ["moveAll", "moveHalf", "moveFull", "moveCharge", "moveRun", "wounds", "size", "fatigue", "carry"];
+export const STAT_KEYS = ["moveAll", "moveHalf", "moveFull", "moveCharge", "moveRun", "wounds", "size", "fatigue", "carry", "initiative"];
 
-/** Flat {stat, amount} list from installed cybernetics' statMods. */
-export function gatherCyberStatMods(items) {
+/** Flat {stat, amount} list from active stat-mod sources: installed cybernetics + all traits (always-on). */
+export function gatherStatMods(items) {
   const out = [];
   for (const it of items ?? []) {
-    if (it?.type !== "cybernetic" || !it.system?.installed) continue;
+    const active = (it?.type === "cybernetic" && it.system?.installed) || it?.type === "trait";
+    if (!active) continue;
     for (const m of it.system.statMods ?? []) out.push({ stat: m.stat, amount: Number(m.amount) || 0 });
   }
   return out;

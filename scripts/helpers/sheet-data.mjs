@@ -5,9 +5,10 @@ import { BDH } from "../config.mjs";
 const TIER_BY_RANK = { untrained: 0, known: 1, trained: 2, experienced: 3, veteran: 4 };
 
 /** Ordered characteristic view-models for the Stats row. */
-export function buildCharacteristics(characteristics) {
+export function buildCharacteristics(characteristics, source = null) {
   return Object.keys(BDH.characteristics).map((key) => {
     const c = characteristics[key] ?? {};
+    const src = source?.[key] ?? c;   // editable base: derived `unnatural` may be boosted by item bonuses
     return {
       key,
       short: BDH.characteristics[key].short,
@@ -15,7 +16,8 @@ export function buildCharacteristics(characteristics) {
       value: c.total ?? 0,
       bonus: c.bonus ?? 0,
       base: c.base ?? 0,
-      unnatural: c.unnatural ?? 0,
+      unnatural: src.unnatural ?? 0,       // editable base (for the input)
+      unnaturalEff: c.unnatural ?? 0,      // effective incl. item bonuses (for the (U) marker)
       impaired: c.impaired ?? false,
       boosted: c.boosted ?? false,
       isInfluence: key === "influence"

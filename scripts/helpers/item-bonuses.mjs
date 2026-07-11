@@ -10,7 +10,8 @@ export function gatherActiveBonusEntries(items) {
   for (const it of items ?? []) {
     const type = it?.type;
     const sys = it?.system ?? {};
-    const active = (type === "cybernetic" && sys.installed) || (type === "armour" && sys.equipped) || (type === "gear");
+    const active = (type === "cybernetic" && sys.installed) || (type === "armour" && sys.equipped)
+      || (type === "gear") || (type === "trait");   // traits are inherent → always active while owned
     if (!active) continue;
     for (const b of sys.bonuses ?? []) {
       const base = { kind: b.kind, key: b.key, amount: Number(b.amount) || 0, sourceType: type, sourceName: it.name ?? "Item" };
@@ -22,16 +23,45 @@ export function gatherActiveBonusEntries(items) {
 
 /** Sum persistent characteristic increases per key: UNCHECKED characteristic bonuses from
  *  cybernetic/armour sources (gear is always situational, so excluded). */
+const PERSISTENT_SOURCES = new Set(["cybernetic", "armour", "trait"]);   // gear is always situational
+
 export function persistentCharacteristicBonuses(entries) {
   const totals = {};
   for (const e of entries ?? []) {
     if (e.kind !== "characteristic" || e.situational) continue;
-    if (e.sourceType !== "cybernetic" && e.sourceType !== "armour") continue;
+    if (!PERSISTENT_SOURCES.has(e.sourceType)) continue;
     const amt = Number(e.amount) || 0;
     if (!e.key || !amt) continue;
     totals[e.key] = (totals[e.key] ?? 0) + amt;
   }
   return totals;
+}
+
+/** Sum per key of UNNATURAL characteristic bonuses (kind "unnatural") from persistent sources. */
+export function persistentUnnaturalBonuses(entries) {
+  const totals = {};
+  for (const e of entries ?? []) {
+    if (e.kind !== "unnatural") continue;
+    if (!PERSISTENT_SOURCES.has(e.sourceType)) continue;
+    const amt = Number(e.amount) || 0;
+    if (!e.key || !amt) continue;
+    totals[e.key] = (totals[e.key] ?? 0) + amt;
+  }
+  return totals;
+}
+
+/** Mutate `chars`: add unnatural-bonus points to each characteristic's `unnatural`, recompute bonus
+ *  (= tens(total) + unnatural), and flag `boosted`. Runs BEFORE persistent flat bonuses so their
+ *  bonus-recompute already sees the raised unnatural. Feeds the unnatural-DoS rule too. */
+export function applyUnnaturalBonuses(chars, entries) {
+  for (const [key, amt] of Object.entries(persistentUnnaturalBonuses(entries))) {
+    const c = chars?.[key];
+    if (!c) continue;
+    c.unnatural = (c.unnatural ?? 0) + amt;
+    c.bonus = Math.floor((c.total ?? 0) / 10) + c.unnatural;
+    if (amt > 0) c.boosted = true;
+  }
+  return chars;
 }
 
 /** Mutate `chars` in place: add persistent increases to the characteristic total, recompute bonus,

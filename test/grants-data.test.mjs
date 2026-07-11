@@ -1,6 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { grantHostType, isGrantHostActive, canGrant, grantDiff, grantPlan, purgeSourcePlan } from "../scripts/helpers/grants-data.mjs";
 
+describe("trait as a grant host", () => {
+  it("grantHostType recognises traits", () => {
+    expect(grantHostType({ type: "trait" })).toBe("trait");
+    expect(grantHostType({ type: "cybernetic" })).toBe("cybernetic");
+    expect(grantHostType({ type: "talent" })).toBe(null);
+  });
+  it("a trait host is always active (inherent)", () => {
+    expect(isGrantHostActive({ type: "trait", system: {} })).toBe(true);
+    expect(isGrantHostActive({ type: "cybernetic", system: { installed: false } })).toBe(false);
+  });
+  it("a trait can grant anything but another trait", () => {
+    expect(canGrant("trait", "talent")).toBe(true);
+    expect(canGrant("trait", "cybernetic")).toBe(true);
+    expect(canGrant("trait", "trait")).toBe(false);
+  });
+});
+
 describe("grantPlan", () => {
   it("partitions into create / update / remove keyed by uuid", () => {
     const existing = [{ id: "a", uuid: "U1" }, { id: "b", uuid: "U2" }];

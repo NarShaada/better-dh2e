@@ -4,13 +4,13 @@ import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { filterQualityChoices } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
-import { canGrant } from "../helpers/grants-data.mjs";
+import { canGrant, grantHostType } from "../helpers/grants-data.mjs";
 import { grantsFolder } from "../cybernetics/grants.mjs";
 
 const STAT_MOD_LABELS = {
   moveAll: "Movement (all bands)", moveHalf: "Movement: Half", moveFull: "Movement: Full",
   moveCharge: "Movement: Charge", moveRun: "Movement: Run",
-  wounds: "Wounds", size: "Size", fatigue: "Fatigue threshold", carry: "Carry"
+  wounds: "Wounds", size: "Size", fatigue: "Fatigue threshold", carry: "Carry", initiative: "Initiative"
 };
 
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -70,6 +70,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       <input class="bdh-num" name="amount" type="number" placeholder="±X"/>
     </div><div class="bdh-add-line">
       <label><input name="situational" type="checkbox"/> Situational</label>
+      <label><input name="unnatural" type="checkbox"/> Unnatural (characteristic)</label>
     </div></div>`;
     const result = await DialogV2.prompt({
       window: { title: "Add Bonus" }, position: { width: 360 }, content, rejectClose: false,
@@ -77,9 +78,12 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         const f = new foundry.applications.ux.FormDataExtended(button.form).object;
         const key = labelToKey[f.key];
         if (!key || (!BDH.skills[key] && !BDH.characteristics[key])) return null;
-        const kind = BDH.skills[key] ? "skill" : "characteristic";
+        const isChar = !!BDH.characteristics[key];
         const amount = parseInt(f.amount, 10) || 0;
         if (!amount) return null;   // a zero bonus is inert
+        // Unnatural applies to characteristics only; it's inherently persistent (situational ignored).
+        if (f.unnatural && isChar) return { kind: "unnatural", key, amount, situational: false };
+        const kind = isChar ? "characteristic" : "skill";
         const situational = type === "gear" ? true : !!f.situational;   // gear is situational-only
         return { kind, key, amount, situational };
       } }
@@ -185,6 +189,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.isForceField = t === "forceField";
     context.isCybernetic = t === "cybernetic";
     context.isArmour = t === "armour";
+    context.isTrait = t === "trait";
     context.isWeapon = t === "weapon";
     context.isWeaponMod = t === "weaponMod";
     context.isPsychicPower = t === "psychicPower";
@@ -240,23 +245,25 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.modList = system.mods.map((m, i) => ({ index: i, ...m }));
     }
 
-    context.showBonuses = context.isCybernetic || context.isGear || context.isArmour;
+    context.showBonuses = context.isCybernetic || context.isGear || context.isArmour || context.isTrait;
+    context.showStatMods = context.isCybernetic || context.isTrait;
     if (context.showBonuses) {
       context.bonusList = (system.bonuses ?? []).map((b, i) => {
         const lbl = BDH.skills[b.key]?.label ?? BDH.characteristics[b.key]?.label ?? b.key;
-        const tag = b.situational ? "situational" : "always";
-        return { index: i, display: `${game.i18n.localize(lbl)} ${b.amount >= 0 ? "+" : ""}${b.amount} (${tag})` };
+        const tag = b.kind === "unnatural" ? "unnatural" : (b.situational ? "situational" : "always");
+        const unn = b.kind === "unnatural" ? " Unnatural" : "";
+        return { index: i, display: `${game.i18n.localize(lbl)}${unn} ${b.amount >= 0 ? "+" : ""}${b.amount} (${tag})` };
       });
     }
 
-    if (context.isCybernetic) {
+    if (context.showStatMods) {
       context.statModList = (system.statMods ?? []).map((m, i) => ({
         index: i,
         display: `${STAT_MOD_LABELS[m.stat] ?? m.stat} ${m.amount >= 0 ? "+" : ""}${m.amount}`
       }));
     }
 
-    context.showGrants = context.isCybernetic || context.isArmour;
+    context.showGrants = context.isCybernetic || context.isArmour || context.isTrait;
     if (context.showGrants) {
       context.grantList = (system.grants ?? []).map((g, i) => {
         let src = null;
@@ -284,7 +291,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     if (this.document.type === "weapon") {
       this.element.addEventListener("dragover", (event) => event.preventDefault());
       this.element.addEventListener("drop", this.#onDropMod.bind(this));
-    } else if (this.document.type === "cybernetic" || this.document.type === "armour") {
+    } else if (grantHostType(this.document)) {   // cybernetic / armour / trait
       this.element.addEventListener("dragover", (event) => event.preventDefault());
       this.element.addEventListener("drop", this.#onDropGrant.bind(this));
     }

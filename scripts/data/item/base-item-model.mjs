@@ -21,13 +21,23 @@ export class BaseItemModel extends foundry.abstract.TypeDataModel {
   }
 }
 
-/** Shared schema fragment: optional skill/characteristic bonus entries (cybernetics/gear/armour). */
+/** Shared schema fragment: optional bonus entries (cybernetics/gear/armour/traits).
+ *  kind: "skill" | "characteristic" (flat value) | "unnatural" (raises the characteristic's unnatural bonus). */
 export function bonusesField() {
   return new fields.ArrayField(new fields.SchemaField({
-    kind:        new fields.StringField({ required: true, initial: "skill", choices: ["skill", "characteristic"] }),
+    kind:        new fields.StringField({ required: true, initial: "skill", choices: ["skill", "characteristic", "unnatural"] }),
     key:         new fields.StringField({ required: true, blank: true, initial: "" }),
     amount:      new fields.NumberField({ required: true, integer: true, initial: 0 }),
     situational: new fields.BooleanField({ required: true, initial: false })
+  }));
+}
+
+/** Shared schema fragment: derived-stat modifiers (cybernetics + traits). */
+export function statModsField() {
+  return new fields.ArrayField(new fields.SchemaField({
+    stat:   new fields.StringField({ required: true, blank: true, initial: "",
+      choices: ["moveAll", "moveHalf", "moveFull", "moveCharge", "moveRun", "wounds", "size", "fatigue", "carry", "initiative"] }),
+    amount: new fields.NumberField({ required: true, integer: true, initial: 0 })
   }));
 }
 

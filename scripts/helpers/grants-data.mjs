@@ -1,22 +1,24 @@
 // scripts/helpers/grants-data.mjs — PURE. Grant-host rules + reconcile diff.
 
-/** "cybernetic" | "armour" | null — which grant-host kind this item is. */
+/** "cybernetic" | "armour" | "trait" | null — which grant-host kind this item is. */
 export function grantHostType(item) {
-  return (item?.type === "cybernetic" || item?.type === "armour") ? item.type : null;
+  return (item?.type === "cybernetic" || item?.type === "armour" || item?.type === "trait") ? item.type : null;
 }
 
-/** Is this grant host currently active? cybernetic → installed; armour → equipped. */
+/** Is this grant host currently active? cybernetic → installed; armour → equipped; trait → always (inherent). */
 export function isGrantHostActive(item) {
   if (item?.type === "cybernetic") return !!item.system?.installed;
   if (item?.type === "armour") return !!item.system?.equipped;
+  if (item?.type === "trait") return true;
   return false;
 }
 
 /** May a host of hostType grant an item of itemType?
- *  cybernetic → anything except cybernetic; armour → anything except armour and cybernetic. */
+ *  cybernetic → anything except cybernetic; armour → anything except armour and cybernetic; trait → anything except trait. */
 export function canGrant(hostType, itemType) {
   if (hostType === "cybernetic") return itemType !== "cybernetic";
   if (hostType === "armour") return itemType !== "armour" && itemType !== "cybernetic";
+  if (hostType === "trait") return itemType !== "trait";
   return false;
 }
 

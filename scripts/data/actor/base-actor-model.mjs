@@ -3,8 +3,8 @@ import { BDH } from "../../config.mjs";
 import { characteristicTotal, characteristicBonus, skillTotal, fatigueMax, movement } from "../../helpers/derived.mjs";
 import { effectiveAgilityCap, applyImpairments } from "../../helpers/impairment-data.mjs";
 import { applyCharacteristicDamage } from "../../helpers/char-damage.mjs";
-import { gatherActiveBonusEntries, applyPersistentBonuses } from "../../helpers/item-bonuses.mjs";
-import { gatherCyberStatMods, sumStatMods, applyMovementMods } from "../../helpers/cyber-stats.mjs";
+import { gatherActiveBonusEntries, applyPersistentBonuses, applyUnnaturalBonuses } from "../../helpers/item-bonuses.mjs";
+import { gatherStatMods, sumStatMods, applyMovementMods } from "../../helpers/cyber-stats.mjs";
 
 const fields = foundry.data.fields;
 
@@ -113,12 +113,15 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       c.total = characteristicTotal(c);
       c.bonus = characteristicBonus(c);
     }
-    // Persistent item bonuses (installed cybernetics / equipped armour) raise the value (green) before damage.
-    applyPersistentBonuses(this.characteristics, gatherActiveBonusEntries(this.parent.items));
+    // Item bonuses (installed cybernetics / equipped armour / traits) — unnatural first (raises the
+    // unnatural bonus + feeds the unnatural-DoS rule), then persistent flat increases (green) before damage.
+    const bonusEntries = gatherActiveBonusEntries(this.parent.items);
+    applyUnnaturalBonuses(this.characteristics, bonusEntries);
+    applyPersistentBonuses(this.characteristics, bonusEntries);
     // Characteristic damage (temporary, from injuries) — before fatigue max + impairments.
     applyCharacteristicDamage(this.characteristics, this.injuries);
     // Installed-cybernetic derived-stat modifiers (flat; effective mutations, stored bases untouched).
-    const cyberSums = sumStatMods(gatherCyberStatMods(this.parent.items));
+    const cyberSums = sumStatMods(gatherStatMods(this.parent.items));
     this.size = (this.size ?? 4) + cyberSums.size;            // before movement() + size-dependent calcs
     if (this.wounds) this.wounds.max = (this.wounds.max ?? 0) + cyberSums.wounds;
     // Fatigue max derives from the (char-damage-reduced) Toughness/Willpower bonuses; fatigue halving must not shrink it.

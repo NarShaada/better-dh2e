@@ -1,21 +1,28 @@
 import { describe, it, expect } from "vitest";
-import { gatherCyberStatMods, sumStatMods, applyMovementMods } from "../scripts/helpers/cyber-stats.mjs";
+import { gatherStatMods, sumStatMods, applyMovementMods } from "../scripts/helpers/cyber-stats.mjs";
 import { classifyMovement } from "../scripts/helpers/battlemap-data.mjs";
 
 const cyber = (installed, statMods, name = "Cyber") => ({ type: "cybernetic", name, system: { installed, statMods } });
+const trait = (statMods, name = "Trait") => ({ type: "trait", name, system: { statMods } });
 
-describe("gatherCyberStatMods", () => {
-  it("flattens statMods from installed cybernetics only", () => {
+describe("gatherStatMods", () => {
+  it("flattens statMods from installed cybernetics AND all traits (traits always active)", () => {
     const items = [
       cyber(true,  [{ stat: "moveAll", amount: 2 }, { stat: "wounds", amount: 3 }]),
-      cyber(false, [{ stat: "size", amount: 1 }]),
-      { type: "armour", system: { equipped: true, statMods: [{ stat: "wounds", amount: 5 }] } },  // not a cybernetic
+      cyber(false, [{ stat: "size", amount: 1 }]),                                  // not installed → skipped
+      trait([{ stat: "initiative", amount: 5 }]),                                    // trait → active
+      { type: "armour", system: { equipped: true, statMods: [{ stat: "wounds", amount: 5 }] } },  // armour is not a stat-mod source
     ];
-    expect(gatherCyberStatMods(items)).toEqual([{ stat: "moveAll", amount: 2 }, { stat: "wounds", amount: 3 }]);
+    expect(gatherStatMods(items)).toEqual([
+      { stat: "moveAll", amount: 2 }, { stat: "wounds", amount: 3 }, { stat: "initiative", amount: 5 }
+    ]);
+  });
+  it("sums Initiative across sources", () => {
+    expect(sumStatMods(gatherStatMods([cyber(true, [{ stat: "initiative", amount: 2 }]), trait([{ stat: "initiative", amount: 3 }])])).initiative).toBe(5);
   });
   it("handles missing/empty input", () => {
-    expect(gatherCyberStatMods(undefined)).toEqual([]);
-    expect(gatherCyberStatMods([cyber(true, undefined)])).toEqual([]);
+    expect(gatherStatMods(undefined)).toEqual([]);
+    expect(gatherStatMods([cyber(true, undefined)])).toEqual([]);
   });
 });
 

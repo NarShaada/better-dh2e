@@ -1,7 +1,27 @@
 import { describe, it, expect } from "vitest";
 import {
-  gatherActiveBonusEntries, persistentCharacteristicBonuses, applyPersistentBonuses, rollBonusesFor, effectiveStrengthBonus
+  gatherActiveBonusEntries, persistentCharacteristicBonuses, applyPersistentBonuses, rollBonusesFor, effectiveStrengthBonus,
+  persistentUnnaturalBonuses, applyUnnaturalBonuses
 } from "../scripts/helpers/item-bonuses.mjs";
+
+describe("traits + unnatural bonuses", () => {
+  const traitItem = (bonuses) => ({ type: "trait", name: "Machine", system: { bonuses } });
+  it("traits are always-active bonus sources", () => {
+    const entries = gatherActiveBonusEntries([traitItem([{ kind: "characteristic", key: "strength", amount: 10, situational: false }])]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].sourceType).toBe("trait");
+    expect(persistentCharacteristicBonuses(entries).strength).toBe(10);   // trait counts as a persistent source
+  });
+  it("unnatural bonuses raise .unnatural + recompute bonus, and flag boosted", () => {
+    const entries = gatherActiveBonusEntries([traitItem([{ kind: "unnatural", key: "strength", amount: 3, situational: false }])]);
+    expect(persistentUnnaturalBonuses(entries).strength).toBe(3);
+    const chars = { strength: { total: 45, unnatural: 0, bonus: 4 } };
+    applyUnnaturalBonuses(chars, entries);
+    expect(chars.strength.unnatural).toBe(3);
+    expect(chars.strength.bonus).toBe(7);   // tens(45)=4 + unnatural 3
+    expect(chars.strength.boosted).toBe(true);
+  });
+});
 
 const bonus = (o) => ({ kind: "skill", key: "", amount: 0, situational: false, ...o });
 const item = (type, system, name = "Src") => ({ type, name, system });
