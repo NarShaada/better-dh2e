@@ -105,6 +105,7 @@ export function vengefulValue(qualities) { return qualityValue(qualities, "venge
 export function hasUnwieldy(qualities) { return has(qualities, "unwieldy"); }
 
 export function hasFlame(qualities) { return has(qualities, "flame"); }
+export function hasForce(qualities) { return has(qualities, "force"); }
 export function hasFlexible(qualities) { return has(qualities, "flexible"); }
 export function hasGraviton(qualities) { return has(qualities, "graviton"); }
 

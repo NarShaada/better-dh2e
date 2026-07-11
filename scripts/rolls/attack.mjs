@@ -1,11 +1,11 @@
 // scripts/rolls/attack.mjs
 // Full to-hit flow: dialog → 1d100 → DoS/hits/locations/jam → attack chat card.
-import { evaluateTest } from "./test-logic.mjs";
+import { evaluateTest, parseModifier } from "./test-logic.mjs";
 import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100 } from "../helpers/attack-math.mjs";
 import { computeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor, effectiveStrengthBonus } from "../helpers/item-bonuses.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
@@ -98,6 +98,7 @@ export function bindCardButtons(message, html) {
   html.querySelectorAll("[data-bdh]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (btn.dataset.bdh === "rollDamage") await rollDamage(message);
+      else if (btn.dataset.bdh === "rollDamageForce") await rollDamageWithForce(message);
       else if (btn.dataset.bdh === "evade") await rollEvade(message);
       else if (btn.dataset.bdh === "applyDamage") await applyDamage(message);
       else if (btn.dataset.bdh === "shockTest") await rollShockTest(message);
@@ -424,7 +425,47 @@ async function rollOnFireWP(message) {
 }
 const DAMAGE_CARD = "systems/better-dh2e/templates/chat/damage-card.hbs";
 
-async function rollDamage(message) {
+/** Force channel: one opposed WP+0 test (attacker vs victim, both in one dialog + card; the GM may type
+ *  an arbitrary victim WP when there's no target), then roll damage with +1d10 per net DoS on the first hit. */
+async function rollDamageWithForce(message) {
+  const f = message.flags[NS];
+  const attacker = await fromUuid(f.actorUuid);
+  if (!attacker) return;
+  const weapon = await resolveWeapon(attacker, f);
+  const atkWP = attacker.system?.characteristics?.willpower ?? {};
+  const defender = f.targetUuid ? await fromUuid(f.targetUuid) : null;
+  const defWP = defender?.system?.characteristics?.willpower;
+  const choice = await DialogV2.prompt({
+    window: { title: `${weapon?.name ?? "Weapon"} — Force channel (opposed WP)` },
+    content:
+      `<div class="form-group"><label>Attacker WP</label><span class="bdh-ro">${atkWP.total ?? 0}</span></div>`
+      + `<div class="form-group"><label>Attacker modifier</label><input type="text" name="atkMod" value="+0"/></div>`
+      + `<div class="form-group"><label>Victim WP</label><input type="text" name="defWP" value="${defWP?.total ?? ""}" placeholder="WP"/></div>`
+      + `<div class="form-group"><label>Victim modifier</label><input type="text" name="defMod" value="+0"/></div>`
+      + `<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="dmgMod" value="+0"/></div>`,
+    ok: { label: "Channel", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
+    rejectClose: false
+  });
+  if (!choice) return;
+  const atkRoll = await safeRoll("1d100", "Force WP");
+  const defRoll = await safeRoll("1d100", "resist WP");
+  if (!atkRoll || !defRoll) return;
+  const atkRes = evaluateTest({ base: atkWP.total ?? 0, modifier: parseModifier(choice.atkMod), roll: atkRoll.total });
+  const defRes = evaluateTest({ base: Number(choice.defWP) || 0, modifier: parseModifier(choice.defMod), roll: defRoll.total });
+  const atkDoS = atkRes.success ? atkRes.degrees + unnaturalDoSBonus(atkWP.unnatural) : 0;
+  const defDoS = defRes.success ? defRes.degrees + unnaturalDoSBonus(defWP?.unnatural) : 0;
+  const net = Math.max(0, atkDoS - defDoS);
+  const row = (lbl, res, dos) => `<div class="bdh-card-line"><b>${lbl}</b> — ${res.roll} vs ${res.target} · ${res.success ? "Success" : "Failure"} (${dos} DoS)</div>`;
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: attacker }), rolls: [atkRoll, defRoll],
+    content: `<div class="bdh-card"><div class="bdh-card-head"><span class="t">${weapon?.name ?? "Weapon"} <span class="arrow">&mdash;</span> Force channel</span></div>`
+      + row("Attacker WP", atkRes, atkDoS) + row("Victim WP", defRes, defDoS)
+      + `<div class="bdh-card-line ${net > 0 ? "ok" : "fail"}">Net ${net} DoS &rarr; +${net}d10 damage</div></div>`,
+  });
+  await rollDamage(message, { extraDice: net, presetChoice: { mod: choice.dmgMod } });   // no second dialog
+}
+
+async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) {
   const f = message.flags[NS];
 
   // --- Blast branch: ONE shared roll for all tokens still inside the template ---
@@ -521,7 +562,8 @@ async function rollDamage(message) {
   // Vehicle target: let the GM confirm/override the struck armour facing (auto-suggested from geometry).
   const facingRow = f.tgtIsVehicle
     ? `<div class="form-group"><label>Armour facing</label><select name="facing">${["front", "left", "right", "rear"].map((s) => `<option value="${s}"${s === (f.vehSide ?? "front") ? " selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`).join("")}</select></div>` : "";
-  const choice = await DialogV2.prompt({
+  // presetChoice = the damage inputs already gathered elsewhere (Force channel), so we don't prompt twice.
+  const choice = presetChoice ?? await DialogV2.prompt({
     window: { title: `${weaponDisplayName} — Damage` },
     content: `${hitCountRow}${facingRow}${strRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
     ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
@@ -551,6 +593,9 @@ async function rollDamage(message) {
   let weaponBase = baseFormula;
   if (strBonus) weaponBase = `${weaponBase} + ${strBonus}`;
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
+  // Force: a psyker adds their Psy Rating to the weapon's damage (penetration was added at attack time).
+  const forcePR = (!psychic && weapon && hasForce(weapon.system.qualities) && (actor.system.psyRating ?? 0) > 0) ? actor.system.psyRating : 0;
+  if (forcePR) weaponBase = `${weaponBase} + ${forcePR}`;
   if (actor.type === "horde" && weapon.system.hordeEquipped) {
     const hd = hordeDamageBonusDice(actor.system.magnitude);   // +1d10 per 10 Magnitude, cap +2d10
     if (hd) weaponBase = `${weaponBase} + ${hd}d10`;
@@ -573,6 +618,7 @@ async function rollDamage(message) {
       if (trimmed && trimmed !== "+0") bonusParts.push(trimmed);
       const acc = accurateBonusDice(qualities, { isRanged: f.isRanged, aiming: f.aiming, dos });
       if (acc) bonusParts.push(acc);
+      if (extraDice > 0) bonusParts.push(`${extraDice}d10`);   // Force channel: +1d10 per net DoS (first hit only)
     }
     let bRoll = null;
     if (bonusParts.length) { bRoll = await safeRoll(bonusParts.join(" + "), "damage modifier"); if (!bRoll) return; rolls.push(bRoll); }
@@ -1337,7 +1383,9 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   }
 
   // Effective penetration (Lance scales with DoS; Melta doubles at close range)
-  const penetration = effectivePenetration((weapon.system.penetration ?? 0) + (maximal ? 2 : 0), {
+  // Force: a psyker (PR>0) wielding a Force weapon adds their Psy Rating to damage AND penetration.
+  const forcePR = (hasForce(weapon.system.qualities) && (actor.system.psyRating ?? 0) > 0) ? actor.system.psyRating : 0;
+  const penetration = effectivePenetration((weapon.system.penetration ?? 0) + (maximal ? 2 : 0) + forcePR, {
     qualities: weapon.system.qualities,
     dos,
     success,
@@ -1486,6 +1534,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     multiHit: nHits > 1,
     // Show Roll Damage / Evade on a HIT, OR for a blast that caught targets even on a miss (scatter still lands).
     showActions: nHits > 0 || !!blastFlags,
+    forceWeapon: forcePR > 0 && success,   // psyker can channel Force on a hit
     qualityLabels,
     attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal }),
     dosBonus,
