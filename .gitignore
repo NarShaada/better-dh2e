@@ -1,7 +1,8 @@
 # Secrets — never commit
 creds.txt
 
-# Visual-companion scratch (mockups regenerated per session)
+# Visual-companion scratch (design mockups, regenerated per session — not shipped)
+mockups/
 .superpowers/
 
 # Large reference clones / extracted systems (study material, not source)
