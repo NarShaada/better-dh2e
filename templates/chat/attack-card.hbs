@@ -18,10 +18,8 @@
     {{#if dosBonus}}<span class="bdh-fate-note">+{{dosBonus}} DoS &middot; Fate</span>{{/if}}
   </div>
   {{#if blastCaught}}<div class="bdh-card-line">Caught in blast{{#if blastScattered}} (scattered){{/if}}: {{blastCaught}}</div>{{/if}}
-  {{#if jammed}}
-    {{#if overheats}}<div class="bdh-card-line fail">&#128293; Overheat! <button type="button" class="bdh-btn" data-bdh="overheatDrop">Drop!</button> <button type="button" class="bdh-btn" data-bdh="overheatDamage">Roll Damage</button></div>
-    {{else}}<div class="bdh-card-line fail">&#9888; Weapon jammed!</div>{{/if}}
-  {{/if}}
+  {{#if overheated}}<div class="bdh-card-line fail">&#128293; Overheat! Cannot fire until the second round after. <button type="button" class="bdh-btn" data-bdh="overheatDrop">Drop!</button> <button type="button" class="bdh-btn" data-bdh="overheatDamage">Roll Damage</button></div>{{/if}}
+  {{#if jammed}}<div class="bdh-card-line fail">&#9888; Weapon jammed!</div>{{/if}}
   {{#if hasHits}}
     <ul class="bdh-hits">
       {{#each hits}}<li><span class="n">{{inc @index}}</span><span class="loc">{{label}}</span></li>{{/each}}

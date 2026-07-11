@@ -3,9 +3,9 @@
 import { evaluateTest, parseModifier } from "./test-logic.mjs";
 import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100 } from "../helpers/attack-math.mjs";
-import { computeArmour } from "../helpers/combat-data.mjs";
+import { computeArmour, corrodeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor, effectiveStrengthBonus } from "../helpers/item-bonuses.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
@@ -254,10 +254,10 @@ async function rollToxicResist(message) {
   if (!choice) return null;
   const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
   if (battlemapEnabled() && result && !result.success) {
-    // Failed resist: deal 1d10 of the stored damage type, soaked by Toughness Bonus only (no armour).
+    // Failed resist: 1d10 of the stored damage type, NOT reduced by armour or Toughness (per the
+    // Black Crusade wording of the same quality — DH2e leaves it implicit).
     const roll = await new Roll("1d10").evaluate();
-    const tb = defender.system.characteristics.toughness.bonus ?? 0;
-    const dealt = Math.max(0, roll.total - tb);
+    const dealt = roll.total;
     const type = f.damageType ? `${f.damageType} ` : "";   // omit if unknown rather than mislabel
     let statusLine = "";
     if (defender.type === "horde") {   // a horde has no wounds — apply the Magnitude rule instead
@@ -274,7 +274,7 @@ async function rollToxicResist(message) {
       speaker: ChatMessage.getSpeaker({ actor: defender }),
       rolls: [roll],
       content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type}damage from Toxic</header>`
-        + `<div class="bdh-card-line">1d10: ${roll.total} − Toughness ${tb} = ${dealt} (armour ignored)</div>${statusLine}</div>`
+        + `<div class="bdh-card-line">1d10: ${roll.total} (ignores armour &amp; Toughness)</div>${statusLine}</div>`
     });
   }
   return result;
@@ -554,9 +554,12 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   const nHitsTotal = f.hits?.length ?? 0;
   const hitCountRow = nHitsTotal > 1
     ? `<div class="form-group"><label>How many hits?</label><select name="hits">${Array.from({ length: nHitsTotal }, (_, i) => `<option value="${nHitsTotal - i}">${nHitsTotal - i}</option>`).join("")}</select></div>` : "";
-  // Melee only: offer the actor's situational Strength bonuses (e.g. a bionic limb) to opt into for this attack's SB.
-  const isMeleeDamage = !psychic && !f.isRanged;
-  const strSit = isMeleeDamage ? rollBonusesFor(gatherActiveBonusEntries(actor.items), "characteristic", "strength").situational : [];
+  const qualities = psychic ? (f.qualities ?? []) : (f.qualities ?? weapon.system.qualities ?? []);
+  // Strength Bonus applies to melee AND thrown weapons (RAW: thrown add SB unless explosive → Blast).
+  const isBlastWeapon = qualities.some((q) => q.key === "blast");
+  const addsStrength = !psychic && (!f.isRanged || (weapon?.system.weaponClass === "thrown" && !isBlastWeapon));
+  // Offer the actor's situational Strength bonuses (e.g. a bionic limb) to opt into for this attack's SB.
+  const strSit = addsStrength ? rollBonusesFor(gatherActiveBonusEntries(actor.items), "characteristic", "strength").situational : [];
   const strRow = strSit.length
     ? `<div class="form-group"><label>Bionic Strength</label><div>${strSit.map((s) => `<label class="bdh-sit"><input type="checkbox" name="sit_${s.id}"/> ${s.label} Str</label>`).join("")}</div></div>` : "";
   // Vehicle target: let the GM confirm/override the struck armour facing (auto-suggested from geometry).
@@ -573,7 +576,6 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   const strDelta = strSit.filter((s) => choice[`sit_${s.id}`]).reduce((n, s) => n + s.amount, 0);
   const trimmed = String(choice.mod ?? "").trim();
   const hitsToRoll = nHitsTotal > 1 ? f.hits.slice(0, Number(choice.hits) || nHitsTotal) : (f.hits ?? []);   // latest hits drop first
-  const qualities = psychic ? (f.qualities ?? []) : (f.qualities ?? weapon.system.qualities ?? []);
   const dos = f.dos ?? 0;
   const rfThreshold = vengefulValue(qualities) || 10;
   const primitiveX = primitiveValue(qualities);
@@ -587,9 +589,9 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   };
   // Melee-only bonuses: psychic powers skip craftsmanship and Strength bonus.
   const craftDmg = (!psychic && !f.isRanged) ? meleeCraftDamageBonus(weapon.system.craftsmanship) : 0;
-  // Melee weapons add the attacker's Strength Bonus (incl. unnatural + any persistent/situational limb delta).
+  // Melee + thrown weapons add the attacker's Strength Bonus (incl. unnatural + any persistent/situational limb delta).
   const str = actor.system.characteristics.strength ?? {};
-  const strBonus = isMeleeDamage ? effectiveStrengthBonus(str.total ?? 0, str.unnatural ?? 0, strDelta) : 0;
+  const strBonus = addsStrength ? effectiveStrengthBonus(str.total ?? 0, str.unnatural ?? 0, strDelta) : 0;
   let weaponBase = baseFormula;
   if (strBonus) weaponBase = `${weaponBase} + ${strBonus}`;
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
@@ -604,7 +606,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
   if (f.helpless) weaponBase = doubleDamageDice(weaponBase);   // every die term doubles for Helpless
   const rolls = [];
-  const rolled = [];   // per hit: { hit, wRoll, bRoll, rf, baseTotal }
+  const rolled = [];   // per hit: { hit, wRoll, bRoll, fRoll, rf, baseTotal }
   for (const hit of hitsToRoll) {
     // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
     const weaponFormula = weaponDamageFormula(qualities, weaponBase);
@@ -614,15 +616,22 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     rolls.push(wRoll);
     // Bonus damage — non-RF; first hit only: the input modifier + Accurate's DoS dice.
     const bonusParts = [];
+    let fRoll = null;
     if (hit.index === 0) {
       if (trimmed && trimmed !== "+0") bonusParts.push(trimmed);
-      const acc = accurateBonusDice(qualities, { isRanged: f.isRanged, aiming: f.aiming, dos });
+      const acc = accurateBonusDice(qualities, {
+        aiming: f.aiming, dos,
+        singleShot: ["standard", "calledShot"].includes(f.attackType),
+        basicWeapon: weapon?.system.weaponClass === "basic",
+      });
       if (acc) bonusParts.push(acc);
-      if (extraDice > 0) bonusParts.push(`${extraDice}d10`);   // Force channel: +1d10 per net DoS (first hit only)
+      // Force channel: +1d10 Energy per net DoS, first hit only — RAW: this damage IGNORES Armour and
+      // Toughness, so it is rolled separately and applied after soak (never doubled, never substituted).
+      if (extraDice > 0) { fRoll = await safeRoll(`${extraDice}d10`, "force channel"); if (!fRoll) return; rolls.push(fRoll); }
     }
     let bRoll = null;
     if (bonusParts.length) { bRoll = await safeRoll(bonusParts.join(" + "), "damage modifier"); if (!bRoll) return; rolls.push(bRoll); }
-    rolled.push({ hit, wRoll, bRoll, rf, baseTotal: wRoll.total + (bRoll?.total ?? 0) + dieDelta(wRoll) + dieDelta(bRoll) });
+    rolled.push({ hit, wRoll, bRoll, fRoll, rf, baseTotal: wRoll.total + (bRoll?.total ?? 0) + dieDelta(wRoll) + dieDelta(bRoll) });
   }
   // RAW: the attacker may replace ONE damage die in the whole attack with the DoS — auto-pick the global lowest active die if it's below the DoS.
   let subResult = null;
@@ -635,12 +644,13 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     }
   });
   const applySub = subResult !== null && transform(subResult.result) < dos;
-  const hits = rolled.map(({ hit, wRoll, bRoll, rf, baseTotal }, i) => {
+  const hits = rolled.map(({ hit, wRoll, bRoll, fRoll, rf, baseTotal }, i) => {
     const sr = applySub && i === subHitIdx ? subResult : null;
     const total = baseTotal + (sr ? dos - transform(subResult.result) : 0);
     const bonusBreak = bRoll ? formatRoll(bRoll, sr, dos, transform) : "";
     const breakdown = formatRoll(wRoll, sr, dos, transform) + (bonusBreak ? `+${bonusBreak.replace(/^\+/, "")}` : "");
-    return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown };
+    return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown,
+      unsoaked: fRoll?.total ?? 0, unsoakedBreak: fRoll ? formatRoll(fRoll) : "" };
   });
   const cardData = { weaponName: weaponDisplayName, damageType: f.damageType, penetration: f.penetration, hits,
     isVehicle: !!f.tgtIsVehicle,
@@ -658,7 +668,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: f.penetration, damageType: f.damageType,
       qualities: f.qualities ?? [], coverApproach: f.coverApproach ?? null,
       tgtIsVehicle: f.tgtIsVehicle ?? false, facing: choice.facing ?? f.vehSide ?? "front",
-      hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf })) } }
+      hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf, unsoaked: h.unsoaked || 0 })) } }
   };
   ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
@@ -715,8 +725,9 @@ async function rollEvade(message) {
   }
   if (choice.reaction === "parry") {
     const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: i.system.qualities, craftsmanship: i.system.craftsmanship })));
-    const base = defender.system.characteristics.weaponSkill.total;
-    const label = pmod ? `Parry (WS, weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry (WS)";
+    // Parry is a skill (WS-based) — untrained parries at WS−20, trained ranks add +0/+10/+20/+30.
+    const base = defender.system.characteristics.weaponSkill.total + (BDH.skillRanks[defender.system.skills?.parry?.rank] ?? BDH.skillRanks.untrained);
+    const label = pmod ? `Parry (weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry";
     return performTest(defender, { label, base, modifier: modifier + pmod + evadeCondMod, characteristic: "weaponSkill" });
   }
   const dodge = defender.system.skills.dodge;
@@ -725,17 +736,18 @@ async function rollEvade(message) {
 }
 /**
  * Apply one hit's worth of damage to a token's actor: soak vs armour@location + toughness, then wounds.
+ * `unsoaked` damage (e.g. a Force weapon channel) is added AFTER soak — it ignores armour and Toughness.
  * Returns the effective dealt amount (after soak).
  * @param {Actor} actor
- * @param {{damageTotal: number, penetration: number, damageType: string, qualities: object[], location: string}} opts
+ * @param {{damageTotal: number, penetration: number, damageType: string, qualities: object[], location: string, coverAp?: number, unsoaked?: number}} opts
  * @returns {Promise<number>}
  */
-async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location, coverAp = 0 }) {
+async function applyHitToToken(actor, { damageTotal, penetration, damageType, qualities, location, coverAp = 0, unsoaked = 0 }) {
   const sys = actor.system;
   if (actor.type === "vehicle") {
     // Blast/spray fallback for a caught vehicle (the direct-attack path is facing-aware in applyDamage);
     // soak with Front armour, no Toughness, and accumulate on Integrity.
-    const eff = soak(damageTotal, sys.armour?.front ?? 0, penetration, 0);
+    const eff = soak(damageTotal, sys.armour?.front ?? 0, penetration, 0) + unsoaked;
     await actor.update({ "system.integrity.value": applyIntegrity(sys.integrity?.value ?? 0, sys.integrity?.max ?? 0, eff) });
     return eff;
   }
@@ -747,7 +759,7 @@ async function applyHitToToken(actor, { damageTotal, penetration, damageType, qu
   const tbEff = felX ? felledToughnessBonus(tb, sys.characteristics.toughness.unnatural ?? 0, felX) : tb;
   const graviton = hasGraviton(qualities);
   const locAp = (ap[location] ?? 0) + coverAp;   // cover stacks as armour; penetration reduces the combined total
-  const eff = soak(damageTotal + (graviton ? locAp : 0), locAp, penetration, tbEff);
+  const eff = soak(damageTotal + (graviton ? locAp : 0), locAp, penetration, tbEff) + unsoaked;
   if (actor.type === "horde") return eff;   // no wounds on a horde — caller reduces Magnitude
   const w = sys.wounds;
   const res = applyWounds(w.value, w.max, eff);
@@ -836,7 +848,7 @@ async function applyDamage(message) {
       const loc = h.location || "hull";   // default to Hull if a location couldn't be determined
       const side = loc === "turret" ? "front" : facing;
       const ap = armour[side] ?? 0;
-      const eff = soak(h.total, ap, f.penetration, 0);
+      const eff = soak(h.total, ap, f.penetration, 0) + (h.unsoaked || 0);   // Force channel ignores armour
       integ = applyIntegrity(integ, max, eff);
       lines.push(`${VEHICLE_LOCATION_LABELS[loc] ?? loc} — ${side} AP ${ap}: ${h.total} → ${eff}`);
     }
@@ -871,7 +883,7 @@ async function applyDamage(message) {
     const effs = [];
     for (const h of f.hits) {
       effs.push(await applyHitToToken(target, {
-        damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: "body", coverAp,
+        damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: "body", coverAp, unsoaked: h.unsoaked || 0,
       }));
     }
     const devX = homebrewQualitiesEnabled() ? devastatingValue(qualities) : 0;
@@ -888,15 +900,35 @@ async function applyDamage(message) {
   let prevCrit = sys.wounds.critical ?? 0;
   let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
   const lines = [];
+  const corrosive = hasCorrosive(qualities);
   for (const h of f.hits) {
     const eff = await applyHitToToken(target, {
-      damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: h.location, coverAp,
+      damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: h.location, coverAp, unsoaked: h.unsoaked || 0,
     });
     const nowCrit = target.system.wounds.critical ?? 0;
     const hitCrit = nowCrit - prevCrit;
-    prevCrit = nowCrit;
     maxApplied = Math.max(maxApplied, eff);
-    lines.push(`${h.label}: ${h.total} → ${eff} dmg${hitCrit > 0 ? ` (${hitCrit} critical)` : ""}`);
+    lines.push(`${h.label}: ${h.total} → ${eff} dmg${h.unsoaked ? ` (incl. ${h.unsoaked} Force, unsoaked)` : ""}${hitCrit > 0 ? ` (${hitCrit} critical)` : ""}`);
+    // Corrosive: after the hit soaks, 1d10 melts the struck location's armour (persisted on the items —
+    // later hits in this burst and future attacks see the reduced AP); corrosion beyond the total AP
+    // is dealt to the wearer, not reduced by Toughness.
+    if (corrosive) {
+      const armourItems = target.items.filter((i) => i.type === "armour" && i.system.equipped);
+      const cRoll = await safeRoll("1d10", "corrosion");
+      const { losses, excess } = corrodeArmour(armourItems.map((i) => i.system), h.location, cRoll?.total ?? 0);
+      for (const l of losses) {
+        const item = armourItems[l.index];
+        await item.update({ [`system.locations.${h.location}`]: (item.system.locations?.[h.location] ?? 0) - l.loss });
+      }
+      if (excess > 0) {
+        const w = target.system.wounds;
+        const res = applyWounds(w.value, w.max, excess);
+        await target.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
+      }
+      const apLost = losses.reduce((n, l) => n + l.loss, 0);
+      lines.push(`Corrosive (${h.label}): 1d10 = ${cRoll?.total ?? 0} → −${apLost} AP${excess > 0 ? `, ${excess} dmg to wearer (ignores Toughness)` : ""}`);
+    }
+    prevCrit = target.system.wounds.critical ?? 0;   // include any corrosion-excess crit so the next hit's delta stays clean
   }
   // The character's TOTAL accumulated critical damage (parallels the Wounds line below); each hit's
   // own contribution is shown per-line above in "(N critical)".
@@ -1181,7 +1213,7 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   };
   const typeOpts = Object.entries(BDH.attackTypes)
     .filter(([k, t]) => (t.scope === "any" || t.scope === (isMelee ? "melee" : "ranged"))
-      && !(k === "lightning" && hasUnwieldy(weapon.system.qualities))
+      && !(k === "lightning" && (hasUnwieldy(weapon.system.qualities) || hasUnbalanced(weapon.system.qualities)))
       && rofAllows(k))
     .map(([k, t]) => `<option value="${k}">${t.label}</option>`)
     .join("");
@@ -1257,10 +1289,21 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
     const root = dialog.element;
     const sel = root.querySelector('[name="attackType"]');
     const row = root.querySelector('#bdh-cs-row');
-    if (!sel || !row) return;
-    const toggle = () => { row.style.display = sel.value === "calledShot" ? "" : "none"; };
-    sel.addEventListener("change", toggle);
-    toggle();
+    if (sel && row) {
+      const toggle = () => { row.style.display = sel.value === "calledShot" ? "" : "none"; };
+      sel.addEventListener("change", toggle);
+      toggle();
+    }
+    // Maximal adds +10m to the weapon's range — re-suggest the range band from the measured
+    // distance when toggled (the GM's manual selection afterwards still wins).
+    const maxBox = root.querySelector('[name="maximal"]');
+    const rangeSel = root.querySelector('[name="range"]');
+    if (maxBox && rangeSel && measuredDistance != null) {
+      maxBox.addEventListener("change", () => {
+        const r = (Number(weapon.system.range) || 0) + (maxBox.checked ? 10 : 0);
+        rangeSel.value = rangeBand(measuredDistance, r);
+      });
+    }
   };
 
   // Add a "Suppressive Fire" button when on the battlemap and the weapon can semi/full-auto.
@@ -1349,7 +1392,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const rangeMod = isRanged ? (BDH.rangeOptions[choice.range]?.mod ?? 0) : 0;
   const manual = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
   const aiming = choice.aim !== "none";
-  const qualMod = qualityToHitMod(weapon.system.qualities, { aiming });
+  const qualMod = qualityToHitMod(weapon.system.qualities, { aiming, isRanged });
   const craftMod = isMelee ? meleeCraftToHit(weapon.system.craftsmanship) : 0;
   const scatterMod = scatterToHit(weapon.system.qualities, choice.range);
   const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod + scatterMod + conditionMod + sizeMod;
@@ -1357,7 +1400,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
 
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
-  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (stormHail ? 2 : 1);
+  const twinLinked = isRanged && hasTwinLinked(weapon.system.qualities);   // two barrels: ×2 ammo, +20 to hit, +1 hit at 2+ DoS
+  const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (stormHail ? 2 : 1) * (twinLinked ? 2 : 1);
   // Only gate on ammo when we'd actually consume it — a Fate reroll re-resolves the same (already-fired) shot.
   if (consumeAmmo && usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
     ui.notifications.warn(`Not enough ammo: needs ${rounds}, ${weapon.system.clip?.value ?? 0} in the clip.`);
@@ -1402,6 +1446,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const blastWeapon = (weapon.system.qualities ?? []).some((q) => q.key === "blast");   // blast resolves horde hits in the blast flow, not the direct hit
   let nHits = success ? computeHits(at, dos, stormHail ? Infinity : rofCap) : 0;
   if (stormHail && success) nHits = Math.min(nHits * 2, rofCap);
+  if (success) nHits += twinLinkedExtraHits(weapon.system.qualities, dos);   // Twin-Linked: the second barrel's hit sits on top of the RoF cap
   if (success && tgtIsHorde && !blastWeapon) nHits += hordeExtraHits(weapon.system.damageType, weapon.system.qualities);   // additive extras vs hordes
   const firstLoc = at.calledShot ? choice.calledShotLocation : hitLocation(roll.total);
   // Vehicle hit locations: first hit = reversed roll on the vehicle table; extra hits = fresh d100 rolls.
@@ -1413,8 +1458,13 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     for (let i = 1; i < nHits; i++) locs.push(vehicleHitLocation((await safeRoll("1d100", "vehicle hit location"))?.total ?? 50));
   } else locs = locationSequence(firstLoc, nHits);
 
-  // Jam check
-  const jammed = checkJam(roll.total, success, isRanged, effectiveJamFloor(weapon.system.qualities, weapon.system.craftsmanship));
+  // Jam / overheat check. RAW: single shots jam on 96+, semi/full-auto on 94+. Overheats weapons
+  // never jam — they overheat on a natural 91+ instead (regardless of hit/miss; Best never overheats).
+  const isAuto = isRanged && (choice.attackType === "semiAuto" || choice.attackType === "fullAuto");
+  const overheatsWeapon = isRanged && hasOverheats(weapon.system.qualities);
+  const overheated = overheatsWeapon && weapon.system.craftsmanship !== "best" && roll.total >= 91;
+  const jammed = !overheatsWeapon
+    && checkJam(roll.total, success, isRanged, effectiveJamFloor(weapon.system.qualities, weapon.system.craftsmanship, { auto: isAuto }));
 
   // Scatter flat damage modifier (range-based; 0 for melee or no Scatter quality)
   const scatterDmg = scatterDamage(weapon.system.qualities, choice.range);
@@ -1487,6 +1537,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       damageType: weapon.system.damageType,
       qualities: weapon.system.qualities ?? [],
       aiming,
+      attackType: choice.attackType,
       dos,
       targetUuid,
       targetName,
@@ -1496,6 +1547,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       hits,
       success,
       jammed,
+      overheated,
       scatterDmg,
       helpless: vsHelpless,
       reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, choice, targetUuid, targetName, roll: roll.total, success, dosBonus },
@@ -1527,7 +1579,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     rangeLabel,
     hits,
     jammed,
-    overheats: jammed && hasOverheats(weapon.system.qualities),
+    overheated,
     targetName,
     hasHits: nHits > 0,
     hitCount: nHits,

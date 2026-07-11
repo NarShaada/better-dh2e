@@ -3,25 +3,34 @@ import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus, normalizeCra
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 
-describe("effectiveJamFloor (quality × craftsmanship)", () => {
+describe("effectiveJamFloor (quality × craftsmanship × fire mode)", () => {
   it("best never jams", () => {
     expect(effectiveJamFloor(Q(), "best")).toBe(Infinity);
     expect(effectiveJamFloor(Q("unreliable"), "best")).toBe(Infinity);
+    expect(effectiveJamFloor(Q(), "best", { auto: true })).toBe(Infinity);
   });
-  it("good: unreliable cancels to neither, else reliable", () => {
-    expect(effectiveJamFloor(Q("unreliable"), "good")).toBe(94);
+  it("normal: single shot jams on 96+, semi/full-auto on 94+", () => {
+    expect(effectiveJamFloor(Q(), "normal")).toBe(96);
+    expect(effectiveJamFloor(Q(), "normal", { auto: false })).toBe(96);
+    expect(effectiveJamFloor(Q(), "normal", { auto: true })).toBe(94);
+  });
+  it("normal: reliable 100, unreliable 91 regardless of fire mode", () => {
+    expect(effectiveJamFloor(Q("reliable"), "normal")).toBe(100);
+    expect(effectiveJamFloor(Q("reliable"), "normal", { auto: true })).toBe(100);
+    expect(effectiveJamFloor(Q("unreliable"), "normal")).toBe(91);
+    expect(effectiveJamFloor(Q("unreliable"), "normal", { auto: true })).toBe(91);
+  });
+  it("good: unreliable cancels to the mode base, else reliable", () => {
+    expect(effectiveJamFloor(Q("unreliable"), "good")).toBe(96);
+    expect(effectiveJamFloor(Q("unreliable"), "good", { auto: true })).toBe(94);
     expect(effectiveJamFloor(Q(), "good")).toBe(100);
     expect(effectiveJamFloor(Q("reliable"), "good")).toBe(100);
   });
-  it("poor: unreliable -> jam on every fail (0); reliable cancels to neither; else unreliable", () => {
+  it("poor: unreliable -> jam on every fail (0); reliable cancels to the mode base; else unreliable", () => {
     expect(effectiveJamFloor(Q("unreliable"), "poor")).toBe(0);
-    expect(effectiveJamFloor(Q("reliable"), "poor")).toBe(94);
+    expect(effectiveJamFloor(Q("reliable"), "poor")).toBe(96);
+    expect(effectiveJamFloor(Q("reliable"), "poor", { auto: true })).toBe(94);
     expect(effectiveJamFloor(Q(), "poor")).toBe(91);
-  });
-  it("normal: reliable 100, unreliable 91, neither 94", () => {
-    expect(effectiveJamFloor(Q("reliable"), "normal")).toBe(100);
-    expect(effectiveJamFloor(Q("unreliable"), "normal")).toBe(91);
-    expect(effectiveJamFloor(Q(), "normal")).toBe(94);
   });
 });
 describe("meleeCraftToHit", () => {

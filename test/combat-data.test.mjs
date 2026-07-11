@@ -1,6 +1,6 @@
 // test/combat-data.test.mjs
 import { describe, it, expect } from "vitest";
-import { computeArmour } from "../scripts/helpers/combat-data.mjs";
+import { computeArmour, corrodeArmour } from "../scripts/helpers/combat-data.mjs";
 
 const loc = (o) => ({ head: 0, body: 0, rightArm: 0, leftArm: 0, rightLeg: 0, leftLeg: 0, ...o });
 
@@ -32,5 +32,34 @@ describe("computeArmour", () => {
     ], 4);
     expect(r.body).toBe(11); // 6 + 1 + 4
     expect(r.head).toBe(5);  // 0 + 1 + 4
+  });
+});
+
+describe("corrodeArmour", () => {
+  it("melts the struck location's AP, no excess when armour absorbs it all", () => {
+    const { losses, excess } = corrodeArmour([{ locations: loc({ body: 6 }) }], "body", 4);
+    expect(losses).toEqual([{ index: 0, loss: 4 }]);
+    expect(excess).toBe(0);
+  });
+  it("corrosion beyond the total AP becomes excess (dealt to the wearer)", () => {
+    const { losses, excess } = corrodeArmour([{ locations: loc({ body: 3 }) }], "body", 8);
+    expect(losses).toEqual([{ index: 0, loss: 3 }]);
+    expect(excess).toBe(5);
+  });
+  it("no armour at the location -> the whole roll is excess", () => {
+    expect(corrodeArmour([{ locations: loc({ head: 4 }) }], "body", 7)).toEqual({ losses: [], excess: 7 });
+    expect(corrodeArmour([], "body", 7)).toEqual({ losses: [], excess: 7 });
+  });
+  it("multiple pieces: highest AP at the location melts first, then the next", () => {
+    const armours = [
+      { locations: loc({ body: 2 }) },   // index 0 (additive chestplate)
+      { locations: loc({ body: 6 }) },   // index 1 (main suit — melts first)
+    ];
+    const { losses, excess } = corrodeArmour(armours, "body", 7);
+    expect(losses).toEqual([{ index: 1, loss: 6 }, { index: 0, loss: 1 }]);
+    expect(excess).toBe(0);
+  });
+  it("clamps a nonsense negative amount to zero", () => {
+    expect(corrodeArmour([{ locations: loc({ body: 3 }) }], "body", -2)).toEqual({ losses: [], excess: 0 });
   });
 });

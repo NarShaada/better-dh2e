@@ -2,14 +2,17 @@
 
 const has = (qualities, key) => Array.isArray(qualities) && qualities.some((q) => q.key === key);
 
-/** Effective ranged jam floor from quality + craftsmanship (Infinity = never jams; 0 = jams on every failed roll). */
-export function effectiveJamFloor(qualities, craftsmanship) {
+/** Effective ranged jam floor from quality + craftsmanship (Infinity = never jams; 0 = jams on every failed roll).
+ *  Base floor is fire-mode dependent (RAW): single shots jam on 96+, semi-/full-auto bursts on 94+.
+ *  Unreliable jams on 91+ regardless of mode; Reliable only on 100. */
+export function effectiveJamFloor(qualities, craftsmanship, { auto = false } = {}) {
   if (craftsmanship === "best") return Infinity;
+  const base = auto ? 94 : 96;
   const r = has(qualities, "reliable");
   const u = has(qualities, "unreliable");
-  if (craftsmanship === "good") return u ? 94 : 100;            // U cancels to neither; N/R -> reliable
-  if (craftsmanship === "poor") return u ? 0 : (r ? 94 : 91);   // U -> jam every fail; R cancels to neither; N -> unreliable
-  return r ? 100 : (u ? 91 : 94);                               // normal
+  if (craftsmanship === "good") return u ? base : 100;            // U cancels to neither; N/R -> reliable
+  if (craftsmanship === "poor") return u ? 0 : (r ? base : 91);   // U -> jam every fail; R cancels to neither; N -> unreliable
+  return r ? 100 : (u ? 91 : base);                               // normal
 }
 
 /** Melee craftsmanship to-hit modifier. */

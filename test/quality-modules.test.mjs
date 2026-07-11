@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, filterQualityChoices } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, hasUnbalanced, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, filterQualityChoices } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -16,16 +16,27 @@ describe("qualityToHitMod", () => {
     expect(qualityToHitMod(Q("accurate"), { aiming: false })).toBe(0);
     expect(qualityToHitMod(Q(), { aiming: true })).toBe(0);
   });
+  it("Twin-Linked gives +20 on ranged attacks only", () => {
+    expect(qualityToHitMod(Q("twinLinked"), { aiming: false, isRanged: true })).toBe(20);
+    expect(qualityToHitMod(Q("twinLinked"), { aiming: false, isRanged: false })).toBe(0);
+    expect(qualityToHitMod(Q("twinLinked", "accurate"), { aiming: true, isRanged: true })).toBe(30);
+  });
 });
 describe("accurateBonusDice", () => {
-  it("+1d10 per 2 DoS, capped 2, ranged+aiming only", () => {
-    expect(accurateBonusDice(Q("accurate"), { isRanged: true, aiming: true, dos: 4 })).toBe("2d10");
-    expect(accurateBonusDice(Q("accurate"), { isRanged: true, aiming: true, dos: 2 })).toBe("1d10");
-    expect(accurateBonusDice(Q("accurate"), { isRanged: true, aiming: true, dos: 6 })).toBe("2d10");
-    expect(accurateBonusDice(Q("accurate"), { isRanged: true, aiming: true, dos: 1 })).toBeNull();
-    expect(accurateBonusDice(Q("accurate"), { isRanged: true, aiming: false, dos: 4 })).toBeNull();
-    expect(accurateBonusDice(Q("accurate"), { isRanged: false, aiming: true, dos: 4 })).toBeNull();
-    expect(accurateBonusDice(Q(), { isRanged: true, aiming: true, dos: 4 })).toBeNull();
+  const opts = (over = {}) => ({ aiming: true, dos: 4, singleShot: true, basicWeapon: true, ...over });
+  it("+1d10 per 2 DoS beyond the first, capped 2 (DoS 3-4 → 1d10, 5+ → 2d10)", () => {
+    expect(accurateBonusDice(Q("accurate"), opts({ dos: 3 }))).toBe("1d10");
+    expect(accurateBonusDice(Q("accurate"), opts({ dos: 4 }))).toBe("1d10");
+    expect(accurateBonusDice(Q("accurate"), opts({ dos: 5 }))).toBe("2d10");
+    expect(accurateBonusDice(Q("accurate"), opts({ dos: 8 }))).toBe("2d10");
+    expect(accurateBonusDice(Q("accurate"), opts({ dos: 2 }))).toBeNull();
+    expect(accurateBonusDice(Q("accurate"), opts({ dos: 1 }))).toBeNull();
+  });
+  it("requires aiming + a single shot from a Basic weapon + the quality", () => {
+    expect(accurateBonusDice(Q("accurate"), opts({ aiming: false }))).toBeNull();
+    expect(accurateBonusDice(Q("accurate"), opts({ singleShot: false }))).toBeNull();
+    expect(accurateBonusDice(Q("accurate"), opts({ basicWeapon: false }))).toBeNull();
+    expect(accurateBonusDice(Q(), opts())).toBeNull();
   });
 });
 describe("weaponDamageFormula", () => {
@@ -107,16 +118,18 @@ describe("hasInaccurate", () => {
   });
 });
 describe("effectivePenetration", () => {
-  it("Lance multiplies Pen by DoS on a hit; nothing on a miss", () => {
-    expect(effectivePenetration(4, { qualities: Q("lance"), dos: 3, success: true, closeRange: false })).toBe(12);
+  it("Lance adds its base Pen once per DoS on a hit (base × (DoS+1)); nothing on a miss", () => {
+    expect(effectivePenetration(5, { qualities: Q("lance"), dos: 3, success: true, closeRange: false })).toBe(20);   // RAW example: 5 + 3×5
+    expect(effectivePenetration(4, { qualities: Q("lance"), dos: 1, success: true, closeRange: false })).toBe(8);
     expect(effectivePenetration(4, { qualities: Q("lance"), dos: 3, success: false, closeRange: false })).toBe(4);
+    expect(effectivePenetration(4, { qualities: Q("lance"), dos: 0, success: true, closeRange: false })).toBe(4);    // spray path (no DoS)
   });
   it("Melta doubles Pen at close range only", () => {
     expect(effectivePenetration(4, { qualities: Q("melta"), dos: 1, success: true, closeRange: true })).toBe(8);
     expect(effectivePenetration(4, { qualities: Q("melta"), dos: 1, success: true, closeRange: false })).toBe(4);
   });
   it("stacks Lance and Melta", () => {
-    expect(effectivePenetration(4, { qualities: Q("lance", "melta"), dos: 2, success: true, closeRange: true })).toBe(16);
+    expect(effectivePenetration(4, { qualities: Q("lance", "melta"), dos: 2, success: true, closeRange: true })).toBe(24);   // (4 + 2×4) × 2
   });
   it("no relevant qualities -> base Pen", () => {
     expect(effectivePenetration(4, { qualities: Q(), dos: 3, success: true, closeRange: true })).toBe(4);
@@ -202,6 +215,23 @@ describe("toxicValue / vengefulValue / hasUnwieldy", () => {
     expect(vengefulValue(Q())).toBe(0);
     expect(hasUnwieldy(Q("unwieldy"))).toBe(true);
     expect(hasUnwieldy(Q())).toBe(false);
+  });
+});
+
+describe("twin-linked / corrosive / unbalanced helpers", () => {
+  it("detect the qualities", () => {
+    expect(hasTwinLinked(Q("twinLinked"))).toBe(true);
+    expect(hasTwinLinked(Q())).toBe(false);
+    expect(hasCorrosive(Q("corrosive"))).toBe(true);
+    expect(hasCorrosive(Q())).toBe(false);
+    expect(hasUnbalanced(Q("unbalanced"))).toBe(true);
+    expect(hasUnbalanced(Q())).toBe(false);
+  });
+  it("Twin-Linked grants one extra hit at 2+ DoS", () => {
+    expect(twinLinkedExtraHits(Q("twinLinked"), 1)).toBe(0);
+    expect(twinLinkedExtraHits(Q("twinLinked"), 2)).toBe(1);
+    expect(twinLinkedExtraHits(Q("twinLinked"), 5)).toBe(1);
+    expect(twinLinkedExtraHits(Q(), 5)).toBe(0);
   });
 });
 

@@ -56,8 +56,9 @@ export function applyWounds(current, max, effective) {
   return { wounds: Math.min(max, total), critical: Math.max(0, total - max) };
 }
 
-/** Ranged jam: a failed attack rolling at/above the jam floor (base 94; Reliable 100; Unreliable 91). */
-export function checkJam(roll, isSuccess, isRanged, jamFloor = 94) {
+/** Ranged jam: a failed attack rolling at/above the jam floor (see effectiveJamFloor —
+ *  96 single shot / 94 semi- & full-auto; Reliable 100; Unreliable 91). */
+export function checkJam(roll, isSuccess, isRanged, jamFloor = 96) {
   return isRanged && !isSuccess && roll >= jamFloor;
 }
 

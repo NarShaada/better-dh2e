@@ -116,7 +116,7 @@ BDH.qualities = {
   felling:    { label: "Felling", takesValue: true, automation: "full" },
   accurate:   { label: "Accurate", takesValue: false, automation: "full" },
   storm:      { label: "Storm", takesValue: false, automation: "full" },
-  twinLinked: { label: "Twin-Linked", takesValue: false, noteOn: "attack" },
+  twinLinked: { label: "Twin-Linked", takesValue: false, automation: "full" },
   reliable:   { label: "Reliable", takesValue: false, automation: "full" },
   unreliable: { label: "Unreliable", takesValue: false, automation: "full" },
   unwieldy:   { label: "Unwieldy", takesValue: false, automation: "full" },
@@ -126,7 +126,7 @@ BDH.qualities = {
   shocking:   { label: "Shocking", takesValue: false, automation: "full" },
   blast:      { label: "Blast", takesValue: true, automation: "full", noteOn: "attack" },
   concussive: { label: "Concussive", takesValue: true, automation: "full" },
-  corrosive:  { label: "Corrosive", takesValue: false, noteOn: "damage" },
+  corrosive:  { label: "Corrosive", takesValue: false, automation: "full", noteOn: "damage" },   // auto on single-target apply; note reminds on AoE paths
   crippling:  { label: "Crippling", takesValue: true, noteOn: "damage" },
   defensive:  { label: "Defensive", takesValue: false, automation: "full" },
   flame:         { label: "Flame", takesValue: false, automation: "full" },

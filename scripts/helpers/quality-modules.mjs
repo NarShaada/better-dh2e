@@ -8,18 +8,20 @@ export function tearingFormula(formula) {
   return formula.replace(/(\d+)d(\d+)/, (m, n, faces) => `${Number(n) + 1}d${faces}kh${n}`);
 }
 
-/** To-hit modifier from qualities (Accurate: +10 when aiming; Defensive: -10 always). */
-export function qualityToHitMod(qualities, { aiming }) {
+/** To-hit modifier from qualities (Accurate: +10 when aiming; Defensive: -10 always; Twin-Linked: +20 ranged). */
+export function qualityToHitMod(qualities, { aiming, isRanged = false }) {
   let mod = 0;
   if (aiming && has(qualities, "accurate")) mod += 10;
   if (has(qualities, "defensive")) mod -= 10;
+  if (isRanged && has(qualities, "twinLinked")) mod += 20;
   return mod;
 }
 
-/** Accurate bonus damage dice (+1d10 per 2 DoS, capped +2d10; ranged & aiming only). Formula string or null. */
-export function accurateBonusDice(qualities, { isRanged, aiming, dos }) {
-  if (!isRanged || !aiming || !has(qualities, "accurate")) return null;
-  const n = Math.min(2, Math.floor(dos / 2));
+/** Accurate bonus damage dice: a single shot from a Basic weapon while aiming gains +1d10 per
+ *  2 DoS beyond the first (DoS 3-4 → 1d10, 5+ → 2d10), capped at +2d10. Formula string or null. */
+export function accurateBonusDice(qualities, { aiming, dos, singleShot, basicWeapon }) {
+  if (!aiming || !singleShot || !basicWeapon || !has(qualities, "accurate")) return null;
+  const n = Math.min(2, Math.floor(Math.max(0, dos - 1) / 2));
   return n > 0 ? `${n}d10` : null;
 }
 
@@ -103,6 +105,14 @@ export function hasStorm(qualities) { return has(qualities, "storm"); }
 export function toxicValue(qualities) { return qualityValue(qualities, "toxic"); }
 export function vengefulValue(qualities) { return qualityValue(qualities, "vengeful"); }
 export function hasUnwieldy(qualities) { return has(qualities, "unwieldy"); }
+export function hasUnbalanced(qualities) { return has(qualities, "unbalanced"); }
+export function hasTwinLinked(qualities) { return has(qualities, "twinLinked"); }
+export function hasCorrosive(qualities) { return has(qualities, "corrosive"); }
+
+/** Twin-Linked: one extra hit when the attack succeeds by 2+ DoS (on top of the fire mode's hits). */
+export function twinLinkedExtraHits(qualities, dos) {
+  return has(qualities, "twinLinked") && dos >= 2 ? 1 : 0;
+}
 
 export function hasFlame(qualities) { return has(qualities, "flame"); }
 export function hasForce(qualities) { return has(qualities, "force"); }
@@ -113,10 +123,11 @@ export function hasInaccurate(qualities) { return has(qualities, "inaccurate"); 
 export function hasOverheats(qualities) { return has(qualities, "overheats"); }
 export function hasMaximal(qualities) { return has(qualities, "maximal"); }
 
-/** Penetration after Lance (×DoS on a hit), Razor Sharp (×2 at 3+ DoS on a hit), and Melta (×2 at Point-Blank/Short range). */
+/** Penetration after Lance (+base per DoS on a hit, i.e. base × (DoS+1)), Razor Sharp (×2 at 3+ DoS
+ *  on a hit), and Melta (×2 at Point-Blank/Short range). */
 export function effectivePenetration(basePen, { qualities, dos, success, closeRange }) {
   let pen = basePen;
-  if (success && has(qualities, "lance")) pen *= dos;
+  if (success && has(qualities, "lance")) pen += basePen * dos;
   if (success && has(qualities, "razorSharp") && dos >= 3) pen *= 2;
   if (closeRange && has(qualities, "melta")) pen *= 2;
   return pen;
