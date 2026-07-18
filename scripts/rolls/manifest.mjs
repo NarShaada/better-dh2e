@@ -2,7 +2,7 @@
 // Psychic manifestation cast flow: dialog → PR choice → focus roll → phenomena/perils → cast card.
 import { evaluateTest } from "./test-logic.mjs";
 import { manifestState, isDoubles, resolveFocusTarget, substitutePR } from "../helpers/psychic-manifest.mjs";
-import { psychicRuleset } from "../helpers/psychic-ruleset.mjs";
+import { psychicRuleset, makePsychicRuleset } from "../helpers/psychic-ruleset.mjs";
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
 import { effectivePenetration } from "../helpers/quality-modules.mjs";
@@ -56,7 +56,7 @@ export async function rollManifest(actor, powerId) {
   const dialogContent = `
     ${rangeRow}
     <div class="form-group"><label>Effective PR</label><select name="castChoice">${prOpts.join("")}</select></div>
-    <div class="form-group"><label>PR Bonus</label><input type="number" name="prBonus" value="0"/></div>
+    <div class="form-group"><label>PR Bonus</label><input type="number" step="1" name="prBonus" value="0"/></div>
     <div class="form-group"><label>Circumstance Modifier</label><input type="text" name="modifier" value="+0"/></div>`;
 
   const choice = await DialogV2.prompt({
@@ -72,7 +72,7 @@ export async function rollManifest(actor, powerId) {
 
   const [chosenState, chosenPR] = String(choice.castChoice).split(":");
   const statePR = Number(chosenPR);
-  const prBonus = Number(choice.prBonus) || 0;
+  const prBonus = Math.trunc(Number(choice.prBonus)) || 0;
   const circ = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
   return resolveManifest(actor, power, { state: chosenState, statePR, prBonus, circ });
 }
@@ -92,7 +92,8 @@ export async function resolveManifest(actor, power, opts) {
 
   const normalPR = actor.system.psyRating ?? 0;
   const psykerClass = actor.system.psykerClass;
-  const rs = psychicRuleset();
+  // Rerolls replay under the ruleset the cast was made with (payload-pinned); live casts use the world setting.
+  const rs = opts.rulesetKey ? makePsychicRuleset(opts.rulesetKey) : psychicRuleset();
   // Legacy reroll payloads (pre-PR-bonus cards) carry only effPR — treat it as the chosen rung, derive the state.
   const statePR = opts.statePR ?? opts.effPR ?? normalPR;
   const state = opts.state ?? manifestState(statePR, normalPR);
@@ -149,7 +150,7 @@ export async function resolveManifest(actor, power, opts) {
     ? "Daemonic — unaffected by its own phenomena." : "";
 
   // Reroll payload — stored on both flag shapes so the new card is itself rerollable
-  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, state, statePR, prBonus, circ, targetUuid, targetName, roll: roll.total, success, dosBonus };
+  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, rulesetKey: rs.key, state, statePR, prBonus, circ, targetUuid, targetName, roll: roll.total, success, dosBonus };
 
   // --- Attack-type branch (Bolt / Barrage / Storm / Blast) ---
   let attackFlags = null;
