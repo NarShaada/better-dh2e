@@ -255,7 +255,7 @@
 .better-dh2e .bdh-mode-hint { font-size:11px; color:var(--bdh-muted); font-style:italic; }
 .better-dh2e .bdh-xp { display:flex; align-items:center; gap:6px; }
 .better-dh2e .bdh-xp label { font-size:10px; text-transform:uppercase; color:var(--bdh-muted); letter-spacing:1px; }
-.better-dh2e .bdh-xp input, .better-dh2e .bdh-xp .bdh-xp-v { width:70px; text-align:right; font-weight:bold; }
+.better-dh2e .bdh-xp input, .better-dh2e .bdh-xp .bdh-xp-v { width:70px; text-align:left; font-weight:bold; }
 .better-dh2e .bdh-xp-free { color:#3d6a4a; }
 .better-dh2e .bdh-apt-select { width:calc(100% - 16px); margin:4px 8px 8px; min-height:180px; }
 .better-dh2e .bdh-edit { background:#fff6df; border:1px solid var(--bdh-gold); border-radius:3px; color:var(--bdh-ink); }
@@ -416,4 +416,3 @@
 .better-dh2e .bdh-god-tallies { display:flex; flex-wrap:wrap; gap:10px; padding:4px 10px; }
 .better-dh2e .bdh-god-tally { font-size:12px; border:1px solid var(--bdh-brown); border-radius:4px; padding:2px 8px; background:var(--bdh-panel); }
 .better-dh2e .bdh-god-tally b { font-variant:small-caps; letter-spacing:1px; margin-right:4px; color:var(--bdh-maroon); }
-.better-dh2e .bdh-tally-hint { padding:0 10px 6px; }

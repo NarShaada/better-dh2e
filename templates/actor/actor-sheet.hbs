@@ -464,7 +464,7 @@
     </div>
     {{#if bcAdvancement}}
     <div class="bdh-section">
-      <div class="bdh-section-head">Alignment <span class="bdh-hint2">devotion among the Ruinous Powers</span></div>
+      <div class="bdh-section-head">Alignment</div>
       <div class="bdh-align-row">
         {{#if isCustom}}
           <select class="bdh-edit" name="system.alignment">{{selectOptions alignmentChoices selected=system.alignment}}</select>
@@ -476,12 +476,11 @@
       <div class="bdh-god-tallies">
         {{#each godTallies as |g|}}<span class="bdh-god-tally"><b>{{g.label}}</b> {{g.count}}</span>{{/each}}
       </div>
-      <div class="bdh-hint2 bdh-tally-hint">Simple-mode purchases per Ruinous Power (counted since Black Crusade advancement was enabled).</div>
       {{/unless}}
     </div>
     {{else}}
     <div class="bdh-section">
-      <div class="bdh-section-head">Aptitudes <span class="bdh-hint2">the character's fixed aptitudes</span></div>
+      <div class="bdh-section-head">Aptitudes</div>
       <div class="bdh-apt-list">
         {{#each system.aptitudes as |a|}}<span class="bdh-apt-chip">{{a}}{{#if @root.isCustom}} <a data-action="removeAptitude" data-aptitude="{{a}}" title="Remove">✕</a>{{/if}}</span>{{/each}}
         {{#unless system.aptitudes.length}}<span class="bdh-empty">None.</span>{{/unless}}

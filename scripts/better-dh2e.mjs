@@ -187,7 +187,7 @@ Hooks.once("init", () => {
   // --- Black Crusade conversion (per-area rule selection; both data variants always stored) ---
   game.settings.register("better-dh2e", "advancementRules", {
     name: "Advancement Rules",
-    hint: "Dark Heresy 2: aptitudes + DH2 XP costs. Black Crusade: alignment + BC XP costs. Non-destructive — both aptitudes and alignment stay stored on every character.",
+    hint: "Non-destructive — both aptitudes and alignment stay stored on every character.",
     scope: "world",
     config: true,
     type: String,
@@ -197,7 +197,7 @@ Hooks.once("init", () => {
   });
   game.settings.register("better-dh2e", "sheetHeaderStyle", {
     name: "Sheet Header Style",
-    hint: "Bio fields shown in the character header. Dark Heresy 2: Home World / Background / Role / Elite. Black Crusade: Race / Archetype / Pride / Disgrace / Motivation. Both sets are always stored.",
+    hint: "Non-destructive — both headers stay stored on every character.",
     scope: "world",
     config: true,
     type: String,
@@ -208,7 +208,6 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "psychicRules", {
     name: "Psychic Rules",
-    hint: "Manifestation rules for psychic powers. Dark Heresy 2: per-point fetter/push ladder. Black Crusade: Fettered (half PR, phenomena-immune) / Unfettered / Push, +5×PR focus bonus, BC phenomena modifiers.",
     scope: "world",
     config: true,
     type: String,
