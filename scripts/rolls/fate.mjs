@@ -33,7 +33,7 @@ export async function rerollFromFate(message) {
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName });
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
-    if (power) await resolveManifest(actor, power, { effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName });
+    if (power) await resolveManifest(actor, power, { state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName });
   }
 }
 
@@ -66,6 +66,6 @@ export async function addDoSFromFate(message) {
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
-    if (power) await resolveManifest(actor, power, { effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });
+    if (power) await resolveManifest(actor, power, { state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });
   }
 }

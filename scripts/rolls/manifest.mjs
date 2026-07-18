@@ -1,10 +1,8 @@
 // scripts/rolls/manifest.mjs
 // Psychic manifestation cast flow: dialog → PR choice → focus roll → phenomena/perils → cast card.
 import { evaluateTest } from "./test-logic.mjs";
-import {
-  maxPush, manifestState, fetterPushModifier, isDoubles,
-  phenomenaTriggers, phenomenaModifier, resolveFocusTarget, substitutePR
-} from "../helpers/psychic-manifest.mjs";
+import { manifestState, isDoubles, resolveFocusTarget, substitutePR } from "../helpers/psychic-manifest.mjs";
+import { psychicRuleset } from "../helpers/psychic-ruleset.mjs";
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
 import { effectivePenetration } from "../helpers/quality-modules.mjs";
@@ -36,16 +34,11 @@ export async function rollManifest(actor, powerId) {
   }
 
   const psykerClass = actor.system.psykerClass;
-  const mp = maxPush(psykerClass);
 
-  // Build effective-PR option list (1 … normalPR + mp, default = normalPR)
-  const prOpts = [];
-  for (let pr = 1; pr <= normalPR + mp; pr++) {
-    const st = manifestState(pr, normalPR);
-    const m = fetterPushModifier(pr, normalPR);
-    const tag = st === "normal" ? "Normal" : st === "fettered" ? `Fettered +${m}` : `Push ${m}`;
-    prOpts.push(`<option value="${pr}"${pr === normalPR ? " selected" : ""}>PR ${pr} — ${tag}</option>`);
-  }
+  // Cast options from the active ruleset (DH2 ladder / BC Fettered-Unfettered-Push).
+  // Option values encode "state:statePR" — BC PR-1 Fettered and Unfettered share a number but not a state.
+  const prOpts = psychicRuleset().castOptions(normalPR, psykerClass)
+    .map((o) => `<option value="${o.state}:${o.statePR}"${o.selected ? " selected" : ""}>${o.label}</option>`);
 
   // Battlemap: show the measured distance to the target (informational only — Focus Power tests take no range modifier).
   let rangeRow = "";
@@ -62,7 +55,8 @@ export async function rollManifest(actor, powerId) {
 
   const dialogContent = `
     ${rangeRow}
-    <div class="form-group"><label>Effective PR</label><select name="effPR">${prOpts.join("")}</select></div>
+    <div class="form-group"><label>Effective PR</label><select name="castChoice">${prOpts.join("")}</select></div>
+    <div class="form-group"><label>PR Bonus</label><input type="number" name="prBonus" value="0"/></div>
     <div class="form-group"><label>Circumstance Modifier</label><input type="text" name="modifier" value="+0"/></div>`;
 
   const choice = await DialogV2.prompt({
@@ -76,9 +70,11 @@ export async function rollManifest(actor, powerId) {
   });
   if (!choice) return null;
 
-  const effPR = Number(choice.effPR);
+  const [chosenState, chosenPR] = String(choice.castChoice).split(":");
+  const statePR = Number(chosenPR);
+  const prBonus = Number(choice.prBonus) || 0;
   const circ = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
-  return resolveManifest(actor, power, { effPR, circ });
+  return resolveManifest(actor, power, { state: chosenState, statePR, prBonus, circ });
 }
 
 /**
@@ -90,16 +86,21 @@ export async function rollManifest(actor, powerId) {
  * @returns {Promise<true|null>}
  */
 export async function resolveManifest(actor, power, opts) {
-  const { effPR, circ = 0, fixedRoll = null, dosBonus = 0, targetUuid: optsTargetUuid, targetName: optsTargetName } = opts;
+  const { circ = 0, prBonus = 0, fixedRoll = null, dosBonus = 0, targetUuid: optsTargetUuid, targetName: optsTargetName } = opts;
   const s = power.system;
 
   const normalPR = actor.system.psyRating ?? 0;
   const psykerClass = actor.system.psykerClass;
-  const state = manifestState(effPR, normalPR);
-  const pushPts = Math.max(0, effPR - normalPR);
+  const rs = psychicRuleset();
+  // Legacy reroll payloads (pre-PR-bonus cards) carry only effPR — treat it as the chosen rung, derive the state.
+  const statePR = opts.statePR ?? opts.effPR ?? normalPR;
+  const state = opts.state ?? manifestState(statePR, normalPR);
+  const pushPts = Math.max(0, statePR - normalPR);
+  // The PR bonus applies AFTER the state: effective PR drives substitution/hit caps/BC focus, floors at 1.
+  const effPR = Math.max(1, statePR + prBonus);
 
   const focus = resolveFocusTarget(actor.system, s.focusTest);
-  const focusMod = (s.focusModifier ?? 0) + fetterPushModifier(effPR, normalPR) + circ;
+  const focusMod = (s.focusModifier ?? 0) + rs.focusModifier(state, statePR, normalPR, effPR) + circ;
 
   // Roll + evaluate
   const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
@@ -116,11 +117,11 @@ export async function resolveManifest(actor, power, opts) {
   let phenTriggered = false, phenRoll = null, phenMod = 0, phenTotal = null, perilRoll = null;
   const extraRolls = [];
   if (fixedRoll == null) {
-    phenTriggered = phenomenaTriggers(psykerClass, state, doubles);
+    phenTriggered = rs.phenomenaTriggers(psykerClass, state, doubles);
     if (phenTriggered) {
       const pr = await new Roll("1d100").evaluate(); extraRolls.push(pr);
       phenRoll = pr.total;
-      phenMod = phenomenaModifier(psykerClass, state, pushPts);
+      phenMod = rs.phenomenaModifier(psykerClass, state, pushPts);
       phenTotal = phenRoll + phenMod;
       if (phenTotal >= 75) { const per = await new Roll("1d100").evaluate(); extraRolls.push(per); perilRoll = per.total; }
     }
@@ -138,13 +139,16 @@ export async function resolveManifest(actor, power, opts) {
     ?? focus.key
   );
   const powerTypeLabel = CONFIG.BDH.psychicTypes[s.type] ?? s.type;
-  const prLabel = state === "normal" ? `PR ${effPR}` : state === "fettered" ? `Fettered PR ${effPR}` : `Pushed PR ${effPR}`;
+  const prBase = state === "normal" ? "PR" : state === "fettered" ? "Fettered PR" : "Pushed PR";
+  const prLabel = prBonus !== 0
+    ? `${prBase} ${statePR} (${prBonus > 0 ? "+" : ""}${prBonus} → ${effPR})`
+    : `${prBase} ${effPR}`;
   const modifierLabel = `${modifier >= 0 ? "+" : ""}${modifier}`;
   const daemonicNote = (psykerClass === "daemonic" && phenTriggered)
     ? "Daemonic — unaffected by its own phenomena." : "";
 
   // Reroll payload — stored on both flag shapes so the new card is itself rerollable
-  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, effPR, circ, targetUuid, targetName, roll: roll.total, success, dosBonus };
+  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, state, statePR, prBonus, circ, targetUuid, targetName, roll: roll.total, success, dosBonus };
 
   // --- Attack-type branch (Bolt / Barrage / Storm / Blast) ---
   let attackFlags = null;
