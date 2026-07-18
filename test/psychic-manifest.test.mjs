@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   maxPush, manifestState, fetterPushModifier, isDoubles,
   phenomenaTriggers, phenomenaModifier, substitutePR, resolveFocusTarget,
+  bcMaxPush, bcFetteredPR, bcPhenomenaTriggers, bcPhenomenaModifier,
 } from "../scripts/helpers/psychic-manifest.mjs";
 
 describe("maxPush", () => {
@@ -86,5 +87,64 @@ describe("resolveFocusTarget", () => {
   });
   it("falls back to willpower for an unknown key", () => {
     expect(resolveFocusTarget(system, "nope")).toEqual({ kind: "characteristic", key: "willpower", total: 45 });
+  });
+});
+
+describe("bcMaxPush", () => {
+  it("by class: bound 3, unbound 5, daemonic 4", () => {
+    expect(bcMaxPush("bound")).toBe(3);
+    expect(bcMaxPush("unbound")).toBe(5);
+    expect(bcMaxPush("daemonic")).toBe(4);
+    expect(bcMaxPush("???")).toBe(0);
+  });
+});
+
+describe("bcFetteredPR", () => {
+  it("half PR rounded up", () => {
+    expect(bcFetteredPR(1)).toBe(1);
+    expect(bcFetteredPR(3)).toBe(2);
+    expect(bcFetteredPR(4)).toBe(2);
+    expect(bcFetteredPR(5)).toBe(3);
+  });
+});
+
+describe("bcPhenomenaTriggers", () => {
+  it("fettered never, even on doubles", () => {
+    for (const c of ["bound", "unbound", "daemonic"]) {
+      expect(bcPhenomenaTriggers(c, "fettered", true)).toBe(false);
+      expect(bcPhenomenaTriggers(c, "fettered", false)).toBe(false);
+    }
+  });
+  it("unfettered (normal) on doubles only, all classes", () => {
+    for (const c of ["bound", "unbound", "daemonic"]) {
+      expect(bcPhenomenaTriggers(c, "normal", true)).toBe(true);
+      expect(bcPhenomenaTriggers(c, "normal", false)).toBe(false);
+    }
+  });
+  it("pushed always, all classes", () => {
+    for (const c of ["bound", "unbound", "daemonic"]) {
+      expect(bcPhenomenaTriggers(c, "pushed", true)).toBe(true);
+      expect(bcPhenomenaTriggers(c, "pushed", false)).toBe(true);
+    }
+  });
+});
+
+describe("bcPhenomenaModifier", () => {
+  it("non-push: +10 unbound/daemonic, 0 bound", () => {
+    expect(bcPhenomenaModifier("bound", "normal", 0)).toBe(0);
+    expect(bcPhenomenaModifier("unbound", "normal", 0)).toBe(10);
+    expect(bcPhenomenaModifier("daemonic", "normal", 0)).toBe(10);
+  });
+  it("push: bound flat +10 regardless of depth", () => {
+    expect(bcPhenomenaModifier("bound", "pushed", 1)).toBe(10);
+    expect(bcPhenomenaModifier("bound", "pushed", 3)).toBe(10);
+  });
+  it("push: unbound 5/pt capped at 25", () => {
+    expect(bcPhenomenaModifier("unbound", "pushed", 2)).toBe(10);
+    expect(bcPhenomenaModifier("unbound", "pushed", 5)).toBe(25);
+  });
+  it("push: daemonic 10/pt capped at 40", () => {
+    expect(bcPhenomenaModifier("daemonic", "pushed", 3)).toBe(30);
+    expect(bcPhenomenaModifier("daemonic", "pushed", 4)).toBe(40);
   });
 });

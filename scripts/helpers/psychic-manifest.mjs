@@ -38,6 +38,31 @@ export function phenomenaModifier(psykerClass, state, pushPoints) {
   return (psykerClass === "unbound" || psykerClass === "daemonic") ? 10 : 0;
 }
 
+/** Black Crusade push limits by class. */
+export const BC_MAX_PUSH = { bound: 3, unbound: 5, daemonic: 4 };
+export function bcMaxPush(psykerClass) { return BC_MAX_PUSH[psykerClass] ?? 0; }
+
+/** BC Fettered manifests at half PR, rounded up. (Daemonic cannot fetter — enforced by the ruleset's castOptions.) */
+export function bcFetteredPR(normalPR) { return Math.ceil(normalPR / 2); }
+
+/** BC phenomena trigger: fettered never; unfettered on doubles; push always (all classes). */
+export function bcPhenomenaTriggers(psykerClass, state, doubles) {
+  if (state === "fettered") return false;
+  if (state === "pushed") return true;
+  return doubles;
+}
+
+/** BC phenomena modifier: push — bound flat +10, unbound 5×pts cap +25, daemonic 10×pts cap +40;
+ *  non-push — standing +10 for unbound/daemonic, 0 for bound (fettered never triggers, so moot). */
+export function bcPhenomenaModifier(psykerClass, state, pushPoints) {
+  if (state === "pushed") {
+    if (psykerClass === "unbound")  return Math.min(5 * pushPoints, 25);
+    if (psykerClass === "daemonic") return Math.min(10 * pushPoints, 40);
+    return 10;
+  }
+  return (psykerClass === "unbound" || psykerClass === "daemonic") ? 10 : 0;
+}
+
 /** Substitute the effective PR into a formula token (handles +PR, *PR, bare PR). */
 export function substitutePR(formula, effectivePR) {
   return String(formula ?? "").replace(/\bPR\b/gi, String(effectivePR));
