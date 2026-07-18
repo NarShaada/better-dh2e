@@ -206,6 +206,17 @@ Hooks.once("init", () => {
     onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
   });
 
+  game.settings.register("better-dh2e", "psychicRules", {
+    name: "Psychic Rules",
+    hint: "Manifestation rules for psychic powers. Dark Heresy 2: per-point fetter/push ladder. Black Crusade: Fettered (half PR, phenomena-immune) / Unfettered / Push, +5×PR focus bonus, BC phenomena modifiers.",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: { dh2: "Dark Heresy 2", bc: "Black Crusade" },
+    default: "dh2",
+    onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
+  });
+
   registerTokenPrefix();
 
   // Conditions — replace Foundry's default set with our DH2e set.
