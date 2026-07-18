@@ -184,6 +184,28 @@ Hooks.once("init", () => {
     default: false,
   });
 
+  // --- Black Crusade conversion (per-area rule selection; both data variants always stored) ---
+  game.settings.register("better-dh2e", "advancementRules", {
+    name: "Advancement Rules",
+    hint: "Dark Heresy 2: aptitudes + DH2 XP costs. Black Crusade: alignment + BC XP costs. Non-destructive — both aptitudes and alignment stay stored on every character.",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: { dh2: "Dark Heresy 2", bc: "Black Crusade" },
+    default: "dh2",
+    onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
+  });
+  game.settings.register("better-dh2e", "sheetHeaderStyle", {
+    name: "Sheet Header Style",
+    hint: "Bio fields shown in the character header. Dark Heresy 2: Home World / Background / Role / Elite. Black Crusade: Race / Archetype / Pride / Disgrace / Motivation. Both sets are always stored.",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: { dh2: "Dark Heresy 2", bc: "Black Crusade" },
+    default: "dh2",
+    onChange: () => { foundry.applications.instances.forEach((app) => { if (app.rendered) app.render(false); }); }
+  });
+
   registerTokenPrefix();
 
   // Conditions — replace Foundry's default set with our DH2e set.
