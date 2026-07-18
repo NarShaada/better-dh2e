@@ -10,12 +10,16 @@
     <div class="bdh-fields">
       <label>Tier</label><select name="system.tier">{{selectOptions tierChoices selected=system.tier}}</select>
       <label>Prerequisites</label><input type="text" name="system.prerequisites" value="{{system.prerequisites}}"/>
-      <label>Aptitudes</label>
-      <div class="bdh-apt-list">
-        {{#each system.aptitudes as |a|}}<span class="bdh-apt-chip">{{a}} <a data-action="removeAptitude" data-aptitude="{{a}}" title="Remove">✕</a></span>{{/each}}
-        {{#unless system.aptitudes.length}}<span class="bdh-empty">None.</span>{{/unless}}
-      </div>
-      <div class="bdh-apt-add"><select class="bdh-apt-pick">{{#each availableAptitudes}}<option value="{{this}}">{{this}}</option>{{/each}}</select><button type="button" data-action="addAptitude">Add</button></div>
+      {{#if bcAdvancement}}
+        <label>Alignment</label><select name="system.alignment">{{selectOptions alignmentChoices selected=system.alignment}}</select>
+      {{else}}
+        <label>Aptitudes</label>
+        <div class="bdh-apt-list">
+          {{#each system.aptitudes as |a|}}<span class="bdh-apt-chip">{{a}} <a data-action="removeAptitude" data-aptitude="{{a}}" title="Remove">✕</a></span>{{/each}}
+          {{#unless system.aptitudes.length}}<span class="bdh-empty">None.</span>{{/unless}}
+        </div>
+        <div class="bdh-apt-add"><select class="bdh-apt-pick">{{#each availableAptitudes}}<option value="{{this}}">{{this}}</option>{{/each}}</select><button type="button" data-action="addAptitude">Add</button></div>
+      {{/if}}
     </div>
   {{/if}}
 

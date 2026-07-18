@@ -6,6 +6,7 @@ import { filterQualityChoices } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { canGrant, grantHostType } from "../helpers/grants-data.mjs";
 import { grantsFolder } from "../cybernetics/grants.mjs";
+import { bcAdvancement } from "../helpers/advancement-ruleset.mjs";
 
 const STAT_MOD_LABELS = {
   moveAll: "Movement (all bands)", moveHalf: "Movement: Half", moveFull: "Movement: Full",
@@ -200,6 +201,8 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.showQualityCogs = homebrewQualitiesEnabled();
     if (context.isTalent) {
       context.availableAptitudes = BDH.aptitudes.filter((a) => !(system.aptitudes ?? []).includes(a));
+      context.bcAdvancement = bcAdvancement();
+      context.alignmentChoices = BDH.alignments;
     }
 
     if (context.isPsychicPower) {
