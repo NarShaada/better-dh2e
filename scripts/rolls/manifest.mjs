@@ -82,7 +82,8 @@ export async function rollManifest(actor, powerId) {
  * builds the cast card, and creates the ChatMessage. Called by rollManifest and by fate.mjs rerolls.
  * @param {Actor} actor
  * @param {Item}  power   — the psychicPower Item (already looked up)
- * @param {{ effPR: number, circ?: number, targetUuid?: string|null, targetName?: string|null }} opts
+ * @param {{ state?: string, statePR?: number, prBonus?: number, effPR?: number, circ?: number, targetUuid?: string|null, targetName?: string|null }} opts
+ *   — state/statePR/prBonus are the cast parameters; effPR is accepted for legacy reroll payloads only.
  * @returns {Promise<true|null>}
  */
 export async function resolveManifest(actor, power, opts) {
