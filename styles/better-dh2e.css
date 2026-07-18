@@ -409,3 +409,11 @@
 .better-dh2e .veh-wrow:last-child { border-bottom:none; }
 .better-dh2e .veh-wdrop { text-align:center; font-style:italic; color:var(--bdh-muted); border:1px dashed var(--bdh-brown); border-radius:4px; padding:4px; font-size:11px; margin-top:3px; }
 .better-dh2e .veh-soon { opacity:.7; font-size:10px; }
+
+/* BC advancement — alignment selector + per-god purchase tallies */
+.better-dh2e .bdh-align-row { display:flex; align-items:center; gap:8px; padding:4px 10px; }
+.better-dh2e .bdh-align-val { font-weight:bold; color:var(--bdh-maroon); font-variant:small-caps; letter-spacing:1px; }
+.better-dh2e .bdh-god-tallies { display:flex; flex-wrap:wrap; gap:10px; padding:4px 10px; }
+.better-dh2e .bdh-god-tally { font-size:12px; border:1px solid var(--bdh-brown); border-radius:4px; padding:2px 8px; background:var(--bdh-panel); }
+.better-dh2e .bdh-god-tally b { font-variant:small-caps; letter-spacing:1px; margin-right:4px; color:var(--bdh-maroon); }
+.better-dh2e .bdh-tally-hint { padding:0 10px 6px; }

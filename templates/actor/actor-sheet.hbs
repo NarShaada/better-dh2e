@@ -8,10 +8,18 @@
       <div class="nm"><input type="text" name="name" value="{{document.name}}" placeholder="Name"/></div>
       <div class="bio-row">
         {{#if system.bio}}
-          <div class="bio"><b>Home World</b>{{#if isCustom}}<input type="text" name="system.bio.homeWorld" value="{{system.bio.homeWorld}}"/>{{else}}<span>{{system.bio.homeWorld}}</span>{{/if}}</div>
-          <div class="bio"><b>Background</b>{{#if isCustom}}<input type="text" name="system.bio.background" value="{{system.bio.background}}"/>{{else}}<span>{{system.bio.background}}</span>{{/if}}</div>
-          <div class="bio"><b>Role</b>{{#if isCustom}}<input type="text" name="system.bio.role" value="{{system.bio.role}}"/>{{else}}<span>{{system.bio.role}}</span>{{/if}}</div>
-          <div class="bio"><b>Elite</b>{{#if isCustom}}<input type="text" name="system.bio.elite" value="{{system.bio.elite}}"/>{{else}}<span>{{system.bio.elite}}</span>{{/if}}</div>
+          {{#if bcHeader}}
+            <div class="bio"><b>Race</b>{{#if isCustom}}<input type="text" name="system.bio.race" value="{{system.bio.race}}"/>{{else}}<span>{{system.bio.race}}</span>{{/if}}</div>
+            <div class="bio"><b>Archetype</b>{{#if isCustom}}<input type="text" name="system.bio.archetype" value="{{system.bio.archetype}}"/>{{else}}<span>{{system.bio.archetype}}</span>{{/if}}</div>
+            <div class="bio"><b>Pride</b>{{#if isCustom}}<input type="text" name="system.bio.pride" value="{{system.bio.pride}}"/>{{else}}<span>{{system.bio.pride}}</span>{{/if}}</div>
+            <div class="bio"><b>Disgrace</b>{{#if isCustom}}<input type="text" name="system.bio.disgrace" value="{{system.bio.disgrace}}"/>{{else}}<span>{{system.bio.disgrace}}</span>{{/if}}</div>
+            <div class="bio"><b>Motivation</b>{{#if isCustom}}<input type="text" name="system.bio.motivation" value="{{system.bio.motivation}}"/>{{else}}<span>{{system.bio.motivation}}</span>{{/if}}</div>
+          {{else}}
+            <div class="bio"><b>Home World</b>{{#if isCustom}}<input type="text" name="system.bio.homeWorld" value="{{system.bio.homeWorld}}"/>{{else}}<span>{{system.bio.homeWorld}}</span>{{/if}}</div>
+            <div class="bio"><b>Background</b>{{#if isCustom}}<input type="text" name="system.bio.background" value="{{system.bio.background}}"/>{{else}}<span>{{system.bio.background}}</span>{{/if}}</div>
+            <div class="bio"><b>Role</b>{{#if isCustom}}<input type="text" name="system.bio.role" value="{{system.bio.role}}"/>{{else}}<span>{{system.bio.role}}</span>{{/if}}</div>
+            <div class="bio"><b>Elite</b>{{#if isCustom}}<input type="text" name="system.bio.elite" value="{{system.bio.elite}}"/>{{else}}<span>{{system.bio.elite}}</span>{{/if}}</div>
+          {{/if}}
         {{/if}}
         {{#if isNpc}}
           <div class="bio"><b>Faction</b>{{#if isCustom}}<input type="text" name="system.faction" value="{{system.faction}}"/>{{else}}<span>{{system.faction}}</span>{{/if}}</div>
@@ -259,7 +267,7 @@
           {{#if @root.isSimple}}
             {{#if t.purchased}}<span class="bdh-cost-done">{{t.cost}} xp ✓</span>
             {{else if t.valid}}<button type="button" class="bdh-buy" data-action="buyTalent">Buy {{t.cost}}</button>
-            {{else}}<span class="bdh-warn">set tier + 2 aptitudes</span>{{/if}}
+            {{else}}<span class="bdh-warn">{{@root.talentBuyWarning}}</span>{{/if}}
           {{else}}{{#unless t.purchased}}<span class="bdh-warn">unpaid</span>{{/unless}}{{/if}}
           {{#unless @root.isPlay}}{{#unless t.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{/unless}}{{#if t.granted}}<span class="bdh-tag bdh-granted" title="{{t.grantedBy}}">⚙</span>{{/if}}
         </div>
@@ -454,6 +462,24 @@
         <label>Free</label><span class="bdh-xp-v bdh-xp-free">{{experience.free}}</span>
       </div>{{/unless}}
     </div>
+    {{#if bcAdvancement}}
+    <div class="bdh-section">
+      <div class="bdh-section-head">Alignment <span class="bdh-hint2">devotion among the Ruinous Powers</span></div>
+      <div class="bdh-align-row">
+        {{#if isCustom}}
+          <select class="bdh-edit" name="system.alignment">{{selectOptions alignmentChoices selected=system.alignment}}</select>
+        {{else}}
+          <span class="bdh-align-val">{{alignmentLabel}}</span>
+        {{/if}}
+      </div>
+      {{#unless isNpc}}
+      <div class="bdh-god-tallies">
+        {{#each godTallies as |g|}}<span class="bdh-god-tally"><b>{{g.label}}</b> {{g.count}}</span>{{/each}}
+      </div>
+      <div class="bdh-hint2 bdh-tally-hint">Simple-mode purchases per power (counted since Black Crusade advancement was enabled).</div>
+      {{/unless}}
+    </div>
+    {{else}}
     <div class="bdh-section">
       <div class="bdh-section-head">Aptitudes <span class="bdh-hint2">the character's fixed aptitudes</span></div>
       <div class="bdh-apt-list">
@@ -467,6 +493,7 @@
         </div>
       {{/if}}
     </div>
+    {{/if}}
     {{#unless isNpc}}<div class="bdh-section">
       <div class="bdh-section-head">Advancement Log</div>
       {{#each advancementLog as |e|}}
