@@ -10,7 +10,8 @@ import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
-import { aptitudeMatches, characteristicCost, skillCost, talentCost, psyRatingCost, RANK_ORDER, purchasedOnAcquire } from "../helpers/advancement-costs.mjs";
+import { RANK_ORDER, purchasedOnAcquire } from "../helpers/advancement-costs.mjs";
+import { advancementRuleset, bcHeader } from "../helpers/advancement-ruleset.mjs";
 import { carryLimits } from "../helpers/encumbrance-data.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -208,10 +209,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
     list.push({ id, name: "New Specialty", rank: "known", favourite: false });
     if (this._advancementMode === "simple") {
-      const matches = aptitudeMatches(CONFIG.BDH.skills[key].aptitudes, this.actor.system.aptitudes);
-      const cost = skillCost(matches, "untrained");
+      const rs = advancementRuleset();
+      const cost = rs.skillCost(rs.skillMatches(this.actor.system, key), "untrained");
       const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list },
-        { type: "specialty", label: `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (new)`, detail: "→ Known", cost, ref: key, specialtyId: id, toRank: "known" });
+        { type: "specialty", label: `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (new)`, detail: "→ Known", cost, ref: key, specialtyId: id, toRank: "known", god: rs.godOfSkill(key) });
       if (upd) await this.actor.update(upd);
       return;
     }
@@ -389,24 +390,25 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
   /** Action: buy the next +5 characteristic advance (Simple). */
   static async #onBuyCharacteristic(event, target) {
     const key = target.dataset.characteristic;
+    const rs = advancementRuleset();
     const owned = (this.actor.system.characteristics[key].advance ?? 0) / 5;
-    const matches = aptitudeMatches(CONFIG.BDH.characteristics[key].aptitudes, this.actor.system.aptitudes);
-    const cost = characteristicCost(matches, owned);
+    const cost = rs.characteristicCost(rs.charMatches(this.actor.system, key), owned);
     if (cost == null) return;
     const label = game.i18n.localize(CONFIG.BDH.characteristics[key].label);
     const upd = this.#chargeXP({ [`system.characteristics.${key}.advance`]: (owned + 1) * 5 },
-      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost, ref: key, specialtyId: "", toRank: String(owned + 1) });
+      { type: "characteristic", label, detail: `+5 (advance ${owned + 1})`, cost, ref: key, specialtyId: "", toRank: String(owned + 1), god: rs.godOfChar(key) });
     if (upd) await this.actor.update(upd);
   }
 
-  /** Action: buy the next psy rating (Simple) — 200 × new level; first rating is Custom-only. */
+  /** Action: buy the next psy rating (Simple) — DH2: 200 × new level; BC: flat 750. First rating is Custom-only. */
   static async #onBuyPsyRating(event, target) {
     const pr = this.actor.system.psyRating ?? 0;
     if (pr < 1) return;
+    const rs = advancementRuleset();
     const next = pr + 1;
-    const cost = psyRatingCost(next);
+    const cost = rs.psyRatingCost(next);
     const upd = this.#chargeXP({ "system.psyRating": next },
-      { type: "psyRating", label: "Psy Rating", detail: `→ ${next}`, cost, ref: "", specialtyId: "", toRank: String(next) });
+      { type: "psyRating", label: "Psy Rating", detail: `→ ${next}`, cost, ref: "", specialtyId: "", toRank: String(next), god: rs.psyRatingGod });
     if (upd) await this.actor.update(upd);
   }
 
@@ -415,11 +417,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const key = target.dataset.skill;
     const rank = this.actor.system.skills[key].rank;
     const next = RANK_ORDER[RANK_ORDER.indexOf(rank) + 1];
-    const matches = aptitudeMatches(CONFIG.BDH.skills[key].aptitudes, this.actor.system.aptitudes);
-    const cost = skillCost(matches, rank);
+    const rs = advancementRuleset();
+    const cost = rs.skillCost(rs.skillMatches(this.actor.system, key), rank);
     if (cost == null || !next) return;
     const label = game.i18n.localize(CONFIG.BDH.skills[key].label);
-    const upd = this.#chargeXP({ [`system.skills.${key}.rank`]: next }, { type: "skill", label, detail: `→ ${next}`, cost, ref: key, specialtyId: "", toRank: next });
+    const upd = this.#chargeXP({ [`system.skills.${key}.rank`]: next },
+      { type: "skill", label, detail: `→ ${next}`, cost, ref: key, specialtyId: "", toRank: next, god: rs.godOfSkill(key) });
     if (upd) await this.actor.update(upd);
   }
 
@@ -430,26 +433,28 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
     const sp = list[idx];
     const next = RANK_ORDER[RANK_ORDER.indexOf(sp.rank) + 1];
-    const matches = aptitudeMatches(CONFIG.BDH.skills[key].aptitudes, this.actor.system.aptitudes);
-    const cost = skillCost(matches, sp.rank);
+    const rs = advancementRuleset();
+    const cost = rs.skillCost(rs.skillMatches(this.actor.system, key), sp.rank);
     if (cost == null || !next) return;
     sp.rank = next;
     const label = `${game.i18n.localize(CONFIG.BDH.skills[key].label)} (${sp.name})`;
-    const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list }, { type: "specialty", label, detail: `→ ${next}`, cost, ref: key, specialtyId: sp.id, toRank: next });
+    const upd = this.#chargeXP({ [`system.skills.${key}.specialties`]: list },
+      { type: "specialty", label, detail: `→ ${next}`, cost, ref: key, specialtyId: sp.id, toRank: next, god: rs.godOfSkill(key) });
     if (upd) await this.actor.update(upd);
   }
 
-  /** Action: buy a talent (Simple) — requires tier + exactly 2 aptitudes; charge once. */
+  /** Action: buy a talent (Simple) — DH2: tier + exactly 2 aptitudes; BC: tier (alignment is always valid). */
   static async #onBuyTalent(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
     const item = this.actor.items.get(id);
     if (!item || item.system.purchased) return;
-    if ((item.system.aptitudes?.length ?? 0) !== 2 || !(item.system.tier >= 1)) {
-      ui.notifications.warn("Set a tier and exactly two aptitudes on the talent before buying.");
+    const rs = advancementRuleset();
+    if (!rs.talentValid(item.system)) {
+      ui.notifications.warn(rs.talentInvalidWarning);
       return;
     }
-    const cost = talentCost(aptitudeMatches(item.system.aptitudes, this.actor.system.aptitudes), item.system.tier);
-    const upd = this.#chargeXP({}, { type: "talent", label: item.name, detail: `Tier ${item.system.tier}`, cost, ref: item.id, specialtyId: "", toRank: "" });
+    const cost = rs.talentCost(rs.talentMatches(this.actor.system, item.system), item.system.tier);
+    const upd = this.#chargeXP({}, { type: "talent", label: item.name, detail: `Tier ${item.system.tier}`, cost, ref: item.id, specialtyId: "", toRank: "", god: rs.godOfTalent(item.system) });
     if (!upd) return;
     await item.update({ "system.purchased": true });
     await this.actor.update(upd);
@@ -738,6 +743,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.isCustom = this._advancementMode === "custom";
     context.isSimple = this._advancementMode === "simple";
     context.isPlay = !context.isCustom && !context.isSimple;
+    const rs = advancementRuleset();
+    context.bcAdvancement = rs.key === "bc";
+    context.bcHeader = bcHeader();
+    context.talentBuyWarning = rs.talentWarnShort;
     // Fate pips for the top bar: one per max, the first `value` filled.
     const fv = this.document.system.fate?.value ?? 0, fm = this.document.system.fate?.max ?? 0;
     context.fatePips = Array.from({ length: fm }, (_, i) => ({ on: i < fv }));
@@ -746,7 +755,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.psykerClassChoices = CONFIG.BDH.psykerClasses;
     context.psykerClassLabel = CONFIG.BDH.psykerClasses[this.document.system.psykerClass] ?? "—";
     context.canBuyPsyRating = context.isSimple && pr >= 1;
-    context.psyRatingNextCost = psyRatingCost(pr + 1);
+    context.psyRatingNextCost = rs.psyRatingCost(pr + 1);
     context.isNpc = this.document.type === "npc";
     context.isHorde = this.document.type === "horde";
     context.availableAptitudes = BDH.aptitudes.filter((a) => !(this.document.system.aptitudes ?? []).includes(a));
@@ -759,28 +768,37 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const initKey = sys.initiative.characteristic;
     context.initBonus = sys.characteristics[initKey].bonus;
     context.initShort = BDH.characteristics[initKey].short;
-    // Simple-mode cost data (cheap; the template reads it only when isSimple).
-    const apts = sys.aptitudes;
+    // Simple-mode cost data (cheap; the template reads it only when isSimple). Ruleset-aware:
+    // DH2 = aptitude matches, 5 char tiers, Influence blocked; BC = alignment matches, 4 tiers, Influence buyable.
     context.characteristics = context.characteristics.map((c) => {
-      if (c.key === "influence") return { ...c, noAdvance: true };
+      if (rs.noAdvanceChars.includes(c.key)) return { ...c, noAdvance: true };
       const owned = (sys.characteristics[c.key].advance ?? 0) / 5;
-      const matches = aptitudeMatches(BDH.characteristics[c.key].aptitudes, apts);
-      return { ...c, owned, advDots: [0, 1, 2, 3, 4].map((i) => i < owned), nextCost: characteristicCost(matches, owned) };
+      return { ...c, owned, advDots: Array.from({ length: rs.charTiers }, (_, i) => i < owned), nextCost: rs.characteristicCost(rs.charMatches(sys, c.key), owned) };
     });
     context.skills = context.skills.map((s) => {
-      const matches = aptitudeMatches(BDH.skills[s.key].aptitudes, apts);
+      const matches = rs.skillMatches(sys, s.key);
       if (s.specialist) {
-        return { ...s, addCost: skillCost(matches, "untrained"), specialties: s.specialties.map((sp) => ({ ...sp, nextCost: skillCost(matches, sp.rank) })) };
+        return { ...s, addCost: rs.skillCost(matches, "untrained"), specialties: s.specialties.map((sp) => ({ ...sp, nextCost: rs.skillCost(matches, sp.rank) })) };
       }
-      return { ...s, nextCost: skillCost(matches, s.rank) };
+      return { ...s, nextCost: rs.skillCost(matches, s.rank) };
     });
     context.talents = context.talents.map((t) => {
       const tsys = items.get(t.id).system;
-      const valid = (tsys.aptitudes?.length === 2) && tsys.tier >= 1;
-      const cost = valid ? talentCost(aptitudeMatches(tsys.aptitudes, apts), tsys.tier) : null;
+      const valid = rs.talentValid(tsys);
+      const cost = valid ? rs.talentCost(rs.talentMatches(sys, tsys), tsys.tier) : null;
       return { ...t, cost, valid, purchased: tsys.purchased ?? false };
     });
     context.advancementLog = sys.advancementLog;
+    // BC Advancement-tab extras: alignment selector + per-god purchase tallies (display only).
+    context.alignmentChoices = BDH.alignments;
+    context.alignmentLabel = BDH.alignments[sys.alignment] ?? "Unaligned";
+    if (context.bcAdvancement) {
+      const godOrder = ["khorne", "nurgle", "slaanesh", "tzeentch", "unaligned"];
+      context.godTallies = godOrder.map((k) => ({
+        key: k, label: BDH.alignments[k],
+        count: sys.advancementLog.filter((e) => e.god === k).length
+      }));
+    }
     // The Custom-mode dropdown edits the stored BASE size; the display shows the EFFECTIVE size
     // (base + any installed-cybernetic size mod). Binding the dropdown to the derived value would
     // write base+mod back to source and double-apply the mod on the next derive.
