@@ -147,6 +147,7 @@ body.bdh-themed .better-dh2e .bdh-add { background:transparent; color:var(--t-mu
 body.bdh-themed .better-dh2e .bdh-add:hover { color:var(--t-gold); }
 body.bdh-themed .better-dh2e .bdh-tag { color:var(--t-muted); border-color:var(--t-line2); border-radius:0; }
 body.bdh-themed .better-dh2e .bdh-clip { font-family:var(--t-mono); color:var(--t-ink); background:var(--t-field); border:1px solid var(--t-line2); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-loaded { font-family:var(--t-cond); color:var(--t-gold); border:1px solid var(--t-line2); border-radius:0; }
 body.bdh-themed .better-dh2e .bdh-eq.on { color:var(--t-green); }
 body.bdh-themed .better-dh2e .bdh-gear-bar { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-gear-bar b { color:var(--t-ink2); font-family:var(--t-mono); }

@@ -9,7 +9,7 @@
     <div class="bdh-stat"><b>{{modifierLabel}}</b><span>Modifier</span></div>
     <div class="bdh-stat rolled"><b>{{roll}}</b><span>Rolled</span></div>
   </div>
-  <div class="bdh-card-line quals">{{attackTypeLabel}}{{#if aimLabel}} &middot; {{aimLabel}}{{/if}}{{#if rangeLabel}} &middot; {{rangeLabel}}{{/if}}{{#if attackNotes}} &middot; <span class="qn">{{attackNotes}}</span>{{/if}}</div>
+  <div class="bdh-card-line quals">{{attackTypeLabel}}{{#if aimLabel}} &middot; {{aimLabel}}{{/if}}{{#if rangeLabel}} &middot; {{rangeLabel}}{{/if}}{{#if attackNotes}} &middot; <span class="qn">{{attackNotes}}</span>{{/if}}{{#if loadedAmmo}} &middot; <span class="qn">{{loadedAmmo}}</span>{{/if}}</div>
   {{#if helplessNote}}<div class="bdh-card-line"><span class="qn">{{helplessNote}}</span></div>{{/if}}
   <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
     {{#if success}}{{#if hasHits}}Hit{{#if multiHit}} &times;{{hitCount}}{{/if}}{{else}}Success{{/if}}{{else}}Miss{{/if}}

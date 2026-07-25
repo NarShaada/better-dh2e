@@ -13,6 +13,7 @@ import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
 import { RANK_ORDER, purchasedOnAcquire } from "../helpers/advancement-costs.mjs";
 import { advancementRuleset, bcHeader } from "../helpers/advancement-ruleset.mjs";
 import { carryLimits } from "../helpers/encumbrance-data.mjs";
+import { totalMagazines, magazineWeight } from "../helpers/weapon-effects.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -279,11 +280,49 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update(upd);
   }
 
-  /** Action: reload a weapon — refill its clip to max. */
+  /** Action: reload a weapon. With no stocked ammo this refills the clip exactly as before;
+   *  otherwise it offers plain reload or loading a specific magazine type. */
   static async #onReloadWeapon(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
     const item = this.actor.items.get(id);
-    if (item) await item.update({ "system.clip.value": item.system.clip.max });
+    if (!item) return;
+
+    const stock = item.system.ammo ?? [];
+    if (!stock.length) {   // unchanged behaviour for every weapon that ignores this feature
+      await item.update({ "system.clip.value": item.system.clip.max, "system.loadedAmmo": null });
+      return;
+    }
+
+    const { DialogV2 } = foundry.applications.api;
+    const opts = stock.map((a, i) =>
+      `<option value="${i}"${a.count <= 0 ? " disabled" : ""}>${a.name} (${a.count})</option>`).join("");
+    const content = `<div class="bdh-reload-dialog">
+      <div class="form-group"><label><input type="checkbox" name="useAmmo"/> Use Ammo</label></div>
+      <div class="form-group"><label>Type</label><select name="index">${opts}</select></div>
+    </div>`;
+
+    const choice = await DialogV2.prompt({
+      window: { title: `Reload — ${item.name}` }, position: { width: 340 }, content, rejectClose: false,
+      ok: { label: "Reload", callback: (ev, button) => {
+        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
+        return { useAmmo: !!f.useAmmo, index: Number(f.index) };
+      } }
+    });
+    if (!choice) return;
+
+    const update = { "system.clip.value": item.system.clip.max };
+    if (choice.useAmmo) {
+      const entry = stock[choice.index];
+      if (!entry || entry.count <= 0) return ui.notifications.warn("No magazines of that type left.");
+      const ammo = foundry.utils.deepClone(stock);
+      ammo[choice.index].count -= 1;
+      update["system.ammo"] = ammo;
+      const { count, ...snapshot } = entry;   // loaded rounds are no longer stock
+      update["system.loadedAmmo"] = foundry.utils.deepClone(snapshot);
+    } else {
+      update["system.loadedAmmo"] = null;
+    }
+    await item.update(update);
   }
 
   /** Action: add a Lasting Injury or Characteristic Damage entry via a type-picker dialog. */
@@ -631,6 +670,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       return {
         id: w.id, name: w.name, equipped: s.equipped, hordeEquipped: s.hordeEquipped, summary: parts.join(" · "),
         usesAmmo: flags.usesAmmo, clip: `${s.clip.value}/${s.clip.max}`,
+        mags: totalMagazines(s), loadedAmmo: s.loadedAmmo?.name ?? "",
         granted: !!w.getFlag("better-dh2e", "grantedBy"), grantedBy: grantedBy(w)
       };
     });
@@ -651,7 +691,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.carriedWeight = items.reduce((sum, i) => {
       const w = i.system.weight ?? 0;
       if (i.type === "gear") return sum + w * (i.system.quantity ?? 1);
-      if (i.type === "weapon" || i.type === "armour" || i.type === "forceField") return sum + w;
+      if (i.type === "weapon") return sum + w + magazineWeight(i.system);
+      if (i.type === "armour" || i.type === "forceField") return sum + w;
       return sum;
     }, 0);
     const encSum = (this.document.system.characteristics.strength.bonus ?? 0) + (this.document.system.characteristics.toughness.bonus ?? 0) + (this.document.system.carryMod ?? 0);
@@ -674,7 +715,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         id: w.id, name: w.name,
         attackChar: (w.system.weaponClass === "melee" ? BDH.characteristics.weaponSkill : BDH.characteristics.ballisticSkill).short,
         summary: `${w.system.damage} ${BDH.damageTypes[w.system.damageType] ?? ""} · Pen ${w.system.penetration}`,
-        usesAmmo: flags.usesAmmo, clip: `${w.system.clip.value}/${w.system.clip.max}`
+        usesAmmo: flags.usesAmmo, clip: `${w.system.clip.value}/${w.system.clip.max}`,
+        mags: totalMagazines(w.system), loadedAmmo: w.system.loadedAmmo?.name ?? ""
       };
     });
     context.favTalents = items.filter((i) => i.type === "talent" && i.system.favourite)

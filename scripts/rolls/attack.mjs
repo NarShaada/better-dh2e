@@ -1590,6 +1590,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     attackTypeLabel: at.label,
     aimLabel,
     rangeLabel,
+    loadedAmmo: weapon.system.loadedAmmo?.name ?? "",
     hits,
     jammed,
     overheated,
