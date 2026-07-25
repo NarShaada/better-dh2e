@@ -433,3 +433,8 @@ body.bdh-theme-heretic .bdh-card-head {
 body.bdh-theme-heretic .bdh-card-result {
   clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
+
+/* 9. Vehicle chips: Heretic's --t-gold2 is a dark brass, so the shared dark-on-accent
+      text lands at 2.75:1 on 9-11px type. Light ink instead. */
+body.bdh-theme-heretic .better-dh2e .veh-badge,
+body.bdh-theme-heretic .better-dh2e .veh-roll { color:var(--t-ink2); }
