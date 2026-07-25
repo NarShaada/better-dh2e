@@ -6,6 +6,7 @@ import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds
 import { computeArmour, corrodeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
 import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
+import { effectiveWeapon } from "../helpers/weapon-effects.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor, effectiveStrengthBonus } from "../helpers/item-bonuses.mjs";
 import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../helpers/craftsmanship-data.mjs";
@@ -323,12 +324,13 @@ async function applySpray(message, html) {
   const attacker = await fromUuid(f.actorUuid);
   const weapon = await resolveWeapon(attacker, f);
   if (!weapon) { ui.notifications.warn("Weapon not found."); return; }
+  const eff = effectiveWeapon(weapon.system);
   const checked = [...html.querySelectorAll(".bdh-spray-hit:checked")].map((c) => c.dataset.uuid);
-  const qualities = weapon.system.qualities ?? [];
-  const roll = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+  const qualities = eff.qualities;
+  const roll = await safeRoll(weaponDamageFormula(qualities, eff.damage), "weapon damage");
   if (!roll) return;
   // Penetration like the ranged path (no DoS for spray):
-  const penBase = Number((await safeRoll(String(weapon.system.penetration || "0"), "penetration"))?.total) || 0;
+  const penBase = Number((await safeRoll(String(eff.penetration || "0"), "penetration"))?.total) || 0;
   const penetration = effectivePenetration(penBase, { qualities, dos: 0, success: true, closeRange: false });
   // Primitive/Proven clamp each die (same as the normal damage path — weaponDamageFormula only does Tearing).
   const primitiveX = primitiveValue(qualities), provenX = provenValue(qualities);
@@ -341,7 +343,7 @@ async function applySpray(message, html) {
   // A horde caught in the spray takes many separate hits, each its own roll (like a burst); non-hordes take the one shared roll.
   const sprayRolls = [];
   const rollSprayHit = async () => {
-    const r = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+    const r = await safeRoll(weaponDamageFormula(qualities, eff.damage), "weapon damage");
     if (!r) return null;
     let delta = 0;
     for (const d of r.dice) for (const res of d.results) if (res.active) delta += transform(res.result) - res.result;
@@ -483,8 +485,9 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     const actor = await fromUuid(f.actorUuid);
     const weapon = await resolveWeapon(actor, f);
     if (!weapon) return;
-    const baseFormula = weapon.system.damage;
-    const qualities = f.qualities ?? weapon.system.qualities ?? [];
+    const blastEff = effectiveWeapon(weapon.system);
+    const baseFormula = f.damageFormula ?? blastEff.damage;
+    const qualities = f.qualities ?? blastEff.qualities;
     // Ranged blast: strBonus is always 0, craftDmg is 0 (melee-only).
     let weaponBase = baseFormula;
     if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
@@ -548,13 +551,14 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   const psychic = !!f.psychic;
   const weapon = psychic ? null : await resolveWeapon(actor, f);
   if (!psychic && !weapon) return;
-  const baseFormula = psychic ? (f.damage || "0") : weapon.system.damage;   // e.g. "1d10+3" or PR-substituted formula
+  const eff = weapon ? effectiveWeapon(weapon.system) : null;
+  const baseFormula = psychic ? (f.damage || "0") : (f.damageFormula ?? eff.damage);   // e.g. "1d10+3" or PR-substituted formula
   const weaponDisplayName = f.weaponName ?? weapon?.name;
   // Multi-hit on one target: let the player drop hits mitigated by talents (latest hits drop first).
   const nHitsTotal = f.hits?.length ?? 0;
   const hitCountRow = nHitsTotal > 1
     ? `<div class="form-group"><label>How many hits?</label><select name="hits">${Array.from({ length: nHitsTotal }, (_, i) => `<option value="${nHitsTotal - i}">${nHitsTotal - i}</option>`).join("")}</select></div>` : "";
-  const qualities = psychic ? (f.qualities ?? []) : (f.qualities ?? weapon.system.qualities ?? []);
+  const qualities = psychic ? (f.qualities ?? []) : (f.qualities ?? eff.qualities);
   // Strength Bonus applies to melee AND thrown weapons (RAW: thrown add SB unless explosive → Blast).
   const isBlastWeapon = qualities.some((q) => q.key === "blast");
   const addsStrength = !psychic && (!f.isRanged || (weapon?.system.weaponClass === "thrown" && !isBlastWeapon));
@@ -596,7 +600,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   if (strBonus) weaponBase = `${weaponBase} + ${strBonus}`;
   if (craftDmg) weaponBase = `${weaponBase} + ${craftDmg}`;
   // Force: a psyker adds their Psy Rating to the weapon's damage (penetration was added at attack time).
-  const forcePR = (!psychic && weapon && hasForce(weapon.system.qualities) && (actor.system.psyRating ?? 0) > 0) ? actor.system.psyRating : 0;
+  const forcePR = (!psychic && weapon && hasForce(eff.qualities) && (actor.system.psyRating ?? 0) > 0) ? actor.system.psyRating : 0;
   if (forcePR) weaponBase = `${weaponBase} + ${forcePR}`;
   if (actor.type === "horde" && weapon.system.hordeEquipped) {
     const hd = hordeDamageBonusDice(actor.system.magnitude);   // +1d10 per 10 Magnitude, cap +2d10
@@ -698,7 +702,7 @@ async function rollEvade(message) {
   if (!defender) { ui.notifications.warn("Select a token to evade with."); return; }
   if (defender.type === "vehicle") return rollJink(defender);
   const meleeWeapons = defender.items.filter((i) => i.type === "weapon" && i.system.weaponClass === "melee" && i.system.equipped);
-  const parryWeapons = meleeWeapons.filter((i) => !hasUnwieldy(i.system.qualities));
+  const parryWeapons = meleeWeapons.filter((i) => !hasUnwieldy(effectiveWeapon(i.system).qualities));
   const onlyUnwieldy = meleeWeapons.length > 0 && parryWeapons.length === 0;   // holding only Unwieldy melee
   const flexible = hasFlexible(f.qualities);
   const noParry = flexible || onlyUnwieldy;
@@ -724,7 +728,7 @@ async function rollEvade(message) {
     return null;
   }
   if (choice.reaction === "parry") {
-    const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: i.system.qualities, craftsmanship: i.system.craftsmanship })));
+    const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: effectiveWeapon(i.system).qualities, craftsmanship: i.system.craftsmanship })));
     // Parry is a skill (WS-based) — untrained parries at WS−20, trained ranks add +0/+10/+20/+30.
     const base = defender.system.characteristics.weaponSkill.total + (BDH.skillRanks[defender.system.skills?.parry?.rank] ?? BDH.skillRanks.untrained);
     const label = pmod ? `Parry (weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry";
@@ -968,6 +972,7 @@ async function rollOverheatDamage(message) {
   const attacker = await fromUuid(f.actorUuid);
   const weapon = await resolveWeapon(attacker, f);
   if (!weapon) return;
+  const eff = effectiveWeapon(weapon.system);
   const hand = await DialogV2.prompt({
     window: { title: "Overheat — which hand?" },
     content: `<div class="form-group"><label>Hand</label><select name="hand"><option value="rightArm">Right Arm</option><option value="leftArm">Left Arm</option></select></div>`,
@@ -975,12 +980,12 @@ async function rollOverheatDamage(message) {
     rejectClose: false
   });
   if (!hand) return;
-  const roll = await safeRoll(weapon.system.damage, "weapon damage");
+  const roll = await safeRoll(eff.damage, "weapon damage");
   if (!roll) return;
   const rf = roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 10));
   const hits = [{ location: hand, label: BDH.hitLocationLabels[hand], total: roll.total, rf, breakdown: formatRoll(roll) }];
   const cardData = {
-    weaponName: `${weapon.name} (Overheat)`, damageType: weapon.system.damageType, penetration: 0, hits,
+    weaponName: `${weapon.name} (Overheat)`, damageType: eff.damageType, penetration: 0, hits,
     targetName: attacker.name, canApply: true,
     shocking: false, concussive: null, flame: false, hallucinogenic: null, damageNotes: ""
   };
@@ -988,7 +993,7 @@ async function rollOverheatDamage(message) {
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor: attacker }), rolls: [roll], content,
     flags: { [NS]: { type: "damage", targetUuid: attacker.uuid, targetName: attacker.name, penetration: 0,
-      damageType: weapon.system.damageType, qualities: [],
+      damageType: eff.damageType, qualities: [],
       hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf })) } }
   };
   ChatMessage.applyRollMode(messageData, "roll");
@@ -1027,6 +1032,7 @@ async function rollSpray(actor, weapon) {
   // Spray is single-shot: needs 1 round in the clip (checked before aiming, consumed once it fires).
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
   if (usesAmmo && (weapon.system.clip?.value ?? 0) < 1) { ui.notifications.warn("The weapon is empty."); return; }
+  const eff = effectiveWeapon(weapon.system);
   // Minimize open windows (the sheet blocks the map) so the player can see + aim the cone; restore after.
   const minimized = [];
   for (const app of foundry.applications.instances.values()) {
@@ -1040,12 +1046,12 @@ async function rollSpray(actor, weapon) {
   const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
   const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name, isVehicle: t.actor.type === "vehicle" }));
   if (!rows.length) await deleteRegionByUuid(region.uuid);   // caught no one → no apply step, clean up now
-  const cardData = { weaponName: weapon.name, caught: rows, hasCaught: rows.length > 0, damageType: weapon.system.damageType };
+  const cardData = { weaponName: weapon.name, caught: rows, hasCaught: rows.length > 0, damageType: eff.damageType };
   const content = await renderTemplate("systems/better-dh2e/templates/chat/spray-card.hbs", cardData);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }), content,
     flags: { [NS]: { kind: "spray", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, regionUuid: rows.length ? region.uuid : null,
-      caughtUuids: rows.map((r) => r.uuid), damageType: weapon.system.damageType } },
+      caughtUuids: rows.map((r) => r.uuid), damageType: eff.damageType } },
   });
 }
 
@@ -1159,8 +1165,9 @@ async function applySuppressDamage(message, uuid) {
   const hit = (f.hits ?? []).find((h) => h.uuid === uuid);
   const target = await fromUuid(uuid);
   if (!weapon || !hit || !target) { ui.notifications.warn("Hit/weapon/target not found."); return; }
-  const qualities = weapon.system.qualities ?? [];
-  const penBase = Number((await safeRoll(String(weapon.system.penetration || "0"), "penetration"))?.total) || 0;
+  const eff = effectiveWeapon(weapon.system);
+  const qualities = eff.qualities;
+  const penBase = Number((await safeRoll(String(eff.penetration || "0"), "penetration"))?.total) || 0;
   const penetration = effectivePenetration(penBase, { qualities, dos: 0, success: true, closeRange: false });
   const primitiveX = primitiveValue(qualities), provenX = provenValue(qualities);
   // Multi-hit on this target: let the GM drop hits mitigated by talents (latest drop first).
@@ -1178,10 +1185,10 @@ async function applySuppressDamage(message, uuid) {
   }
   const lines = [];
   for (const loc of locKeys) {
-    const roll = await safeRoll(weaponDamageFormula(qualities, weapon.system.damage), "weapon damage");
+    const roll = await safeRoll(weaponDamageFormula(qualities, eff.damage), "weapon damage");
     if (!roll) continue;
     let delta = 0; for (const d of roll.dice) for (const r of d.results) if (r.active) delta += transformDamageDie(r.result, { primitiveX, provenX }) - r.result;
-    const dealt = await applyHitToToken(target, { damageTotal: roll.total + delta, penetration, damageType: weapon.system.damageType, qualities, location: loc });
+    const dealt = await applyHitToToken(target, { damageTotal: roll.total + delta, penetration, damageType: eff.damageType, qualities, location: loc });
     lines.push(`${BDH.hitLocationLabels[loc] ?? loc}: ${dealt}`);
   }
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
@@ -1191,8 +1198,9 @@ async function applySuppressDamage(message, uuid) {
 export async function rollAttack(actor, weaponId, { weapon: weaponOverride = null } = {}) {
   const weapon = weaponOverride ?? actor.items.get(weaponId);
   if (!weapon) return null;
+  const eff = effectiveWeapon(weapon.system);
 
-  const isSpray = (weapon.system.qualities ?? []).some((q) => q.key === "spray");
+  const isSpray = eff.qualities.some((q) => q.key === "spray");
   if (battlemapEnabled() && isSpray) return rollSpray(actor, weapon);
 
   const isMelee = weapon.system.weaponClass === "melee";
@@ -1213,7 +1221,7 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   };
   const typeOpts = Object.entries(BDH.attackTypes)
     .filter(([k, t]) => (t.scope === "any" || t.scope === (isMelee ? "melee" : "ranged"))
-      && !(k === "lightning" && (hasUnwieldy(weapon.system.qualities) || hasUnbalanced(weapon.system.qualities)))
+      && !(k === "lightning" && (hasUnwieldy(eff.qualities) || hasUnbalanced(eff.qualities)))
       && rofAllows(k))
     .map(([k, t]) => `<option value="${k}">${t.label}</option>`)
     .join("");
@@ -1247,7 +1255,7 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
     .join("");
 
   const charShort = BDH.characteristics[charKey].short;
-  const maximalRow = isRanged && hasMaximal(weapon.system.qualities)
+  const maximalRow = isRanged && hasMaximal(eff.qualities)
     ? `<div class="form-group"><label>Maximal (×3 ammo)</label><input type="checkbox" name="maximal"/></div>` : "";
 
   // Target-condition row and self-condition row for the dialog display (the to-hit modifier itself is
@@ -1366,11 +1374,12 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const { consumeAmmo = true, fixedRoll = null, dosBonus = 0 } = opts;
 
   // Recompute setup-scope locals (needed whether called from rollAttack or a reroll)
+  const eff = effectiveWeapon(weapon.system);
   const isMelee = weapon.system.weaponClass === "melee";
   const isRanged = !isMelee;
   const charKey = isMelee ? "weaponSkill" : "ballisticSkill";
   const charShort = BDH.characteristics[charKey].short;
-  const storm = hasStorm(weapon.system.qualities);
+  const storm = hasStorm(eff.qualities);
   const maximal = isRanged && !!choice.maximal;
 
   // Target-condition + self-condition to-hit modifiers — resolved here (from the live target or the
@@ -1388,19 +1397,20 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // Combine modifiers, clamped ±60
   const at = BDH.attackTypes[choice.attackType];
   const stormHail = storm && at.hits?.mode === "multi";   // Storm only doubles automatic fire, never a single shot
-  const aimMod = hasInaccurate(weapon.system.qualities) ? 0 : (BDH.aimOptions[choice.aim]?.mod ?? 0);
+  const aimMod = hasInaccurate(eff.qualities) ? 0 : (BDH.aimOptions[choice.aim]?.mod ?? 0);
   const rangeMod = isRanged ? (BDH.rangeOptions[choice.range]?.mod ?? 0) : 0;
   const manual = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
   const aiming = choice.aim !== "none";
-  const qualMod = qualityToHitMod(weapon.system.qualities, { aiming, isRanged });
+  const qualMod = qualityToHitMod(eff.qualities, { aiming, isRanged });
+  const gearMod = eff.attackMod;   // installed mods + loaded ammo
   const craftMod = isMelee ? meleeCraftToHit(weapon.system.craftsmanship) : 0;
-  const scatterMod = scatterToHit(weapon.system.qualities, choice.range);
-  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + craftMod + scatterMod + conditionMod + sizeMod;
+  const scatterMod = scatterToHit(eff.qualities, choice.range);
+  const rawModifier = manual + aimMod + rangeMod + at.mod + qualMod + gearMod + craftMod + scatterMod + conditionMod + sizeMod;
   const base = actor.system.characteristics[charKey].total;
 
   // Ammo check — block if clip is too low; compute rounds consumed for this attack type
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
-  const twinLinked = isRanged && hasTwinLinked(weapon.system.qualities);   // two barrels: ×2 ammo, +20 to hit, +1 hit at 2+ DoS
+  const twinLinked = isRanged && hasTwinLinked(eff.qualities);   // two barrels: ×2 ammo, +20 to hit, +1 hit at 2+ DoS
   const rounds = (at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : (weapon.system.rateOfFire?.single || 1)) * (maximal ? 3 : 1) * (stormHail ? 2 : 1) * (twinLinked ? 2 : 1);
   // Only gate on ammo when we'd actually consume it — a Fate reroll re-resolves the same (already-fired) shot.
   if (consumeAmmo && usesAmmo && (weapon.system.clip?.value ?? 0) < rounds) {
@@ -1428,9 +1438,9 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
 
   // Effective penetration (Lance scales with DoS; Melta doubles at close range)
   // Force: a psyker (PR>0) wielding a Force weapon adds their Psy Rating to damage AND penetration.
-  const forcePR = (hasForce(weapon.system.qualities) && (actor.system.psyRating ?? 0) > 0) ? actor.system.psyRating : 0;
-  const penetration = effectivePenetration((weapon.system.penetration ?? 0) + (maximal ? 2 : 0) + forcePR, {
-    qualities: weapon.system.qualities,
+  const forcePR = (hasForce(eff.qualities) && (actor.system.psyRating ?? 0) > 0) ? actor.system.psyRating : 0;
+  const penetration = effectivePenetration((eff.penetration ?? 0) + (maximal ? 2 : 0) + forcePR, {
+    qualities: eff.qualities,
     dos,
     success,
     closeRange: ["pointBlank", "short"].includes(choice.range)
@@ -1443,11 +1453,11 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const hordeTarget = (opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null));
   const tgtIsHorde = hordeTarget?.type === "horde";
   const tgtIsVehicle = hordeTarget?.type === "vehicle";
-  const blastWeapon = (weapon.system.qualities ?? []).some((q) => q.key === "blast");   // blast resolves horde hits in the blast flow, not the direct hit
+  const blastWeapon = eff.qualities.some((q) => q.key === "blast");   // blast resolves horde hits in the blast flow, not the direct hit
   let nHits = success ? computeHits(at, dos, stormHail ? Infinity : rofCap) : 0;
   if (stormHail && success) nHits = Math.min(nHits * 2, rofCap);
-  if (success) nHits += twinLinkedExtraHits(weapon.system.qualities, dos);   // Twin-Linked: the second barrel's hit sits on top of the RoF cap
-  if (success && tgtIsHorde && !blastWeapon) nHits += hordeExtraHits(weapon.system.damageType, weapon.system.qualities);   // additive extras vs hordes
+  if (success) nHits += twinLinkedExtraHits(eff.qualities, dos);   // Twin-Linked: the second barrel's hit sits on top of the RoF cap
+  if (success && tgtIsHorde && !blastWeapon) nHits += hordeExtraHits(eff.damageType, eff.qualities);   // additive extras vs hordes
   const firstLoc = at.calledShot ? choice.calledShotLocation : hitLocation(roll.total);
   // Vehicle hit locations: first hit = reversed roll on the vehicle table; extra hits = fresh d100 rolls.
   let locs;
@@ -1461,13 +1471,13 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // Jam / overheat check. RAW: single shots jam on 96+, semi/full-auto on 94+. Overheats weapons
   // never jam — they overheat on a natural 91+ instead (regardless of hit/miss; Best never overheats).
   const isAuto = isRanged && (choice.attackType === "semiAuto" || choice.attackType === "fullAuto");
-  const overheatsWeapon = isRanged && hasOverheats(weapon.system.qualities);
+  const overheatsWeapon = isRanged && hasOverheats(eff.qualities);
   const overheated = overheatsWeapon && weapon.system.craftsmanship !== "best" && roll.total >= 91;
   const jammed = !overheatsWeapon
-    && checkJam(roll.total, success, isRanged, effectiveJamFloor(weapon.system.qualities, weapon.system.craftsmanship, { auto: isAuto }));
+    && checkJam(roll.total, success, isRanged, effectiveJamFloor(eff.qualities, weapon.system.craftsmanship, { auto: isAuto }));
 
   // Scatter flat damage modifier (range-based; 0 for melee or no Scatter quality)
-  const scatterDmg = scatterDamage(weapon.system.qualities, choice.range);
+  const scatterDmg = scatterDamage(eff.qualities, choice.range);
 
   // Target token — opts override takes precedence (Fate reroll), else read live targets
   const liveTarget = opts.targetUuid ? null : (game.user.targets.first() ?? null);
@@ -1480,7 +1490,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
 
   // Blast(X) — place a circle Region on the target, scatter on miss
   let blastFlags = null, blastCaughtNames = "";
-  const blastQuality = (weapon.system.qualities ?? []).find((q) => q.key === "blast");
+  const blastQuality = eff.qualities.find((q) => q.key === "blast");
   const blastX = blastQuality ? (Number(blastQuality.value) || 0) + (maximal ? 2 : 0) : 0;   // Maximal: +2 Blast
   // Resolve target token PLACEABLE (not just actor): liveTarget is already the Token placeable on live path;
   // on Fate-reroll path (opts.targetUuid set, liveTarget null), derive from game.user.targets or the actor.
@@ -1534,8 +1544,9 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       isRanged,
       maximal,
       penetration,
-      damageType: weapon.system.damageType,
-      qualities: weapon.system.qualities ?? [],
+      damageType: eff.damageType,
+      damageFormula: eff.damage,
+      qualities: eff.qualities,
       aiming,
       attackType: choice.attackType,
       dos,
@@ -1556,9 +1567,12 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   };
 
   // Quality labels for the card
-  const qualityLabels = (weapon.system.qualities ?? [])
+  const qualityLabels = eff.qualities
     .map((q) => `${CONFIG.BDH.qualities[q.key]?.label ?? q.key}${q.value ? ` (${q.value})` : ""}`)
     .join(", ");
+  // Mods/Ammo note: surfaces gearMod's contribution to the to-hit total the same way qualMod's
+  // contributing qualities are surfaced via attackNotes below (no separate numeric line on the card).
+  const gearNote = gearMod ? `Mods/Ammo ${gearMod > 0 ? "+" : ""}${gearMod}` : "";
 
   // Render card template
   const modifierLabel = `${modifier >= 0 ? "+" : ""}${modifier}`;
@@ -1577,6 +1591,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     attackTypeLabel: at.label,
     aimLabel,
     rangeLabel,
+    loadedAmmo: weapon.system.loadedAmmo?.name ?? "",
     hits,
     jammed,
     overheated,
@@ -1588,7 +1603,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
     showActions: nHits > 0 || !!blastFlags,
     forceWeapon: forcePR > 0 && success,   // psyker can channel Force on a hit
     qualityLabels,
-    attackNotes: qualityNotes(weapon.system.qualities, "attack", { maximal }),
+    attackNotes: [qualityNotes(eff.qualities, "attack", { maximal }), gearNote].filter(Boolean).join(" · "),
     dosBonus,
     helplessNote: vsHelpless ? "Automatic Hit (Helpless)" : null,
     blastCaught: blastCaughtNames || null,

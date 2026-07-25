@@ -12,6 +12,7 @@ import { HordeModel } from "./data/actor/horde-model.mjs";
 import { VehicleModel } from "./data/actor/vehicle-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
 import { WeaponModModel } from "./data/item/weapon-mod-model.mjs";
+import { AmmunitionModel } from "./data/item/ammunition-model.mjs";
 import { GearModel } from "./data/item/gear-model.mjs";
 import { TalentModel } from "./data/item/talent-model.mjs";
 import { TraitModel } from "./data/item/trait-model.mjs";
@@ -33,6 +34,7 @@ import { clearAllCover, coverMechanicsEnabled } from "./canvas/cover.mjs";
 import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 import { registerGrantHooks } from "./cybernetics/grants.mjs";
+import { registerWeaponPartHooks } from "./weapons/parts.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -67,6 +69,7 @@ Hooks.once("init", () => {
   CONFIG.Actor.dataModels.vehicle = VehicleModel;
   CONFIG.Item.dataModels.weapon = WeaponModel;
   CONFIG.Item.dataModels.weaponMod = WeaponModModel;
+  CONFIG.Item.dataModels.ammunition = AmmunitionModel;
   CONFIG.Item.dataModels.gear = GearModel;
   CONFIG.Item.dataModels.talent = TalentModel;
   CONFIG.Item.dataModels.trait = TraitModel;
@@ -256,6 +259,7 @@ Hooks.once("ready", () => {
   initCoverOverlay();
   initVehicleFacing();
   registerGrantHooks();
+  registerWeaponPartHooks();
   // Battlemap integration is default-on now — flip any existing world that still had it off so its
   // token/grid automation isn't stuck disabled (the setting is hidden as of v0.2.0).
   if (game.user.isGM && game.settings.get("better-dh2e", "enableBattlemap") !== true) {

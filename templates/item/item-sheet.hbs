@@ -112,6 +112,26 @@
     </div>
   {{/if}}
 
+  {{#if isAmmunition}}
+    <div class="bdh-fields">
+      <label>Attack Mod</label><input type="number" name="system.attackMod" value="{{system.attackMod}}"/>
+      <label>Damage Mod</label><input type="text" name="system.damageMod" value="{{system.damageMod}}" placeholder="+2 or +1d5"/>
+      <label>Pen Mod</label><input type="number" name="system.penMod" value="{{system.penMod}}"/>
+      <label>Damage Type</label><select name="system.damageType">{{selectOptions ammoDamageTypeChoices selected=system.damageType}}</select>
+      <label>Special</label><input type="text" name="system.special" value="{{system.special}}"/>
+    </div>
+
+    <div class="bdh-list-section">
+      <div class="bdh-list-head">Qualities</div>
+      {{#each qualityList as |q|}}
+        <div class="bdh-list-row"><span>{{q.display}}{{#if @root.showQualityCogs}} <span class="bdh-auto{{#if q.isHomebrew}} homebrew{{/if}}" title="{{#if q.isHomebrew}}Non-Vanilla{{else}}Core{{/if}}">⚙</span>{{/if}}</span>
+          <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
+      {{/each}}
+      {{#unless qualityList.length}}<div class="bdh-empty">No qualities.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addQuality">＋ Add</button></div>
+    </div>
+  {{/if}}
+
   {{#if isPsychicPower}}
     <div class="bdh-fields">
       <label>Discipline</label><select name="system.discipline">{{selectOptions disciplines selected=system.discipline}}</select>
@@ -177,10 +197,26 @@
     <div class="bdh-list-section">
       <div class="bdh-list-head">Installed Mods <span class="bdh-hint">— drag a Weapon Mod item here to install</span></div>
       {{#each modList as |m|}}
-        <div class="bdh-list-row"><span><b>{{m.name}}</b> — atk {{m.attackMod}}, dmg {{m.damageMod}}, pen {{m.penMod}}{{#if m.special}}, {{m.special}}{{/if}}</span>
-          <a data-action="removeMod" data-index="{{m.index}}" title="Remove">✖</a></div>
+        <div class="bdh-list-row" data-part-uuid="{{m.uuid}}">
+          <span{{#if m.uuid}} class="bdh-part-link" data-action="editPart" title="Edit this modification"{{/if}}><b>{{m.name}}</b> — atk {{m.attackMod}}, dmg {{m.damageMod}}, pen {{m.penMod}}{{#if m.special}}, {{m.special}}{{/if}}</span>
+          <a data-action="removeMod" data-index="{{m.index}}" title="Remove">✖</a>
+        </div>
       {{/each}}
       {{#unless modList.length}}<div class="bdh-empty">No mods installed.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addMod">＋ Add</button></div>
+    </div>
+
+    <div class="bdh-list-section">
+      <div class="bdh-list-head">Ammunition <span class="bdh-hint">— drag an Ammunition item here to stock it</span></div>
+      {{#each ammoList as |a|}}
+        <div class="bdh-list-row" data-part-uuid="{{a.uuid}}">
+          <span{{#if a.uuid}} class="bdh-part-link" data-action="editPart" title="Edit this ammunition"{{/if}}><b>{{a.name}}</b>{{#if a.damageMod}} — dmg {{a.damageMod}}{{/if}}{{#if a.penMod}}, pen {{a.penMod}}{{/if}}{{#if a.special}}, {{a.special}}{{/if}}</span>
+          <input type="number" class="bdh-ammo-count" data-index="{{a.index}}" value="{{a.count}}" min="0" step="1" title="Magazines carried"/>
+          <a data-action="removeAmmo" data-index="{{a.index}}" title="Remove">✖</a>
+        </div>
+      {{/each}}
+      {{#unless ammoList.length}}<div class="bdh-empty">No ammunition stocked.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addAmmo">＋ Add</button></div>
     </div>
   {{/if}}
 

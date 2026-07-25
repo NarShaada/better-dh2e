@@ -140,6 +140,7 @@ body.bdh-themed .better-dh2e .bdh-subhead { background:var(--t-panel3); color:va
 body.bdh-themed .better-dh2e .bdh-item-row { border-bottom:1px solid var(--t-line); }
 body.bdh-themed .better-dh2e .bdh-name { color:var(--t-ink2); }
 body.bdh-themed .better-dh2e .bdh-name:hover { color:var(--t-gold); text-decoration:none; }
+body.bdh-themed .better-dh2e .bdh-part-link:hover { color:var(--t-gold); text-decoration:none; }
 body.bdh-themed .better-dh2e .bdh-desc-line, body.bdh-themed .better-dh2e .bdh-meta, body.bdh-themed .better-dh2e .bdh-tier { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-empty { color:var(--t-faint); }
 body.bdh-themed .better-dh2e .bdh-del { color:var(--t-red); }
@@ -147,6 +148,7 @@ body.bdh-themed .better-dh2e .bdh-add { background:transparent; color:var(--t-mu
 body.bdh-themed .better-dh2e .bdh-add:hover { color:var(--t-gold); }
 body.bdh-themed .better-dh2e .bdh-tag { color:var(--t-muted); border-color:var(--t-line2); border-radius:0; }
 body.bdh-themed .better-dh2e .bdh-clip { font-family:var(--t-mono); color:var(--t-ink); background:var(--t-field); border:1px solid var(--t-line2); border-radius:0; }
+body.bdh-themed .better-dh2e .bdh-loaded { font-family:var(--t-cond); color:var(--t-gold); border:1px solid var(--t-line2); border-radius:0; }
 body.bdh-themed .better-dh2e .bdh-eq.on { color:var(--t-green); }
 body.bdh-themed .better-dh2e .bdh-gear-bar { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-gear-bar b { color:var(--t-ink2); font-family:var(--t-mono); }

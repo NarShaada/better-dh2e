@@ -177,6 +177,9 @@
 .better-dh2e.item .bdh-add-row { display:flex; gap:5px; align-items:center; padding:5px 8px; }
 .better-dh2e.item .bdh-add-row button { background:var(--bdh-maroon); color:var(--bdh-parch); border:none; border-radius:3px; padding:2px 8px; cursor:pointer; }
 .better-dh2e.item .bdh-empty { padding:4px 8px; color:var(--bdh-muted); font-style:italic; font-size:11px; }
+.better-dh2e .bdh-part-link { cursor:pointer; }
+.better-dh2e .bdh-part-link:hover { text-decoration:underline; }
+.better-dh2e .bdh-ammo-count { width:52px; text-align:center; margin-left:auto; }
 
 /* Item-list sections on actor tabs (Abilities, later Gear/Afflictions/Psychic) */
 .better-dh2e .bdh-section { margin:8px 14px; background:var(--bdh-panel); border:1px solid var(--bdh-brown); border-radius:5px; overflow:hidden; }
@@ -207,6 +210,7 @@
 .better-dh2e .bdh-qty-wrap { flex:0 0 auto; font-size:11px; color:var(--bdh-muted); }
 .better-dh2e .bdh-qty { width:44px; }
 .better-dh2e .bdh-clip { flex:0 0 auto; font-size:11px; font-weight:bold; color:var(--bdh-maroon); background:#efe6cd; border:1px solid #b3a070; border-radius:3px; padding:0 6px; }
+.better-dh2e .bdh-loaded { flex:0 0 auto; font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:var(--bdh-maroon); border:1px solid var(--bdh-brown); border-radius:3px; padding:0 5px; }
 
 /* Combat sub-tab */
 .better-dh2e .bdh-armour-row { display:flex; gap:5px; padding:8px 14px 4px; }
