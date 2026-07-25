@@ -339,15 +339,18 @@ body.bdh-themed .better-dh2e .veh-role-name { font-family:var(--t-cond); color:v
 body.bdh-themed .better-dh2e .veh-field .veh-unit { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .veh-role-head { background:var(--t-panel2); color:var(--t-ink2); border-bottom:1px solid var(--t-line); }
 body.bdh-themed .better-dh2e .veh-role-name-in { color:var(--t-ink2); font-family:var(--t-cond); background:var(--t-field); border-color:var(--t-line2); }
-body.bdh-themed .better-dh2e .veh-badge { background:var(--t-gold2); color:var(--t-bg); }
-body.bdh-themed .better-dh2e .veh-roll { background:var(--t-gold2); color:var(--t-bg); border-radius:2px; }
+body.bdh-themed .better-dh2e .veh-badge { background:var(--t-gold2); color:var(--t-on-accent); }
+body.bdh-themed .better-dh2e .veh-roll { background:var(--t-gold2); color:var(--t-on-accent); border-radius:2px; }
 body.bdh-themed .better-dh2e .veh-seat { background:var(--t-field); border-color:var(--t-line2); }
 body.bdh-themed .better-dh2e .veh-seat .veh-occ { color:var(--t-gold); }
 body.bdh-themed .better-dh2e .veh-wdrop { border-color:var(--t-line2); color:var(--t-muted); }
 
 /* ============================================================
    HERETIC — structural overrides (defaced Imperial)
-   Same specificity as the body.bdh-themed rules above; wins on source order.
+   These rules match the specificity of the body.bdh-themed rules they
+   override, so they depend on being last in the file to win. Any rule
+   here that targets a chat-card element must omit .better-dh2e — chat
+   cards render in the chat log, outside any sheet.
    ============================================================ */
 
 /* 1. Header: soot, ember bleed, and an eight-pointed watermark burned into the slate. */
@@ -370,7 +373,7 @@ body.bdh-theme-heretic .better-dh2e .bdh-header .portrait img {
       .on uses filter:drop-shadow — a box-shadow does not render through clip-path. */
 body.bdh-theme-heretic .better-dh2e .bdh-header .fate-pips i {
   width:15px; height:15px; transform:none; border:none; border-radius:0;
-  background:var(--t-line2); box-shadow:none;
+  background:var(--t-muted); box-shadow:none;
   clip-path:polygon(50% 0,58.5% 32%,84% 14%,67% 40.5%,100% 50%,67% 59.5%,84% 86%,58.5% 68%,50% 100%,41.5% 68%,16% 86%,33% 59.5%,0 50%,33% 40.5%,16% 14%,41.5% 32%);
 }
 body.bdh-theme-heretic .better-dh2e .bdh-header .fate-pips i.on {
@@ -396,9 +399,6 @@ body.bdh-theme-heretic .better-dh2e .bdh-header .fate {
   clip-path:polygon(0 11px, 11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%);
   border-color:var(--t-gold2);
 }
-body.bdh-theme-heretic .better-dh2e .bdh-card-result {
-  clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-}
 
 /* 5. Tabs: the active marker bleeds down into the panel instead of ruling a clean line. */
 body.bdh-theme-heretic .better-dh2e nav.tabs .item.active {
@@ -422,11 +422,14 @@ body.bdh-theme-heretic .better-dh2e .bdh-atk {
   clip-path:polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
 }
 body.bdh-theme-heretic .better-dh2e .bdh-atk:hover {
-  background:var(--t-red); border-color:var(--t-gold); box-shadow:0 0 12px rgba(212,58,44,.45);
+  background:var(--t-red); border-color:var(--t-gold); filter:drop-shadow(0 0 12px rgba(212,58,44,.45));
 }
 
 /* 8. Chat cards: a broken seal. */
 body.bdh-theme-heretic .bdh-card { border-left-width:4px; }
 body.bdh-theme-heretic .bdh-card-head {
   background-image:repeating-linear-gradient(115deg, rgba(200,98,46,.09) 0 1px, transparent 1px 9px);
+}
+body.bdh-theme-heretic .bdh-card-result {
+  clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
