@@ -24,10 +24,10 @@ describe("theme registry", () => {
 
   it("themeChoices maps id → label for the settings dropdown", () => {
     expect(themeChoices()).toEqual({
-      classic: "Classic (parchment)",
-      dataslate: "Dataslate (dark gothic-tech)",
-      dossier: "Dossier (refined light)",
-      heretic: "Heretic (defaced dataslate)"
+      classic: "Parchment",
+      dataslate: "For The Machine God",
+      dossier: "Agents Of The Throne",
+      heretic: "Your Emperor Is False"
     });
   });
 
