@@ -344,3 +344,89 @@ body.bdh-themed .better-dh2e .veh-roll { background:var(--t-gold2); color:var(--
 body.bdh-themed .better-dh2e .veh-seat { background:var(--t-field); border-color:var(--t-line2); }
 body.bdh-themed .better-dh2e .veh-seat .veh-occ { color:var(--t-gold); }
 body.bdh-themed .better-dh2e .veh-wdrop { border-color:var(--t-line2); color:var(--t-muted); }
+
+/* ============================================================
+   HERETIC — structural overrides (defaced Imperial)
+   Same specificity as the body.bdh-themed rules above; wins on source order.
+   ============================================================ */
+
+/* 1. Header: soot, ember bleed, and an eight-pointed watermark burned into the slate. */
+body.bdh-theme-heretic .better-dh2e .bdh-header {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 1 L58.5 33 L84 15 L67 41.5 L99 50 L67 58.5 L84 85 L58.5 67 L50 99 L41.5 67 L16 85 L33 58.5 L1 50 L33 41.5 L16 15 L41.5 33 Z' fill='%23c8622e' fill-opacity='0.16'/%3E%3C/svg%3E"),
+    radial-gradient(130% 180% at 76% -35%, rgba(200,98,46,.14), transparent 62%),
+    linear-gradient(180deg, var(--t-panel2), var(--t-bg));
+  background-repeat:no-repeat, no-repeat, no-repeat;
+  background-position:right 176px center, 0 0, 0 0;
+  background-size:112px 112px, auto, auto;
+  border-bottom:1px solid var(--t-line2);
+}
+body.bdh-theme-heretic .better-dh2e .bdh-header .portrait img {
+  border-color:var(--t-gold);
+  clip-path:polygon(0 14px, 14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+}
+
+/* 2. Fate pips become eight-pointed chaos stars.
+      .on uses filter:drop-shadow — a box-shadow does not render through clip-path. */
+body.bdh-theme-heretic .better-dh2e .bdh-header .fate-pips i {
+  width:15px; height:15px; transform:none; border:none; border-radius:0;
+  background:var(--t-line2); box-shadow:none;
+  clip-path:polygon(50% 0,58.5% 32%,84% 14%,67% 40.5%,100% 50%,67% 59.5%,84% 86%,58.5% 68%,50% 100%,41.5% 68%,16% 86%,33% 59.5%,0 50%,33% 40.5%,16% 14%,41.5% 32%);
+}
+body.bdh-theme-heretic .better-dh2e .bdh-header .fate-pips i.on {
+  background:var(--t-gold); box-shadow:none; filter:drop-shadow(0 0 5px var(--t-glow));
+}
+
+/* 3. Section heads: overwritten, not printed — ember leading bar plus faint scoring. */
+body.bdh-theme-heretic .better-dh2e .bdh-section-head,
+body.bdh-theme-heretic .better-dh2e.item .bdh-list-head,
+body.bdh-theme-heretic .better-dh2e .bdh-track-head {
+  border-left:3px solid var(--t-gold);
+  background-color:var(--t-panel2);
+  background-image:repeating-linear-gradient(115deg, rgba(200,98,46,.10) 0 1px, transparent 1px 9px);
+  text-shadow:0 0 8px rgba(200,98,46,.22);
+}
+
+/* 4. Broken chamfers — dataslate cuts one corner cleanly; heretic cuts two, unevenly,
+      on opposite diagonals. Same machine tooling, no longer square with itself. */
+body.bdh-theme-heretic .better-dh2e .char .box {
+  clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+body.bdh-theme-heretic .better-dh2e .bdh-header .fate {
+  clip-path:polygon(0 11px, 11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%);
+  border-color:var(--t-gold2);
+}
+body.bdh-theme-heretic .better-dh2e .bdh-card-result {
+  clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+/* 5. Tabs: the active marker bleeds down into the panel instead of ruling a clean line. */
+body.bdh-theme-heretic .better-dh2e nav.tabs .item.active {
+  background:linear-gradient(180deg, rgba(200,98,46,.22), transparent 88%);
+  color:var(--t-gold); box-shadow:inset 0 2px 0 var(--t-gold);
+  text-shadow:0 0 10px var(--t-glow);
+}
+body.bdh-theme-heretic .better-dh2e nav.tabs.secondary .item.active {
+  background:transparent; box-shadow:inset 0 -2px 0 var(--t-gold);
+}
+
+/* 6. Fatigue burns from brass to blood as it fills. */
+body.bdh-theme-heretic .better-dh2e .fatigue .bar i {
+  background:linear-gradient(90deg, var(--t-gold2), var(--t-red));
+}
+
+/* 7. Attack button: ember-edged, deeper asymmetric bite. */
+body.bdh-theme-heretic .better-dh2e .bdh-atk {
+  background:linear-gradient(180deg, var(--t-red2), #4e0f09);
+  border-color:var(--t-gold2);
+  clip-path:polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+}
+body.bdh-theme-heretic .better-dh2e .bdh-atk:hover {
+  background:var(--t-red); border-color:var(--t-gold); box-shadow:0 0 12px rgba(212,58,44,.45);
+}
+
+/* 8. Chat cards: a broken seal. */
+body.bdh-theme-heretic .bdh-card { border-left-width:4px; }
+body.bdh-theme-heretic .bdh-card-head {
+  background-image:repeating-linear-gradient(115deg, rgba(200,98,46,.09) 0 1px, transparent 1px 9px);
+}
