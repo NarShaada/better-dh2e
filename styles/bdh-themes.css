@@ -33,15 +33,17 @@ body.bdh-theme-dossier {
 }
 
 /* Heretic — the same dataslate, taken and re-marked. The Imperial gold accent becomes
-   ember-copper (tarnished, still hot); red is pushed to arterial so the two never read
-   as the same colour; green survives as corroded bronze so the success/fail affordance
-   in chat cards keeps working. */
+   ember-copper (tarnished, still hot); red is pulled to a cooler crimson so it stays
+   distinguishable from that accent where the two sit side by side and mean different
+   things (neutral vs failed chat cards, add vs delete) — an earlier warmer red measured
+   only 1.18:1 apart from the ember and failed that job; green survives as corroded
+   bronze so the success/fail affordance in chat cards keeps working. */
 body.bdh-theme-heretic {
   --t-bg:#15100e; --t-panel:#1c1513; --t-panel2:#241a17; --t-panel3:#2e211d;
   --t-line:#37241f; --t-line2:#523229;
   --t-ink:#d5c6b2; --t-ink2:#f3e7d3; --t-muted:#96806b; --t-faint:#65523f;
   --t-gold:#c8622e; --t-gold2:#8d4520; --t-glow:rgba(200,98,46,.40);
-  --t-red:#d43a2c; --t-red2:#7c1712; --t-green:#7f9e5e; --t-green2:#3d4f2c;
+  --t-red:#c1272d; --t-red2:#6e1114; --t-green:#7f9e5e; --t-green2:#3d4f2c;
   --t-warp:#b054d6; --t-field:#110b0a; --t-on-accent:#150d08;
 }
 
@@ -422,7 +424,7 @@ body.bdh-theme-heretic .better-dh2e .bdh-atk {
   clip-path:polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
 }
 body.bdh-theme-heretic .better-dh2e .bdh-atk:hover {
-  background:var(--t-red); border-color:var(--t-gold); filter:drop-shadow(0 0 12px rgba(212,58,44,.45));
+  background:var(--t-red); border-color:var(--t-gold); filter:drop-shadow(0 0 12px rgba(193,39,45,.45));
 }
 
 /* 8. Chat cards: a broken seal. */
