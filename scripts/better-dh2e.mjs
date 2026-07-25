@@ -12,6 +12,7 @@ import { HordeModel } from "./data/actor/horde-model.mjs";
 import { VehicleModel } from "./data/actor/vehicle-model.mjs";
 import { WeaponModel } from "./data/item/weapon-model.mjs";
 import { WeaponModModel } from "./data/item/weapon-mod-model.mjs";
+import { AmmunitionModel } from "./data/item/ammunition-model.mjs";
 import { GearModel } from "./data/item/gear-model.mjs";
 import { TalentModel } from "./data/item/talent-model.mjs";
 import { TraitModel } from "./data/item/trait-model.mjs";
@@ -67,6 +68,7 @@ Hooks.once("init", () => {
   CONFIG.Actor.dataModels.vehicle = VehicleModel;
   CONFIG.Item.dataModels.weapon = WeaponModel;
   CONFIG.Item.dataModels.weaponMod = WeaponModModel;
+  CONFIG.Item.dataModels.ammunition = AmmunitionModel;
   CONFIG.Item.dataModels.gear = GearModel;
   CONFIG.Item.dataModels.talent = TalentModel;
   CONFIG.Item.dataModels.trait = TraitModel;
