@@ -6,7 +6,8 @@
 export const THEMES = {
   classic:   { label: "Classic (parchment)",          bodyClasses: [] },
   dataslate: { label: "Dataslate (dark gothic-tech)", bodyClasses: ["bdh-themed", "bdh-theme-dataslate"] },
-  dossier:   { label: "Dossier (refined light)",      bodyClasses: ["bdh-themed", "bdh-theme-dossier"] }
+  dossier:   { label: "Dossier (refined light)",      bodyClasses: ["bdh-themed", "bdh-theme-dossier"] },
+  heretic:   { label: "Heretic (defaced dataslate)",  bodyClasses: ["bdh-themed", "bdh-theme-heretic"] }
 };
 
 /** id → label map in the shape `game.settings.register` expects for `choices`. */
