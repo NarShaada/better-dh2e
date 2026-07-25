@@ -132,11 +132,64 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     await this.document.update({ "system.statMods": statMods });
   }
 
+  /** Action: add an empty mod row to fill in by hand (drag-drop installs a real weaponMod item). */
+  static async #onAddMod(event, target) {
+    const { DialogV2 } = foundry.applications.api;
+    const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
+      <input class="bdh-pick" name="name" placeholder="Modification…" autofocus/>
+      <input class="bdh-num" name="attackMod" type="number" placeholder="Atk"/>
+      <input class="bdh-num" name="damageMod" placeholder="Dmg"/>
+      <input class="bdh-num" name="penMod" type="number" placeholder="Pen"/>
+    </div></div>`;
+    const result = await DialogV2.prompt({
+      window: { title: "Add Modification" }, position: { width: 420 }, content, rejectClose: false,
+      ok: { label: "Add", callback: (ev, button) => {
+        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
+        if (!f.name) return null;
+        return { name: String(f.name), attackMod: parseInt(f.attackMod, 10) || 0,
+                 damageMod: String(f.damageMod ?? ""), penMod: parseInt(f.penMod, 10) || 0, special: "" };
+      } }
+    });
+    if (!result) return;
+    const mods = foundry.utils.deepClone(this.document.system.mods);
+    mods.push(result);
+    await this.document.update({ "system.mods": mods });
+  }
+
   /** Action: remove an installed mod by index. */
   static async #onRemoveMod(event, target) {
     const mods = foundry.utils.deepClone(this.document.system.mods);
     mods.splice(Number(target.dataset.index), 1);
     await this.document.update({ "system.mods": mods });
+  }
+
+  /** Action: stock an ammunition type by hand (drag-drop copies a real ammunition item). */
+  static async #onAddAmmo(event, target) {
+    const { DialogV2 } = foundry.applications.api;
+    const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
+      <input class="bdh-pick" name="name" placeholder="Ammunition…" autofocus/>
+      <input class="bdh-num" name="count" type="number" placeholder="Mags" value="1"/>
+    </div></div>`;
+    const result = await DialogV2.prompt({
+      window: { title: "Add Ammunition" }, position: { width: 360 }, content, rejectClose: false,
+      ok: { label: "Add", callback: (ev, button) => {
+        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
+        if (!f.name) return null;
+        return { name: String(f.name), count: Math.max(0, parseInt(f.count, 10) || 0),
+                 attackMod: 0, damageMod: "", penMod: 0, special: "", damageType: "", qualities: [] };
+      } }
+    });
+    if (!result) return;
+    const ammo = foundry.utils.deepClone(this.document.system.ammo);
+    ammo.push(result);
+    await this.document.update({ "system.ammo": ammo });
+  }
+
+  /** Action: remove a stocked ammunition type by index. */
+  static async #onRemoveAmmo(event, target) {
+    const ammo = foundry.utils.deepClone(this.document.system.ammo);
+    ammo.splice(Number(target.dataset.index), 1);
+    await this.document.update({ "system.ammo": ammo });
   }
 
   /** Action: add the picked aptitude to the talent item. */
@@ -162,7 +215,10 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     actions: {
       addQuality: DarkHeresyItemSheet.#onAddQuality,
       removeQuality: DarkHeresyItemSheet.#onRemoveQuality,
+      addMod: DarkHeresyItemSheet.#onAddMod,
       removeMod: DarkHeresyItemSheet.#onRemoveMod,
+      addAmmo: DarkHeresyItemSheet.#onAddAmmo,
+      removeAmmo: DarkHeresyItemSheet.#onRemoveAmmo,
       addAptitude: DarkHeresyItemSheet.#onAddAptitude,
       removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude,
       addBonus: DarkHeresyItemSheet.#onAddBonus,
@@ -246,6 +302,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         return { index: i, key: q.key, display, isHomebrew: cfg?.homebrew === true };
       });
       context.modList = system.mods.map((m, i) => ({ index: i, ...m }));
+      context.ammoList = (system.ammo ?? []).map((a, i) => ({ index: i, ...a }));
     }
 
     context.showBonuses = context.isCybernetic || context.isGear || context.isArmour || context.isTrait;
@@ -300,21 +357,36 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     }
   }
 
-  /** Install a dropped weaponMod by copying its fields into system.mods[]. */
+  /** Install a dropped weaponMod into system.mods[], or stock a dropped ammunition into system.ammo[]. */
   async #onDropMod(event) {
     const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
     if (data?.type !== "Item") return;
     const item = await Item.implementation.fromDropData(data);
-    if (!item || item.type !== "weaponMod") return;
-    const mods = foundry.utils.deepClone(this.document.system.mods);
-    mods.push({
-      name: item.name,
-      attackMod: item.system.attackMod,
-      damageMod: item.system.damageMod,
-      penMod: item.system.penMod,
-      special: item.system.special
-    });
-    await this.document.update({ "system.mods": mods });
+    if (!item) return;
+
+    if (item.type === "weaponMod") {
+      const mods = foundry.utils.deepClone(this.document.system.mods);
+      mods.push({
+        name: item.name,
+        attackMod: item.system.attackMod,
+        damageMod: item.system.damageMod,
+        penMod: item.system.penMod,
+        special: item.system.special
+      });
+      await this.document.update({ "system.mods": mods });
+    } else if (item.type === "ammunition") {
+      const ammo = foundry.utils.deepClone(this.document.system.ammo);
+      ammo.push({
+        name: item.name, count: 1,
+        attackMod: item.system.attackMod,
+        damageMod: item.system.damageMod,
+        penMod: item.system.penMod,
+        special: item.system.special,
+        damageType: item.system.damageType,
+        qualities: foundry.utils.deepClone(item.system.qualities ?? [])
+      });
+      await this.document.update({ "system.ammo": ammo });
+    }
   }
 
   /** Add a dropped item as a grant reference (validated against the host's grant rules). */

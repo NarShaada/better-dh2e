@@ -181,6 +181,19 @@
           <a data-action="removeMod" data-index="{{m.index}}" title="Remove">✖</a></div>
       {{/each}}
       {{#unless modList.length}}<div class="bdh-empty">No mods installed.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addMod">＋ Add</button></div>
+    </div>
+
+    <div class="bdh-list-section">
+      <div class="bdh-list-head">Ammunition <span class="bdh-hint">— drag an Ammunition item here to stock it</span></div>
+      {{#each ammoList as |a|}}
+        <div class="bdh-list-row">
+          <span><b>{{a.name}}</b> &times;{{a.count}}{{#if a.damageMod}} — dmg {{a.damageMod}}{{/if}}{{#if a.penMod}}, pen {{a.penMod}}{{/if}}{{#if a.special}}, {{a.special}}{{/if}}</span>
+          <a data-action="removeAmmo" data-index="{{a.index}}" title="Remove">✖</a>
+        </div>
+      {{/each}}
+      {{#unless ammoList.length}}<div class="bdh-empty">No ammunition stocked.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addAmmo">＋ Add</button></div>
     </div>
   {{/if}}
 
