@@ -34,6 +34,7 @@ import { clearAllCover, coverMechanicsEnabled } from "./canvas/cover.mjs";
 import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 import { registerGrantHooks } from "./cybernetics/grants.mjs";
+import { registerWeaponPartHooks } from "./weapons/parts.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -258,6 +259,7 @@ Hooks.once("ready", () => {
   initCoverOverlay();
   initVehicleFacing();
   registerGrantHooks();
+  registerWeaponPartHooks();
   // Battlemap integration is default-on now — flip any existing world that still had it off so its
   // token/grid automation isn't stuck disabled (the setting is hidden as of v0.2.0).
   if (game.user.isGM && game.settings.get("better-dh2e", "enableBattlemap") !== true) {
