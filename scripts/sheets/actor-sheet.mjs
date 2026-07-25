@@ -312,9 +312,13 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
 
     const update = { "system.clip.value": item.system.clip.max };
     if (choice.useAmmo) {
-      const entry = stock[choice.index];
+      // Re-read the stock now rather than reusing the pre-dialog snapshot: the sheet stays
+      // interactive while the dialog is open, so a second reload on the same weapon could
+      // otherwise write back a stale array and silently discard the other one's decrement.
+      const current = item.system.ammo ?? [];
+      const entry = current[choice.index];
       if (!entry || entry.count <= 0) return ui.notifications.warn("No magazines of that type left.");
-      const ammo = foundry.utils.deepClone(stock);
+      const ammo = foundry.utils.deepClone(current);
       ammo[choice.index].count -= 1;
       update["system.ammo"] = ammo;
       const { count, ...snapshot } = entry;   // loaded rounds are no longer stock
