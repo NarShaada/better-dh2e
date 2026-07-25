@@ -33,6 +33,7 @@ export class WeaponModel extends BaseItemModel {
         value: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })
       })),
       mods: new fields.ArrayField(new fields.SchemaField({
+        uuid: new fields.StringField({ required: true, initial: "" }),   // "" = unlinked, hand-made entry
         name:      new fields.StringField({ required: true, initial: "" }),
         attackMod: new fields.NumberField({ required: true, integer: true, initial: 0 }),
         damageMod: new fields.StringField({ required: true, initial: "" }),
@@ -41,6 +42,7 @@ export class WeaponModel extends BaseItemModel {
       })),
       /** Magazine stock for this weapon. Denormalized copies, like mods[]. */
       ammo: new fields.ArrayField(new fields.SchemaField({
+        uuid: new fields.StringField({ required: true, initial: "" }),   // "" = unlinked, hand-made entry
         name:       new fields.StringField({ required: true, initial: "" }),
         count:      new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
         attackMod:  new fields.NumberField({ required: true, integer: true, initial: 0 }),

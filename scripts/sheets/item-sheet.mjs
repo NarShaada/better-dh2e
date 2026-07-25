@@ -6,6 +6,7 @@ import { filterQualityChoices } from "../helpers/quality-modules.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { canGrant, grantHostType } from "../helpers/grants-data.mjs";
 import { grantsFolder } from "../cybernetics/grants.mjs";
+import { weaponPartsFolder } from "../weapons/parts.mjs";
 import { bcAdvancement } from "../helpers/advancement-ruleset.mjs";
 
 const STAT_MOD_LABELS = {
@@ -132,28 +133,17 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     await this.document.update({ "system.statMods": statMods });
   }
 
-  /** Action: add an empty mod row to fill in by hand (drag-drop installs a real weaponMod item). */
+  /** Action: create a new Weapon Mod item, link it, and open it for editing. */
   static async #onAddMod(event, target) {
-    const { DialogV2 } = foundry.applications.api;
-    const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
-      <input class="bdh-pick" name="name" placeholder="Modification…" autofocus/>
-      <input class="bdh-num" name="attackMod" type="number" placeholder="Atk"/>
-      <input class="bdh-num" name="damageMod" placeholder="Dmg"/>
-      <input class="bdh-num" name="penMod" type="number" placeholder="Pen"/>
-    </div></div>`;
-    const result = await DialogV2.prompt({
-      window: { title: "Add Modification" }, position: { width: 420 }, content, rejectClose: false,
-      ok: { label: "Add", callback: (ev, button) => {
-        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
-        if (!f.name) return null;
-        return { name: String(f.name), attackMod: parseInt(f.attackMod, 10) || 0,
-                 damageMod: String(f.damageMod ?? ""), penMod: parseInt(f.penMod, 10) || 0, special: "" };
-      } }
+    const folder = await weaponPartsFolder();
+    const created = await getDocumentClass("Item").create({
+      name: `New ${game.i18n.localize("TYPES.Item.weaponMod")}`, type: "weaponMod", folder: folder.id
     });
-    if (!result) return;
+    if (!created) return;
     const mods = foundry.utils.deepClone(this.document.system.mods);
-    mods.push(result);
+    mods.push({ uuid: created.uuid, name: created.name, attackMod: 0, damageMod: "", penMod: 0, special: "" });
     await this.document.update({ "system.mods": mods });
+    created.sheet.render(true);
   }
 
   /** Action: remove an installed mod by index. */
@@ -163,26 +153,18 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     await this.document.update({ "system.mods": mods });
   }
 
-  /** Action: stock an ammunition type by hand (drag-drop copies a real ammunition item). */
+  /** Action: create a new Ammunition item, stock one magazine of it, and open it for editing. */
   static async #onAddAmmo(event, target) {
-    const { DialogV2 } = foundry.applications.api;
-    const content = `<div class="bdh-add-dialog"><div class="bdh-add-line">
-      <input class="bdh-pick" name="name" placeholder="Ammunition…" autofocus/>
-      <input class="bdh-num" name="count" type="number" placeholder="Mags" value="1"/>
-    </div></div>`;
-    const result = await DialogV2.prompt({
-      window: { title: "Add Ammunition" }, position: { width: 360 }, content, rejectClose: false,
-      ok: { label: "Add", callback: (ev, button) => {
-        const f = new foundry.applications.ux.FormDataExtended(button.form).object;
-        if (!f.name) return null;
-        return { name: String(f.name), count: Math.max(0, parseInt(f.count, 10) || 0),
-                 attackMod: 0, damageMod: "", penMod: 0, special: "", damageType: "", qualities: [] };
-      } }
+    const folder = await weaponPartsFolder();
+    const created = await getDocumentClass("Item").create({
+      name: `New ${game.i18n.localize("TYPES.Item.ammunition")}`, type: "ammunition", folder: folder.id
     });
-    if (!result) return;
+    if (!created) return;
     const ammo = foundry.utils.deepClone(this.document.system.ammo);
-    ammo.push(result);
+    ammo.push({ uuid: created.uuid, name: created.name, count: 1, attackMod: 0, damageMod: "",
+                penMod: 0, special: "", damageType: "", qualities: [] });
     await this.document.update({ "system.ammo": ammo });
+    created.sheet.render(true);
   }
 
   /** Action: remove a stocked ammunition type by index. */
@@ -190,6 +172,15 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     const ammo = foundry.utils.deepClone(this.document.system.ammo);
     ammo.splice(Number(target.dataset.index), 1);
     await this.document.update({ "system.ammo": ammo });
+  }
+
+  /** Action: open the source item behind an ammo/mod entry (the editable master). */
+  static async #onEditPart(event, target) {
+    const uuid = target.closest("[data-part-uuid]")?.dataset.partUuid;
+    if (!uuid) return;
+    const src = await fromUuid(uuid);
+    if (src) src.sheet.render(true);
+    else ui.notifications.warn("Source item not found — it may have been deleted.");
   }
 
   /** Action: add the picked aptitude to the talent item. */
@@ -219,6 +210,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       removeMod: DarkHeresyItemSheet.#onRemoveMod,
       addAmmo: DarkHeresyItemSheet.#onAddAmmo,
       removeAmmo: DarkHeresyItemSheet.#onRemoveAmmo,
+      editPart: DarkHeresyItemSheet.#onEditPart,
       addAptitude: DarkHeresyItemSheet.#onAddAptitude,
       removeAptitude: DarkHeresyItemSheet.#onRemoveAptitude,
       addBonus: DarkHeresyItemSheet.#onAddBonus,
@@ -352,6 +344,16 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     for (const el of this.element.querySelectorAll('input[type="text"]:not([name="name"]), input[type="number"]')) {
       el.addEventListener("focus", (event) => event.currentTarget.select());
     }
+    // `data-action` only fires on clicks, so the magazine-count input needs its own change listener.
+    for (const input of this.element.querySelectorAll(".bdh-ammo-count")) {
+      input.addEventListener("change", (event) => {
+        const idx = Number(event.currentTarget.dataset.index);
+        const ammo = foundry.utils.deepClone(this.document.system.ammo);
+        if (!ammo[idx]) return;
+        ammo[idx].count = Math.max(0, Math.floor(Number(event.currentTarget.value) || 0));
+        this.document.update({ "system.ammo": ammo });
+      });
+    }
   }
 
   /** One-time wiring: weapons accept a dropped weaponMod item to install. The frame element persists
@@ -377,6 +379,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     if (item.type === "weaponMod") {
       const mods = foundry.utils.deepClone(this.document.system.mods);
       mods.push({
+        uuid: item.uuid,
         name: item.name,
         attackMod: item.system.attackMod,
         damageMod: item.system.damageMod,
@@ -387,6 +390,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     } else if (item.type === "ammunition") {
       const ammo = foundry.utils.deepClone(this.document.system.ammo);
       ammo.push({
+        uuid: item.uuid,
         name: item.name, count: 1,
         attackMod: item.system.attackMod,
         damageMod: item.system.damageMod,
