@@ -7,12 +7,13 @@ import { fileURLToPath } from "node:url";
 
 const css = readFileSync(fileURLToPath(new URL("../styles/bdh-themes.css", import.meta.url)), "utf8");
 
-/** Every individual selector in a stylesheet, comments and at-rule blocks stripped. */
+/** Every individual selector in a stylesheet, comments and at-rule preludes stripped. */
 function selectors(source) {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .split("}")
-    .map((block) => block.split("{")[0].trim())
+    .flatMap((block) => block.split("{").slice(0, -1))
+    .map((sel) => sel.trim())
     .filter((sel) => sel && !sel.startsWith("@"))
     .flatMap((sel) => sel.split(",").map((s) => s.trim()))
     .filter(Boolean);
@@ -31,6 +32,11 @@ describe("bdh-themes.css scoping", () => {
 
   it("catches an unscoped selector", () => {
     const leaked = css + "\n.better-dh2e .bdh-header { background:red; }\n";
+    expect(selectors(leaked).filter((sel) => !isScoped(sel))).toEqual([".better-dh2e .bdh-header"]);
+  });
+
+  it("catches an unscoped selector nested in an at-rule", () => {
+    const leaked = css + "\n@media (prefers-reduced-motion: reduce) { .better-dh2e .bdh-header { animation:none; } }\n";
     expect(selectors(leaked).filter((sel) => !isScoped(sel))).toEqual([".better-dh2e .bdh-header"]);
   });
 });
