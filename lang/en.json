@@ -12,6 +12,7 @@
   "TYPES.Item.psychicPower": "Psychic Power",
   "TYPES.Item.armour": "Armour",
   "TYPES.Item.weaponMod": "Weapon Mod",
+  "TYPES.Item.ammunition": "Ammunition",
   "BDH.Char.WeaponSkill": "Weapon Skill",
   "BDH.Char.BallisticSkill": "Ballistic Skill",
   "BDH.Char.Strength": "Strength",

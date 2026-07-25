@@ -13,7 +13,7 @@ import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
 import { RANK_ORDER, purchasedOnAcquire } from "../helpers/advancement-costs.mjs";
 import { advancementRuleset, bcHeader } from "../helpers/advancement-ruleset.mjs";
 import { carryLimits } from "../helpers/encumbrance-data.mjs";
-import { totalMagazines, magazineWeight } from "../helpers/weapon-effects.mjs";
+import { totalMagazines, magazineWeight, effectiveWeapon } from "../helpers/weapon-effects.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -664,10 +664,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.weapons = items.filter((i) => i.type === "weapon").map((w) => {
       const s = w.system;
       const flags = weaponClassFlags(s.weaponClass);
+      const eff = effectiveWeapon(s);
       const parts = [
         BDH.weaponClasses[s.weaponClass] ?? s.weaponClass,
-        [s.damage, BDH.damageTypes[s.damageType]].filter(Boolean).join(" "),
-        `Pen ${s.penetration}`
+        [eff.damage, BDH.damageTypes[eff.damageType]].filter(Boolean).join(" "),
+        `Pen ${eff.penetration}`
       ];
       if (flags.usesRange) parts.push(`Rng ${s.range}m`);
       if (flags.usesAmmo) parts.push(`RoF ${s.rateOfFire.single}/${s.rateOfFire.short}/${s.rateOfFire.long}`);
@@ -715,10 +716,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.forceFieldPR = eff ? eff.system.protectionRating : null;
     context.combatWeapons = items.filter((i) => i.type === "weapon" && i.system.equipped).map((w) => {
       const flags = weaponClassFlags(w.system.weaponClass);
+      const eff = effectiveWeapon(w.system);
       return {
         id: w.id, name: w.name,
         attackChar: (w.system.weaponClass === "melee" ? BDH.characteristics.weaponSkill : BDH.characteristics.ballisticSkill).short,
-        summary: `${w.system.damage} ${BDH.damageTypes[w.system.damageType] ?? ""} · Pen ${w.system.penetration}`,
+        summary: `${eff.damage} ${BDH.damageTypes[eff.damageType] ?? ""} · Pen ${eff.penetration}`,
         usesAmmo: flags.usesAmmo, clip: `${w.system.clip.value}/${w.system.clip.max}`,
         mags: totalMagazines(w.system), loadedAmmo: w.system.loadedAmmo?.name ?? ""
       };

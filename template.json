@@ -7,9 +7,10 @@
     "vehicle": {}
   },
   "Item": {
-    "types": ["weapon", "weaponMod", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"],
+    "types": ["weapon", "weaponMod", "ammunition", "gear", "talent", "trait", "forceField", "cybernetic", "psychicPower", "armour"],
     "weapon": {},
     "weaponMod": {},
+    "ammunition": {},
     "gear": {},
     "talent": {},
     "trait": {},

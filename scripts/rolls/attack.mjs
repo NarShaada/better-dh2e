@@ -486,7 +486,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     const weapon = await resolveWeapon(actor, f);
     if (!weapon) return;
     const blastEff = effectiveWeapon(weapon.system);
-    const baseFormula = blastEff.damage;
+    const baseFormula = f.damageFormula ?? blastEff.damage;
     const qualities = f.qualities ?? blastEff.qualities;
     // Ranged blast: strBonus is always 0, craftDmg is 0 (melee-only).
     let weaponBase = baseFormula;
@@ -552,7 +552,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   const weapon = psychic ? null : await resolveWeapon(actor, f);
   if (!psychic && !weapon) return;
   const eff = weapon ? effectiveWeapon(weapon.system) : null;
-  const baseFormula = psychic ? (f.damage || "0") : eff.damage;   // e.g. "1d10+3" or PR-substituted formula
+  const baseFormula = psychic ? (f.damage || "0") : (f.damageFormula ?? eff.damage);   // e.g. "1d10+3" or PR-substituted formula
   const weaponDisplayName = f.weaponName ?? weapon?.name;
   // Multi-hit on one target: let the player drop hits mitigated by talents (latest hits drop first).
   const nHitsTotal = f.hits?.length ?? 0;
@@ -1545,6 +1545,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       maximal,
       penetration,
       damageType: eff.damageType,
+      damageFormula: eff.damage,
       qualities: eff.qualities,
       aiming,
       attackType: choice.attackType,

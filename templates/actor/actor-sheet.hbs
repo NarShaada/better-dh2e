@@ -298,7 +298,7 @@
           {{#if @root.isHorde}}<a class="bdh-eq {{#if w.hordeEquipped}}on horde{{else}}{{#if w.equipped}}on{{/if}}{{/if}}" data-action="toggleEquipped" title="{{#if w.hordeEquipped}}Horde-Equipped{{else}}{{#if w.equipped}}Equipped{{else}}Not Equipped{{/if}}{{/if}}">{{#if w.hordeEquipped}}✦{{else}}{{#if w.equipped}}✓{{else}}○{{/if}}{{/if}}</a>{{else}}<a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if w.equipped}}✓{{else}}○{{/if}}</a>{{/if}}
           <span class="bdh-name" data-action="editItem">{{w.name}}</span>
           <span class="bdh-desc-line">{{w.summary}}</span>
-          {{#if w.usesAmmo}}<span class="bdh-clip">Clip {{w.clip}}</span>{{/if}}
+          {{#if w.usesAmmo}}<span class="bdh-clip">Clip {{w.clip}}</span>{{#if w.loadedAmmo}}<span class="bdh-loaded" title="Loaded">{{w.loadedAmmo}}</span>{{/if}}{{/if}}
           {{#unless w.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{#if w.granted}}<span class="bdh-tag bdh-granted" title="{{w.grantedBy}}">⚙</span>{{/if}}
         </div>
       {{/each}}

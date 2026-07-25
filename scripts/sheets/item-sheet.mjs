@@ -249,6 +249,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.isTrait = t === "trait";
     context.isWeapon = t === "weapon";
     context.isWeaponMod = t === "weaponMod";
+    context.isAmmunition = t === "ammunition";
     context.isPsychicPower = t === "psychicPower";
     context.craftChoices = BDH.craftsmanship;
     context.availChoices = BDH.availability;
@@ -285,14 +286,8 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       }
     }
 
-    if (context.isWeapon) {
-      const flags = weaponClassFlags(system.weaponClass);
-      context.usesRange = flags.usesRange;
-      context.usesAmmo = flags.usesAmmo;
-      context.weaponClasses = BDH.weaponClasses;
-      context.weaponTypes = BDH.weaponTypes;
-      context.damageTypes = BDH.damageTypes;
-      context.reloadChoices = BDH.reload;
+    // Quality box: weapons and ammunition both carry a system.qualities array of the same shape.
+    if (context.isWeapon || context.isAmmunition) {
       context.qualityList = system.qualities.map((q, i) => {
         const cfg = BDH.qualities[q.key];
         const label = cfg?.label ?? q.key;
@@ -301,8 +296,23 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         const display = cfg?.takesValue && q.value ? `${label} (${q.value})` : label;
         return { index: i, key: q.key, display, isHomebrew: cfg?.homebrew === true };
       });
+    }
+
+    if (context.isWeapon) {
+      const flags = weaponClassFlags(system.weaponClass);
+      context.usesRange = flags.usesRange;
+      context.usesAmmo = flags.usesAmmo;
+      context.weaponClasses = BDH.weaponClasses;
+      context.weaponTypes = BDH.weaponTypes;
+      context.damageTypes = BDH.damageTypes;
+      context.reloadChoices = BDH.reload;
       context.modList = system.mods.map((m, i) => ({ index: i, ...m }));
       context.ammoList = (system.ammo ?? []).map((a, i) => ({ index: i, ...a }));
+    }
+
+    if (context.isAmmunition) {
+      // First option = "" (keep the weapon's own damage type), matching AmmunitionModel's damageType field.
+      context.ammoDamageTypeChoices = { "": "— keep weapon's —", ...BDH.damageTypes };
     }
 
     context.showBonuses = context.isCybernetic || context.isGear || context.isArmour || context.isTrait;

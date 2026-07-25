@@ -17,7 +17,7 @@ export class AmmunitionModel extends BaseItemModel {
       special:    new fields.StringField({ required: true, initial: "" }),
       // "" = keep the weapon's damage type.
       damageType: new fields.StringField({ required: true, initial: "", blank: true,
-                                           choices: ["", ...Object.keys(BDH.damageTypes)] }),
+                                           choices: [...Object.keys(BDH.damageTypes)] }),
       qualities: new fields.ArrayField(new fields.SchemaField({
         key:   new fields.StringField({ required: true }),
         value: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })

@@ -8,6 +8,7 @@ import { promptTest, performTest } from "../rolls/roll-test.mjs";
 import { parseModifier } from "../rolls/test-logic.mjs";
 import { rollAttack } from "../rolls/attack.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
+import { effectiveWeapon } from "../helpers/weapon-effects.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -77,9 +78,10 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         .filter(Boolean)
         .map((w) => {
           const flags = weaponClassFlags(w.system.weaponClass);
+          const eff = effectiveWeapon(w.system);
           return {
             id: w.id, name: w.name,
-            summary: [w.system?.damage, w.system?.penetration != null ? `Pen ${w.system.penetration}` : null].filter(Boolean).join(" · "),
+            summary: [eff.damage, eff.penetration != null ? `Pen ${eff.penetration}` : null].filter(Boolean).join(" · "),
             attackChar: w.system?.weaponClass === "melee" ? "WS" : "BS",
             usesAmmo: flags.usesAmmo, clip: `${w.system.clip?.value ?? 0}/${w.system.clip?.max ?? 0}`
           };
@@ -212,7 +214,7 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   static async #onReloadWeapon(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
     const item = this.actor.items.get(id);
-    if (item) await item.update({ "system.clip.value": item.system.clip.max });
+    if (item) await item.update({ "system.clip.value": item.system.clip.max, "system.loadedAmmo": null });
   }
 
   /** Unmount a weapon: drop it from the seat and delete the vehicle's copy. */

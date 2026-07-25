@@ -112,6 +112,26 @@
     </div>
   {{/if}}
 
+  {{#if isAmmunition}}
+    <div class="bdh-fields">
+      <label>Attack Mod</label><input type="number" name="system.attackMod" value="{{system.attackMod}}"/>
+      <label>Damage Mod</label><input type="text" name="system.damageMod" value="{{system.damageMod}}" placeholder="+2 or +1d5"/>
+      <label>Pen Mod</label><input type="number" name="system.penMod" value="{{system.penMod}}"/>
+      <label>Damage Type</label><select name="system.damageType">{{selectOptions ammoDamageTypeChoices selected=system.damageType}}</select>
+      <label>Special</label><input type="text" name="system.special" value="{{system.special}}"/>
+    </div>
+
+    <div class="bdh-list-section">
+      <div class="bdh-list-head">Qualities</div>
+      {{#each qualityList as |q|}}
+        <div class="bdh-list-row"><span>{{q.display}}{{#if @root.showQualityCogs}} <span class="bdh-auto{{#if q.isHomebrew}} homebrew{{/if}}" title="{{#if q.isHomebrew}}Non-Vanilla{{else}}Core{{/if}}">⚙</span>{{/if}}</span>
+          <a data-action="removeQuality" data-index="{{q.index}}" title="Remove">✖</a></div>
+      {{/each}}
+      {{#unless qualityList.length}}<div class="bdh-empty">No qualities.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addQuality">＋ Add</button></div>
+    </div>
+  {{/if}}
+
   {{#if isPsychicPower}}
     <div class="bdh-fields">
       <label>Discipline</label><select name="system.discipline">{{selectOptions disciplines selected=system.discipline}}</select>
