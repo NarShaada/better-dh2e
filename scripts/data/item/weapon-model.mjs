@@ -39,6 +39,34 @@ export class WeaponModel extends BaseItemModel {
         penMod:    new fields.NumberField({ required: true, integer: true, initial: 0 }),
         special:   new fields.StringField({ required: true, initial: "" })
       })),
+      /** Magazine stock for this weapon. Denormalized copies, like mods[]. */
+      ammo: new fields.ArrayField(new fields.SchemaField({
+        name:       new fields.StringField({ required: true, initial: "" }),
+        count:      new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+        attackMod:  new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        damageMod:  new fields.StringField({ required: true, initial: "" }),
+        penMod:     new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        special:    new fields.StringField({ required: true, initial: "" }),
+        damageType: new fields.StringField({ required: true, initial: "" }),
+        qualities: new fields.ArrayField(new fields.SchemaField({
+          key:   new fields.StringField({ required: true }),
+          value: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })
+        }))
+      })),
+      /** Snapshot of the currently-loaded round — NOT an index into ammo[], which is
+       *  user-editable and reorderable. null = standard rounds. */
+      loadedAmmo: new fields.SchemaField({
+        name:       new fields.StringField({ required: true, initial: "" }),
+        attackMod:  new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        damageMod:  new fields.StringField({ required: true, initial: "" }),
+        penMod:     new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        special:    new fields.StringField({ required: true, initial: "" }),
+        damageType: new fields.StringField({ required: true, initial: "" }),
+        qualities: new fields.ArrayField(new fields.SchemaField({
+          key:   new fields.StringField({ required: true }),
+          value: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })
+        }))
+      }, { required: false, nullable: true, initial: null }),
       equipped: new fields.BooleanField({ required: true, initial: false }),
       hordeEquipped: new fields.BooleanField({ required: true, initial: false })
     };
