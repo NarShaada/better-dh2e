@@ -1,7 +1,9 @@
-/* Better DH2e — Dataslate & Dossier themes (Plan 49).
+/* Better DH2e — Dataslate, Dossier & Heretic themes (Plan 49; Heretic added 2026-07-25).
    Classic = no body class = styles/better-dh2e.css alone; nothing here loads for it.
-   body.bdh-themed       → structure shared by both modern themes
-   body.bdh-theme-*      → palette only (CSS custom properties) */
+   body.bdh-themed       → structure shared by every modern theme
+   body.bdh-theme-*      → palette (CSS custom properties), plus any theme-specific
+                           structural overrides — these must come AFTER the shared
+                           structure section, since they rely on source order to win. */
 
 /* ---------- Fonts (bundled, OFL) ---------- */
 @font-face { font-family:"Cinzel"; src:url("../fonts/Cinzel-700.woff2") format("woff2"); font-weight:700; font-display:swap; }
@@ -28,6 +30,19 @@ body.bdh-theme-dossier {
   --t-gold:#8a6d1f; --t-gold2:#a3851f; --t-glow:rgba(138,109,31,.3);
   --t-red:#962f25; --t-red2:#74221a; --t-green:#3f6b4f; --t-green2:#2e5c43;
   --t-warp:#6d3d8e; --t-field:#fbf6e8; --t-on-accent:#fbf6e8;
+}
+
+/* Heretic — the same dataslate, taken and re-marked. The Imperial gold accent becomes
+   ember-copper (tarnished, still hot); red is pushed to arterial so the two never read
+   as the same colour; green survives as corroded bronze so the success/fail affordance
+   in chat cards keeps working. */
+body.bdh-theme-heretic {
+  --t-bg:#15100e; --t-panel:#1c1513; --t-panel2:#241a17; --t-panel3:#2e211d;
+  --t-line:#37241f; --t-line2:#523229;
+  --t-ink:#d5c6b2; --t-ink2:#f3e7d3; --t-muted:#96806b; --t-faint:#65523f;
+  --t-gold:#c8622e; --t-gold2:#8d4520; --t-glow:rgba(200,98,46,.40);
+  --t-red:#d43a2c; --t-red2:#7c1712; --t-green:#7f9e5e; --t-green2:#3d4f2c;
+  --t-warp:#b054d6; --t-field:#110b0a; --t-on-accent:#150d08;
 }
 
 /* ---------- Type system + chrome ---------- */
