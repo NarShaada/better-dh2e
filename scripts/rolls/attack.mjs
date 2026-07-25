@@ -485,9 +485,9 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     const actor = await fromUuid(f.actorUuid);
     const weapon = await resolveWeapon(actor, f);
     if (!weapon) return;
-    const eff = effectiveWeapon(weapon.system);
-    const baseFormula = eff.damage;
-    const qualities = f.qualities ?? eff.qualities;
+    const blastEff = effectiveWeapon(weapon.system);
+    const baseFormula = blastEff.damage;
+    const qualities = f.qualities ?? blastEff.qualities;
     // Ranged blast: strBonus is always 0, craftDmg is 0 (melee-only).
     let weaponBase = baseFormula;
     if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
@@ -702,7 +702,7 @@ async function rollEvade(message) {
   if (!defender) { ui.notifications.warn("Select a token to evade with."); return; }
   if (defender.type === "vehicle") return rollJink(defender);
   const meleeWeapons = defender.items.filter((i) => i.type === "weapon" && i.system.weaponClass === "melee" && i.system.equipped);
-  const parryWeapons = meleeWeapons.filter((i) => !hasUnwieldy(i.system.qualities));
+  const parryWeapons = meleeWeapons.filter((i) => !hasUnwieldy(effectiveWeapon(i.system).qualities));
   const onlyUnwieldy = meleeWeapons.length > 0 && parryWeapons.length === 0;   // holding only Unwieldy melee
   const flexible = hasFlexible(f.qualities);
   const noParry = flexible || onlyUnwieldy;
@@ -728,7 +728,7 @@ async function rollEvade(message) {
     return null;
   }
   if (choice.reaction === "parry") {
-    const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: i.system.qualities, craftsmanship: i.system.craftsmanship })));
+    const pmod = parryModifier(parryWeapons.map((i) => ({ qualities: effectiveWeapon(i.system).qualities, craftsmanship: i.system.craftsmanship })));
     // Parry is a skill (WS-based) — untrained parries at WS−20, trained ranks add +0/+10/+20/+30.
     const base = defender.system.characteristics.weaponSkill.total + (BDH.skillRanks[defender.system.skills?.parry?.rank] ?? BDH.skillRanks.untrained);
     const label = pmod ? `Parry (weapon ${pmod >= 0 ? "+" : ""}${pmod})` : "Parry";
