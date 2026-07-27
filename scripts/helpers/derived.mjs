@@ -50,3 +50,40 @@ export function movement(agilityBonus, size = 4) {
   const half = Math.max(1, agilityBonus + (size - 4));   // RAW: AgB used for movement can't drop below 1
   return { half, full: half * 2, charge: half * 3, run: half * 6 };
 }
+
+/** Movement base BEFORE size and stat-mods: (characteristic bonus | flat) × multiplier + modifier.
+ *  Defaults (kind "characteristic", multiplier 1, modifier 0) return charBonus unchanged. */
+export function movementBaseValue(cfg, charBonus) {
+  const c = cfg ?? {};
+  const raw = c.kind === "flat" ? (Number(c.flat) || 0) : (Number(charBonus) || 0);
+  const mult = c.multiplier === undefined || c.multiplier === null ? 1 : Number(c.multiplier);
+  return raw * (Number.isFinite(mult) ? mult : 1) + (Number(c.modifier) || 0);
+}
+
+/** Initiative's numeric part BEFORE stat-mods: (characteristic bonus | flat) + modifier. */
+export function initiativeBase(cfg, charBonus) {
+  const c = cfg ?? {};
+  const raw = c.baseKind === "flat" ? (Number(c.flat) || 0) : (Number(charBonus) || 0);
+  return raw + (Number(c.modifier) || 0);
+}
+
+/** A dice term: blank (no dice) or NdM. Deliberately a shape check, not a Foundry roll parse,
+ *  so this helper stays pure and synchronous. */
+const DICE_RE = /^\s*\d+\s*d\s*\d+\s*$/i;
+
+/** The sanitized dice term: "" when deliberately blank, the trimmed expression when valid, and
+ *  "1d10" (with a warning) when malformed. Initiative fires automatically for every combatant at the
+ *  start of a fight, so a typo on one sheet must not break rolling for the whole table. */
+export function initiativeDice(dice) {
+  const raw = dice === undefined || dice === null ? "1d10" : String(dice);
+  if (raw.trim() === "") return "";                             // deliberately no dice
+  if (DICE_RE.test(raw)) return raw.trim();
+  console.warn(`better-dh2e | invalid initiative dice "${raw}" — falling back to 1d10.`);
+  return "1d10";
+}
+
+/** Assemble a per-actor initiative formula from the sanitized dice term. */
+export function initiativeFormula(dice, bonusRef = "@initiativeBonus") {
+  const term = initiativeDice(dice);
+  return term ? `${term} + ${bonusRef}` : bonusRef;
+}
