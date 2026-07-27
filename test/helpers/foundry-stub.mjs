@@ -330,6 +330,12 @@ export function makeActor(overrides = {}) {
     statuses: overrides.statuses ?? new Set(),
     getActiveTokens: overrides.getActiveTokens ?? (() => []),
     update: overrides.update ?? (async (changes) => { applyDotUpdate(actor, changes); return actor; }),
+    statusToggles: [],
+    toggleStatusEffect: overrides.toggleStatusEffect ?? (async (id, { active } = {}) => {
+      actor.statusToggles.push({ id, active });
+      if (active) actor.statuses.add(id); else actor.statuses.delete(id);
+      return true;
+    }),
   };
   return actor;
 }

@@ -239,6 +239,7 @@ Hooks.once("init", () => {
     { id: "unaware",  name: "Unaware",  img: "icons/svg/blind.svg" },
     { id: "pinned",   name: "Pinned",   img: "icons/svg/net.svg" },
     { id: "inCover",  name: "In Cover", img: "icons/svg/shield.svg" },
+    { id: "weaponJammed", name: "Weapon Jammed", img: "icons/svg/clockwork.svg" },
   ];
 
   console.log("Better DH2e | Initialized");

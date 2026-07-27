@@ -287,3 +287,32 @@ describe("7. Untouched-weapon invariant — no mods, no ammo ⇒ card flags are 
     expect(content.attackNotes).not.toContain("Mods/Ammo");   // attackMod is 0 — no gear note at all
   });
 });
+
+describe("Weapon Jammed status", () => {
+  // A jam is a ranged MISS at or above the jam floor: checkJam(roll, isSuccess, isRanged, floor)
+  // returns `isRanged && !isSuccess && roll >= floor`. fixedRoll makes the d100 deterministic.
+  const lowBS = { system: { characteristics: { ballisticSkill: { total: 30, bonus: 3 } } } };
+
+  it("applies weaponJammed to the attacker when the attack jams", async () => {
+    const actor = makeActor(lowBS);
+    const weapon = makeWeapon({ system: { weaponClass: "basic" } });
+    await resolveAttack(actor, weapon, makeChoice(), { fixedRoll: 97 });
+    expect(actor.statusToggles).toContainEqual({ id: "weaponJammed", active: true });
+    expect(actor.statuses.has("weaponJammed")).toBe(true);
+  });
+
+  it("does NOT apply it when the attack does not jam", async () => {
+    const actor = makeActor({ system: { characteristics: { ballisticSkill: { total: 60, bonus: 6 } } } });
+    const weapon = makeWeapon({ system: { weaponClass: "basic" } });
+    await resolveAttack(actor, weapon, makeChoice(), { fixedRoll: 5 });
+    expect(actor.statusToggles.some((t) => t.id === "weaponJammed")).toBe(false);
+  });
+
+  it("does not re-toggle when the attacker is already jammed (that would clear it)", async () => {
+    const actor = makeActor({ ...lowBS, statuses: new Set(["weaponJammed"]) });
+    const weapon = makeWeapon({ system: { weaponClass: "basic" } });
+    await resolveAttack(actor, weapon, makeChoice(), { fixedRoll: 97 });
+    expect(actor.statusToggles.some((t) => t.id === "weaponJammed")).toBe(false);
+    expect(actor.statuses.has("weaponJammed")).toBe(true);
+  });
+});

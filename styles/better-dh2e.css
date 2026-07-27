@@ -426,3 +426,8 @@
 .better-dh2e .bdh-god-tallies { display:flex; flex-wrap:wrap; gap:10px; padding:4px 10px; }
 .better-dh2e .bdh-god-tally { font-size:12px; border:1px solid var(--bdh-brown); border-radius:4px; padding:2px 8px; background:var(--bdh-panel); }
 .better-dh2e .bdh-god-tally b { font-variant:small-caps; letter-spacing:1px; margin-right:4px; color:var(--bdh-maroon); }
+
+/* Token HUD status palette: Foundry lays the icons out in an auto-row grid (public/css/foundry2.css
+   — 5 columns, gap 3px), so any spare height in the HUD column stretches the rows apart. Pack them
+   to the top instead. Global on purpose — the token HUD is not inside .better-dh2e. */
+#token-hud .status-effects { align-content: start; }
