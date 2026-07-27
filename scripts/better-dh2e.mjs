@@ -27,6 +27,7 @@ import { VehicleSheet } from "./sheets/vehicle-sheet.mjs";
 import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
 import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 import { makeDHCombat } from "./documents/combat.mjs";
+import { makeDHCombatant } from "./documents/combatant.mjs";
 import { registerCoverAutomation } from "./canvas/cover.mjs";
 import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
 import { initVehicleFacing } from "./canvas/vehicle-facing.mjs";
@@ -50,7 +51,9 @@ Hooks.once("init", () => {
     return out;
   });
   Handlebars.registerHelper("inc", (v) => (Number(v) || 0) + 1);
-  Handlebars.registerHelper("eq", (a, b) => a === b);
+  // "eq" is intentionally NOT registered here — Foundry core already registers an identical
+  // eq: (v1, v2) => v1 === v2 (client/applications/handlebars.mjs), and the templates in this repo
+  // only ever use eq for plain two-argument strict-equality checks (moveCfg.kind, initiative.baseKind).
 
   // Combat-tracker initiative: 1d10 + the actor's chosen initiative-characteristic bonus (see DarkHeresyActor#getRollData).
   CONFIG.Combat.initiative = { formula: "1d10 + @initiativeBonus", decimals: 0 };
@@ -62,6 +65,7 @@ Hooks.once("init", () => {
   CONFIG.Actor.documentClass = DarkHeresyActor;
   CONFIG.Item.documentClass = DarkHeresyItem;
   if (CONFIG.Combat?.documentClass) CONFIG.Combat.documentClass = makeDHCombat(CONFIG.Combat.documentClass);
+  if (CONFIG.Combatant?.documentClass) CONFIG.Combatant.documentClass = makeDHCombatant(CONFIG.Combatant.documentClass);
 
   // Data models
   CONFIG.Actor.dataModels.acolyte = AcolyteModel;

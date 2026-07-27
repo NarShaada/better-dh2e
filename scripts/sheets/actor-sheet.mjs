@@ -817,11 +817,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     const initCfg = sys.initiative;
     const initCharBonus = sys.characteristics[initCfg.characteristic]?.bonus ?? 0;
     context.initBase = initiativeBase(initCfg, initCharBonus);
-    context.initShort = BDH.characteristics[initCfg.characteristic]?.short ?? "";
-    context.initDice = initiativeDice(initCfg.dice);   // "" when blank; sanitized otherwise
+    // Only meaningful for a characteristic-based init; a flat base has no governing characteristic to label.
+    context.initShort = initCfg.baseKind === "flat" ? "" : (BDH.characteristics[initCfg.characteristic]?.short ?? "");
+    // warn:false — this runs in _prepareContext, which re-renders on every edit; the roll path (initiativeFormula) still warns.
+    context.initDice = initiativeDice(initCfg.dice, { warn: false });   // "" when blank; sanitized otherwise
     context.moveCfg = sys.movementBase;
-    context.moveCharBonus = sys.characteristics[sys.movementBase.characteristic]?.bonus ?? 0;
-    context.moveBase = movementBaseValue(sys.movementBase, context.moveCharBonus);
+    context.moveBase = movementBaseValue(sys.movementBase, sys.characteristics[sys.movementBase.characteristic]?.bonus ?? 0);
     context.kindChoices = { characteristic: "Characteristic bonus", flat: "Flat number" };
     // Simple-mode cost data (cheap; the template reads it only when isSimple). Ruleset-aware:
     // DH2 = aptitude matches, 5 char tiers, Influence blocked; BC = alignment matches, 4 tiers, Influence buyable.

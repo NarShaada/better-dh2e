@@ -1,7 +1,6 @@
 // scripts/documents/combat.mjs — end-of-turn / end-of-round condition ticks.
 import { battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { consumeToxic, tickStunned, tickOnFire } from "../rolls/conditions.mjs";
-import { initiativeFormula } from "../helpers/derived.mjs";
 
 const NS = "better-dh2e";
 
@@ -41,14 +40,6 @@ export function makeDHCombat(Base) {
         content,
         flags: { [NS]: flags }
       });
-    }
-
-    /** Per-actor initiative formula — the system-wide CONFIG.Combat.initiative.formula can't vary
-     *  by combatant. Falls through to Foundry's own path when there is no actor. */
-    _getInitiativeFormula(combatant) {
-      const cfg = combatant?.actor?.system?.initiative;
-      if (!cfg) return super._getInitiativeFormula?.(combatant) ?? CONFIG.Combat.initiative.formula;
-      return initiativeFormula(cfg.dice);
     }
   };
 }

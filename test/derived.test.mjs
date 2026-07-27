@@ -150,6 +150,12 @@ describe("movementBaseValue", () => {
     expect(movementBaseValue(undefined, 3)).toBe(3);
     expect(movementBaseValue({}, 3)).toBe(3);
   });
+
+  it("rounds the result so a fractional multiplier can't leak fractional metres", () => {
+    // 0.5 * 3 = 1.5 -> rounds to 2 (banker's-free Math.round, i.e. round-half-up)
+    expect(movementBaseValue({ ...dflt, multiplier: 0.5 }, 3)).toBe(2);
+    expect(Number.isInteger(movementBaseValue({ ...dflt, multiplier: 0.5 }, 3))).toBe(true);
+  });
 });
 
 describe("movement base feeds movement() — ordering", () => {
@@ -210,6 +216,16 @@ describe("initiativeDice", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(initiativeDice("banana")).toBe("1d10");
     expect(initiativeDice(undefined)).toBe("1d10");
+    vi.restoreAllMocks();
+  });
+
+  it("warns by default on garbage but stays silent with { warn: false } (sheet display path)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(initiativeDice("banana")).toBe("1d10");
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockClear();
+    expect(initiativeDice("banana", { warn: false })).toBe("1d10");
+    expect(warn).not.toHaveBeenCalled();
     vi.restoreAllMocks();
   });
 });
