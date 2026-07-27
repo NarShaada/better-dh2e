@@ -233,8 +233,37 @@
               <span>Half {{system.movement.half}} m</span><span>Full {{system.movement.full}} m</span>
               <span>Charge {{system.movement.charge}} m</span><span>Run {{system.movement.run}} m</span>
             </div>
-            <div class="bdh-init">Initiative: 1d10 +
-              {{#if isCustom}}<select name="system.initiative.characteristic">{{selectOptions charChoices selected=system.initiative.characteristic}}</select>{{else}}<b>{{initBonus}}</b> ({{initShort}}){{/if}}
+            {{#if isCustom}}
+              <div class="bdh-base-edit">
+                <label>Move base</label>
+                <select name="system.movementBase.kind">{{selectOptions kindChoices selected=moveCfg.kind}}</select>
+                {{#if (eq moveCfg.kind "flat")}}
+                  <input type="number" name="system.movementBase.flat" value="{{moveCfg.flat}}"/>
+                {{else}}
+                  <select name="system.movementBase.characteristic">{{selectOptions charChoices selected=moveCfg.characteristic}}</select>
+                {{/if}}
+                <span class="bdh-op">&times;</span>
+                <input type="number" name="system.movementBase.multiplier" value="{{moveCfg.multiplier}}" step="0.5"/>
+                <span class="bdh-op">+</span>
+                <input type="number" name="system.movementBase.modifier" value="{{moveCfg.modifier}}"/>
+                <span class="bdh-base-out">= {{moveBase}}</span>
+              </div>
+            {{/if}}
+            <div class="bdh-init">Initiative:
+              {{#if isCustom}}
+                <input type="text" class="bdh-init-dice" name="system.initiative.dice" value="{{system.initiative.dice}}" placeholder="1d10" title="Blank for no dice"/>
+                <span class="bdh-op">+</span>
+                <select name="system.initiative.baseKind">{{selectOptions kindChoices selected=system.initiative.baseKind}}</select>
+                {{#if (eq system.initiative.baseKind "flat")}}
+                  <input type="number" name="system.initiative.flat" value="{{system.initiative.flat}}"/>
+                {{else}}
+                  <select name="system.initiative.characteristic">{{selectOptions charChoices selected=system.initiative.characteristic}}</select>
+                {{/if}}
+                <span class="bdh-op">+</span>
+                <input type="number" name="system.initiative.modifier" value="{{system.initiative.modifier}}"/>
+              {{else}}
+                {{#if initDice}}{{initDice}} + {{/if}}<b>{{initBase}}</b>{{#if initShort}} ({{initShort}}){{/if}}
+              {{/if}}
             </div>
           </div>
         </div>

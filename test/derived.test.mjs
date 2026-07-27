@@ -1,5 +1,5 @@
 // test/derived.test.mjs
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   characteristicTotal,
   characteristicBonus,
@@ -9,7 +9,11 @@ import {
   sizeToHitModifier,
   sizeStealthModifier,
   unnaturalDoSBonus,
-  governingCharacteristic
+  governingCharacteristic,
+  movementBaseValue,
+  initiativeBase,
+  initiativeDice,
+  initiativeFormula
 } from "../scripts/helpers/derived.mjs";
 
 describe("unnaturalDoSBonus", () => {
@@ -117,5 +121,140 @@ describe("movement floors the size-adjusted AgB at 1", () => {
     expect(movement(0, 4).half).toBe(1);   // AgB 0, Average   -> max(1, 0)   = 1
     expect(movement(3, 4).half).toBe(3);   // unchanged normal
     expect(movement(3, 6).half).toBe(5);   // AgB 3, Enormous  -> 3+2 = 5
+  });
+});
+
+describe("movementBaseValue", () => {
+  const dflt = { kind: "characteristic", characteristic: "agility", flat: 0, multiplier: 1, modifier: 0 };
+
+  it("with defaults returns the characteristic bonus unchanged (today's behaviour)", () => {
+    expect(movementBaseValue(dflt, 3)).toBe(3);
+    expect(movementBaseValue(dflt, 0)).toBe(0);
+  });
+
+  it("ignores the characteristic bonus when kind is flat", () => {
+    expect(movementBaseValue({ ...dflt, kind: "flat", flat: 6 }, 3)).toBe(6);
+  });
+
+  it("scales by the multiplier", () => {
+    expect(movementBaseValue({ ...dflt, multiplier: 2 }, 3)).toBe(6);
+    expect(movementBaseValue({ ...dflt, multiplier: 0.5 }, 4)).toBe(2);
+    expect(movementBaseValue({ ...dflt, multiplier: 0 }, 5)).toBe(0);
+  });
+
+  it("adds the modifier AFTER the multiplier", () => {
+    expect(movementBaseValue({ ...dflt, multiplier: 2, modifier: 1 }, 3)).toBe(7);   // (3*2)+1, not (3+1)*2
+  });
+
+  it("tolerates a missing config or missing fields", () => {
+    expect(movementBaseValue(undefined, 3)).toBe(3);
+    expect(movementBaseValue({}, 3)).toBe(3);
+  });
+
+  it("rounds the result so a fractional multiplier can't leak fractional metres", () => {
+    // 0.5 * 3 = 1.5 -> rounds to 2 (banker's-free Math.round, i.e. round-half-up)
+    expect(movementBaseValue({ ...dflt, multiplier: 0.5 }, 3)).toBe(2);
+    expect(Number.isInteger(movementBaseValue({ ...dflt, multiplier: 0.5 }, 3))).toBe(true);
+  });
+});
+
+describe("movement base feeds movement() — ordering", () => {
+  const dflt = { kind: "characteristic", characteristic: "agility", flat: 0, multiplier: 1, modifier: 0 };
+
+  it("applies the multiplier BEFORE the size adjustment", () => {
+    // Agility bonus 3, Size 5, x2  =>  (3*2) + (5-4) = 7, NOT (3+1)*2 = 8
+    const base = movementBaseValue({ ...dflt, multiplier: 2 }, 3);
+    expect(movement(base, 5).half).toBe(7);
+  });
+
+  it("keeps the bands at x2/x3/x6 of half after a multiplier", () => {
+    const base = movementBaseValue({ ...dflt, multiplier: 2 }, 3);
+    const r = movement(base, 4);
+    expect(r).toEqual({ half: 6, full: 12, charge: 18, run: 36 });
+  });
+
+  it("default config reproduces the old movement(agilityBonus, size) exactly", () => {
+    for (const [ab, size] of [[3, 4], [0, 4], [5, 6], [2, 3]]) {
+      expect(movement(movementBaseValue(dflt, ab), size)).toEqual(movement(ab, size));
+    }
+  });
+});
+
+describe("initiativeBase", () => {
+  const dflt = { characteristic: "agility", dice: "1d10", baseKind: "characteristic", flat: 0, modifier: 0 };
+
+  it("with defaults returns the characteristic bonus (today's behaviour)", () => {
+    expect(initiativeBase(dflt, 4)).toBe(4);
+  });
+
+  it("uses the flat value when baseKind is flat", () => {
+    expect(initiativeBase({ ...dflt, baseKind: "flat", flat: 7 }, 4)).toBe(7);
+  });
+
+  it("adds the modifier to either kind", () => {
+    expect(initiativeBase({ ...dflt, modifier: 2 }, 4)).toBe(6);
+    expect(initiativeBase({ ...dflt, baseKind: "flat", flat: 7, modifier: -1 }, 4)).toBe(6);
+  });
+
+  it("tolerates a missing config", () => {
+    expect(initiativeBase(undefined, 4)).toBe(4);
+  });
+});
+
+describe("initiativeDice", () => {
+  it("passes a valid expression through, trimmed", () => {
+    expect(initiativeDice("1d10")).toBe("1d10");
+    expect(initiativeDice("  2d10  ")).toBe("2d10");
+  });
+
+  it("returns empty for a deliberately blank dice", () => {
+    expect(initiativeDice("")).toBe("");
+    expect(initiativeDice("   ")).toBe("");
+  });
+
+  it("falls back to 1d10 on garbage", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(initiativeDice("banana")).toBe("1d10");
+    expect(initiativeDice(undefined)).toBe("1d10");
+    vi.restoreAllMocks();
+  });
+
+  it("warns by default on garbage but stays silent with { warn: false } (sheet display path)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(initiativeDice("banana")).toBe("1d10");
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockClear();
+    expect(initiativeDice("banana", { warn: false })).toBe("1d10");
+    expect(warn).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+});
+
+describe("initiativeFormula", () => {
+  it("builds the system default", () => {
+    expect(initiativeFormula("1d10")).toBe("1d10 + @initiativeBonus");
+  });
+
+  it("accepts other dice", () => {
+    expect(initiativeFormula("2d10")).toBe("2d10 + @initiativeBonus");
+    expect(initiativeFormula("1d5")).toBe("1d5 + @initiativeBonus");
+  });
+
+  it("omits the dice term when dice is blank", () => {
+    expect(initiativeFormula("")).toBe("@initiativeBonus");
+    expect(initiativeFormula("   ")).toBe("@initiativeBonus");
+  });
+
+  it("falls back to 1d10 on an invalid expression rather than propagating it", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(initiativeFormula("1d")).toBe("1d10 + @initiativeBonus");
+    expect(initiativeFormula("d10; drop table")).toBe("1d10 + @initiativeBonus");
+    expect(initiativeFormula("banana")).toBe("1d10 + @initiativeBonus");
+    expect(initiativeFormula(undefined)).toBe("1d10 + @initiativeBonus");
+    vi.restoreAllMocks();
+  });
+
+  it("honours a custom bonus reference", () => {
+    expect(initiativeFormula("1d10", "@foo")).toBe("1d10 + @foo");
   });
 });

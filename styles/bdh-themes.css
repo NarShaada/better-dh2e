@@ -180,6 +180,9 @@ body.bdh-themed .better-dh2e .bdh-ff-line { color:var(--t-warp); font-family:var
 body.bdh-themed .better-dh2e .bdh-wounds label, body.bdh-themed .better-dh2e .bdh-xp label { font-family:var(--t-cond); letter-spacing:1.5px; color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-move, body.bdh-themed .better-dh2e .bdh-init { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-move b, body.bdh-themed .better-dh2e .bdh-init b { font-family:var(--t-mono); color:var(--t-ink2); }
+body.bdh-themed .better-dh2e .bdh-base-edit label { font-family:var(--t-cond); color:var(--t-muted); }
+body.bdh-themed .better-dh2e .bdh-base-out { color:var(--t-gold); font-family:var(--t-mono); }
+body.bdh-themed .better-dh2e .bdh-op { color:var(--t-faint); }
 
 /* ---------- Afflictions / Psychic / Advancement ---------- */
 body.bdh-themed .better-dh2e .bdh-track { background:var(--t-panel); border:1px solid var(--t-line); border-radius:0; }

@@ -1619,6 +1619,10 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   if (fixedRoll == null) messageData.rolls = [roll];
   ChatMessage.applyRollMode(messageData, "roll");
   const msg = await ChatMessage.create(messageData);
+  // A jam marks the attacker's token. Marker only — no roll effects and no auto-clear (the player
+  // clears it when they clear the jam), which is why weaponJammed is absent from condition-data.mjs.
+  // Guarded: toggling an already-active status would clear it.
+  if (jammed && !actor.statuses?.has?.("weaponJammed")) await actor.toggleStatusEffect("weaponJammed", { active: true });
   // Force field: a hit target with an equipped field auto-tests it.
   if (success && liveTarget?.actor) await rollForceField(liveTarget.actor);
   // Deduct rounds after the message is created (jam still consumes); skip on rerolls
