@@ -1,6 +1,6 @@
 // scripts/data/actor/base-actor-model.mjs
 import { BDH } from "../../config.mjs";
-import { characteristicTotal, characteristicBonus, skillTotal, fatigueMax, movement } from "../../helpers/derived.mjs";
+import { characteristicTotal, characteristicBonus, skillTotal, fatigueMax, movement, movementBaseValue } from "../../helpers/derived.mjs";
 import { effectiveAgilityCap, applyImpairments } from "../../helpers/impairment-data.mjs";
 import { applyCharacteristicDamage } from "../../helpers/char-damage.mjs";
 import { gatherActiveBonusEntries, applyPersistentBonuses, applyUnnaturalBonuses } from "../../helpers/item-bonuses.mjs";
@@ -104,7 +104,19 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
       aptitudes: new fields.ArrayField(new fields.StringField({ choices: BDH.aptitudes })),
       alignment: new fields.StringField({ required: true, choices: Object.keys(BDH.alignments), initial: "unaligned" }),
       initiative: new fields.SchemaField({
-        characteristic: new fields.StringField({ required: true, choices: Object.keys(BDH.characteristics), initial: "agility" })
+        characteristic: new fields.StringField({ required: true, choices: Object.keys(BDH.characteristics), initial: "agility" }),
+        dice:      new fields.StringField({ required: true, initial: "1d10", blank: true }),   // "" = no dice term
+        baseKind:  new fields.StringField({ required: true, choices: ["characteristic", "flat"], initial: "characteristic" }),
+        flat:      new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        modifier:  new fields.NumberField({ required: true, integer: true, initial: 0 })
+      }),
+      /** Movement base config. Named to avoid colliding with `this.movement`, which prepareDerivedData assigns. */
+      movementBase: new fields.SchemaField({
+        kind:           new fields.StringField({ required: true, choices: ["characteristic", "flat"], initial: "characteristic" }),
+        characteristic: new fields.StringField({ required: true, choices: Object.keys(BDH.characteristics), initial: "agility" }),
+        flat:           new fields.NumberField({ required: true, integer: true, initial: 0 }),
+        multiplier:     new fields.NumberField({ required: true, initial: 1 }),   // decimals allowed
+        modifier:       new fields.NumberField({ required: true, integer: true, initial: 0 })
       })
     };
   }
@@ -141,6 +153,8 @@ export class BaseActorModel extends foundry.abstract.TypeDataModel {
         skill.total = skillTotal(charTotal, skill.rank);
       }
     }
-    this.movement = applyMovementMods(movement(this.characteristics.agility.bonus, this.size), cyberSums);
+    const moveCfg = this.movementBase;
+    const moveCharBonus = this.characteristics[moveCfg?.characteristic ?? "agility"]?.bonus ?? 0;
+    this.movement = applyMovementMods(movement(movementBaseValue(moveCfg, moveCharBonus), this.size), cyberSums);
   }
 }
