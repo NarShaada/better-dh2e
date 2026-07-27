@@ -14,6 +14,7 @@ import { RANK_ORDER, purchasedOnAcquire } from "../helpers/advancement-costs.mjs
 import { advancementRuleset, bcHeader } from "../helpers/advancement-ruleset.mjs";
 import { carryLimits } from "../helpers/encumbrance-data.mjs";
 import { totalMagazines, magazineWeight, effectiveWeapon } from "../helpers/weapon-effects.mjs";
+import { initiativeBase, initiativeDice, movementBaseValue } from "../helpers/derived.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -813,9 +814,15 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     };
     context.charChoices = Object.fromEntries(Object.keys(BDH.characteristics).map((k) => [k, BDH.characteristics[k].short]));
     context.rankChoices = { untrained: "Untrained −20", known: "Known +0", trained: "Trained +10", experienced: "Experienced +20", veteran: "Veteran +30" };
-    const initKey = sys.initiative.characteristic;
-    context.initBonus = sys.characteristics[initKey].bonus;
-    context.initShort = BDH.characteristics[initKey].short;
+    const initCfg = sys.initiative;
+    const initCharBonus = sys.characteristics[initCfg.characteristic]?.bonus ?? 0;
+    context.initBase = initiativeBase(initCfg, initCharBonus);
+    context.initShort = BDH.characteristics[initCfg.characteristic]?.short ?? "";
+    context.initDice = initiativeDice(initCfg.dice);   // "" when blank; sanitized otherwise
+    context.moveCfg = sys.movementBase;
+    context.moveCharBonus = sys.characteristics[sys.movementBase.characteristic]?.bonus ?? 0;
+    context.moveBase = movementBaseValue(sys.movementBase, context.moveCharBonus);
+    context.kindChoices = { characteristic: "Characteristic bonus", flat: "Flat number" };
     // Simple-mode cost data (cheap; the template reads it only when isSimple). Ruleset-aware:
     // DH2 = aptitude matches, 5 char tiers, Influence blocked; BC = alignment matches, 4 tiers, Influence buyable.
     context.characteristics = context.characteristics.map((c) => {

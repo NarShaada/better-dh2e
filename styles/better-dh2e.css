@@ -231,6 +231,12 @@
 .better-dh2e .bdh-chardmg-amount { width: 3.5em; text-align: center; }
 .better-dh2e .bdh-move { display:grid; grid-template-columns:1fr 1fr; gap:2px 10px; padding:6px 10px; font-size:11px; }
 .better-dh2e .bdh-init { padding:2px 10px 6px; font-size:11px; color:var(--bdh-muted); }
+.better-dh2e .bdh-base-edit { display:flex; align-items:center; gap:5px; flex-wrap:wrap; font-size:11px; margin:2px 14px 4px; }
+.better-dh2e .bdh-base-edit label { color:var(--bdh-muted); text-transform:uppercase; letter-spacing:1px; font-size:9px; }
+.better-dh2e .bdh-base-edit input[type="number"] { width:52px; text-align:center; }
+.better-dh2e .bdh-base-out { color:var(--bdh-maroon); font-weight:bold; }
+.better-dh2e .bdh-op { color:var(--bdh-muted); }
+.better-dh2e .bdh-init-dice { width:60px; text-align:center; }
 
 /* Favourite star inside the Investigation skill rows */
 .better-dh2e .skill .bdh-fav { flex:0 0 auto; font-size:11px; }
