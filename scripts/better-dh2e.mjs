@@ -5,6 +5,7 @@ import { hordesEnabled } from "./helpers/horde-data.mjs";
 import { themeChoices, themeBodyClasses, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
 import { registerTokenPrefix } from "./helpers/token-prefix.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
+import { bindRequisitionButtons } from "./rolls/requisition.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
@@ -295,6 +296,8 @@ Hooks.once("ready", () => {
 });
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));
+// Requisition binds its own card button in a second hook so the feature stays out of attack.mjs.
+Hooks.on("renderChatMessageHTML", (message, html) => bindRequisitionButtons(message, html));
 
 Hooks.on("getChatMessageContextOptions", (html, options) => {
   const idOf = (li) => li?.dataset?.messageId ?? li?.getAttribute?.("data-message-id") ?? li?.[0]?.dataset?.messageId;

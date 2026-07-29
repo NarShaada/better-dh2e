@@ -1,0 +1,25 @@
+{{!-- templates/chat/requisition-card.hbs --}}
+<div class="bdh-card {{#if success}}ok{{else}}fail{{/if}}">
+  <header class="bdh-card-head">{{label}}</header>
+  {{#if automatic}}
+    <div class="bdh-card-result ok">{{localize "BDH.Requisition.Automatic"}}</div>
+  {{else}}
+    <div class="bdh-card-stats">
+      <div class="bdh-stat"><b>{{target}}</b><span>{{localize "BDH.Roll.Target"}}</span></div>
+      <div class="bdh-stat"><b>{{modifierLabel}}</b><span>{{localize "BDH.Roll.Modifier"}}</span></div>
+      <div class="bdh-stat rolled"><b>{{roll}}</b><span>{{localize "BDH.Roll.Result"}}</span></div>
+    </div>
+    <div class="bdh-card-result {{#if success}}ok{{else}}fail{{/if}}">
+      {{#if success}}{{localize "BDH.Roll.Success"}}{{else}}{{localize "BDH.Roll.Failure"}}{{/if}}
+      {{#if degrees}}<span class="bdh-dos-pips">{{#times degrees}}<i></i>{{/times}}</span>{{/if}}
+      <span class="deg">{{degrees}} {{#if success}}{{localize "BDH.Roll.DoS"}}{{else}}{{localize "BDH.Roll.DoF"}}{{/if}}</span>
+    </div>
+  {{/if}}
+  {{#each parts}}
+    <div class="bdh-card-line">{{this.label}}: {{this.sign}}{{this.value}}</div>
+  {{/each}}
+  {{#if gmDiscretion}}<div class="bdh-card-line">{{localize "BDH.Requisition.GmDiscretion"}}</div>{{/if}}
+  {{#if canAdd}}
+    <div class="bdh-card-actions"><button type="button" data-bdh="requisitionAdd">{{localize "BDH.Requisition.Add"}} {{itemLabel}}</button></div>
+  {{/if}}
+</div>

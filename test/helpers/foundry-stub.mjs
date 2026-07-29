@@ -199,7 +199,21 @@ export function installFoundryStub(options = {}) {
       targets: { first: () => targetToken },
       character: null,
     },
-    i18n: { localize: (k) => k },
+    i18n: {
+      localize: (k) => k,
+      // No lang file is loaded, so `format` substitutes into the key itself — enough for tests to
+      // see that the right data reached the string.
+      format: (k, data = {}) => Object.entries(data).reduce((s, [dk, dv]) => s.replaceAll(`{${dk}}`, dv), k),
+    },
+    // Requisition reads both. `items` is the world Items directory; `packs` are compendia, whose
+    // getIndex() is async and whose entries carry only indexed fields.
+    items: itemsCollection(options.items ?? []),
+    packs: (options.packs ?? []).map((p) => ({
+      documentName: p.documentName ?? "Item",
+      metadata: { label: p.label },
+      getIndex: async () => p.entries ?? [],
+      getUuid: (id) => `Compendium.${p.label}.${id}`,
+    })),
   };
 
   globalThis.ui = {
@@ -327,6 +341,10 @@ export function makeActor(overrides = {}) {
     uuid: overrides.uuid ?? `Actor.${id}`,
     name: overrides.name ?? "Test Actor",
     system, items,
+    // Ownership gates every "write to this actor" button (Fate, Requisition's Add). Default true so
+    // existing callers, which never set it, keep behaving as they did when it was undefined-but-unused.
+    isOwner: overrides.isOwner ?? true,
+    createEmbeddedDocuments: overrides.createEmbeddedDocuments ?? (async (_type, docs) => docs),
     statuses: overrides.statuses ?? new Set(),
     getActiveTokens: overrides.getActiveTokens ?? (() => []),
     update: overrides.update ?? (async (changes) => { applyDotUpdate(actor, changes); return actor; }),
@@ -353,13 +371,19 @@ export function makeChoice(overrides = {}) {
 /** A fake chat-card `html` root for bindCardButtons(message, html). Only `[data-bdh="X"]` buttons
  *  and the two `.bdh-*-hit:checked` checkbox selectors attack.mjs actually queries are modelled;
  *  the GM/owner-only removal selectors resolve to an empty list (a harmless no-op — the assertions
- *  in these tests click the button directly rather than relying on it surviving the removal pass). */
+ *  in these tests click the button directly rather than relying on it surviving the removal pass).
+ *  `remove()` also detaches the element from this root, so a caller that gates on a button's absence
+ *  (bindRequisitionButtons) can be asserted with querySelector without pulling in jsdom. */
 export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] } = {}) {
   const els = buttons.map((bdh) => ({
     dataset: { bdh },
     _listeners: {},
     addEventListener(evt, cb) { this._listeners[evt] = cb; },
-    remove() { this.removed = true; },
+    remove() {
+      this.removed = true;
+      const i = els.indexOf(this);
+      if (i >= 0) els.splice(i, 1);
+    },
   }));
   const sprayBoxes = sprayChecked.map((uuid) => ({ dataset: { uuid }, checked: true }));
   const pinBoxes = pinChecked.map((uuid) => ({ dataset: { uuid }, checked: true }));
@@ -369,6 +393,12 @@ export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] 
       if (!el) throw new Error(`makeCardHtml: no button "${bdh}" — pass it in { buttons: [...] }`);
       if (!el._listeners.click) throw new Error(`makeCardHtml: bindCardButtons never registered a click handler for "${bdh}"`);
       await el._listeners.click();
+    },
+    /** Only the `[data-bdh="X"]` form is modelled — the single selector bindRequisitionButtons uses. */
+    querySelector(selector) {
+      const m = /^\[data-bdh="([^"]+)"\]$/.exec(selector);
+      if (!m) throw new Error(`makeCardHtml.querySelector: unsupported selector "${selector}"`);
+      return els.find((b) => b.dataset.bdh === m[1]) ?? null;
     },
     querySelectorAll(selector) {
       if (selector === "[data-bdh]") return els;

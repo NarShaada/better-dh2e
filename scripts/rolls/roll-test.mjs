@@ -11,6 +11,11 @@ const { renderTemplate } = foundry.applications.handlebars;
 
 const CARD = "systems/better-dh2e/templates/chat/test-card.hbs";
 
+/** Escape a string for safe interpolation into an HTML attribute or text node. */
+function esc(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 /** Build a short " [src +X, …]" note of the item bonuses applied to a roll (empty when none). */
 function bonusNote(auto, applied) {
   const parts = [];
@@ -23,7 +28,7 @@ function bonusNote(auto, applied) {
  * Show the modifier dialog (plus an optional characteristic picker).
  * @returns {Promise<{modifier:string, characteristicKey:(string|null)}|null>} null if cancelled.
  */
-export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [], info = [] }) {
+export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [], info = [], fields = [] }) {
   let picker = "";
   if (characteristics) {
     const opts = characteristics.map((c) =>
@@ -43,7 +48,25 @@ export async function promptTest({ title, characteristics = null, defaultModifie
   const infoRows = info.length
     ? info.map((r) => `<div class="form-group"><label>${r.label}</label><span class="bdh-roll-info">${r.value}</span></div>`).join("")
     : "";
-  const content = `${picker}${checks}${infoRows}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
+  // Caller-supplied inputs (Requisition's Item / Availability / Craftsmanship). Rendered above the
+  // read-only info rows so the breakdown sits directly beneath what produced it.
+  // Values are escaped: unlike the other rows these carry user-authored data (item names), and a
+  // stray quote would otherwise break out of the attribute.
+  const fieldRows = fields.map((f) => {
+    if (f.kind === "select") {
+      const opts = (f.options ?? []).map((o) =>
+        `<option value="${esc(o.value)}"${o.selected ? " selected" : ""}>${esc(o.label)}</option>`).join("");
+      return `<div class="form-group"><label>${f.label}</label><select name="${f.name}">${opts}</select></div>`;
+    }
+    const listId = f.datalist ? `bdh-dl-${f.name}` : null;
+    const list = listId
+      ? `<datalist id="${listId}">${f.datalist.map((v) => `<option value="${esc(v)}"></option>`).join("")}</datalist>`
+      : "";
+    return `<div class="form-group"><label>${f.label}</label>`
+      + `<input type="text" name="${f.name}"${listId ? ` list="${listId}"` : ""}`
+      + `${f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : ""}/>${list}</div>`;
+  }).join("");
+  const content = `${picker}${checks}${fieldRows}${infoRows}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
     <input type="text" name="modifier" value="${defaultModifier}" autofocus/></div>`;
 
   return DialogV2.prompt({
@@ -55,7 +78,8 @@ export async function promptTest({ title, characteristics = null, defaultModifie
       callback: (event, button) => ({
         modifier: button.form.elements.modifier.value,
         characteristicKey: button.form.elements.characteristic?.value ?? null,
-        situationalIds: situational.filter((s) => button.form.elements[`sit_${s.id}`]?.checked).map((s) => s.id)
+        situationalIds: situational.filter((s) => button.form.elements[`sit_${s.id}`]?.checked).map((s) => s.id),
+        fieldValues: Object.fromEntries(fields.map((f) => [f.name, button.form.elements[f.name]?.value ?? null]))
       })
     }
   });
