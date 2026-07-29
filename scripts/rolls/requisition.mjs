@@ -8,6 +8,7 @@ import { evaluateTest, parseModifier } from "./test-logic.mjs";
 import { makeRequisitionRuleset } from "../helpers/requisition-ruleset.mjs";
 import { buildSourceIndex } from "../helpers/requisition-sources.mjs";
 import { promptTest } from "./roll-test.mjs";
+import { escapeHtml } from "../helpers/html-escape.mjs";
 
 const NS = "better-dh2e";
 const CARD = "systems/better-dh2e/templates/chat/requisition-card.hbs";
@@ -16,11 +17,6 @@ const { renderTemplate } = foundry.applications.handlebars;
 /** The active ruleset. Only "dh2" exists; the setting arrives with the Black Crusade branch. */
 function ruleset() {
   return makeRequisitionRuleset("dh2");
-}
-
-/** Escape a string destined for a raw HTML chat card (item/actor names are user-authored). */
-function esc(value) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /** Gather pickable items from the world Items directory and every visible Item compendium.
@@ -162,6 +158,6 @@ async function addRequisitionedItem(message) {
   await message.setFlag(NS, "added", true);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="bdh-card"><header class="bdh-card-head">${esc(game.i18n.format("BDH.Requisition.Acquired", { actor: actor.name, item: data.name }))}</header></div>`
+    content: `<div class="bdh-card"><header class="bdh-card-head">${escapeHtml(game.i18n.format("BDH.Requisition.Acquired", { actor: actor.name, item: data.name }))}</header></div>`
   });
 }

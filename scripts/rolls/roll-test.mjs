@@ -3,6 +3,7 @@
 import { parseModifier, evaluateTest } from "./test-logic.mjs";
 import { skillTotal, sizeStealthModifier, unnaturalDoSBonus } from "../helpers/derived.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor } from "../helpers/item-bonuses.mjs";
+import { escapeHtml } from "../helpers/html-escape.mjs";
 
 const NS = "better-dh2e";
 
@@ -10,11 +11,6 @@ const { DialogV2 } = foundry.applications.api;
 const { renderTemplate } = foundry.applications.handlebars;
 
 const CARD = "systems/better-dh2e/templates/chat/test-card.hbs";
-
-/** Escape a string for safe interpolation into an HTML attribute or text node. */
-function esc(value) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
 
 /** Build a short " [src +X, …]" note of the item bonuses applied to a roll (empty when none). */
 function bonusNote(auto, applied) {
@@ -55,16 +51,16 @@ export async function promptTest({ title, characteristics = null, defaultModifie
   const fieldRows = fields.map((f) => {
     if (f.kind === "select") {
       const opts = (f.options ?? []).map((o) =>
-        `<option value="${esc(o.value)}"${o.selected ? " selected" : ""}>${esc(o.label)}</option>`).join("");
+        `<option value="${escapeHtml(o.value)}"${o.selected ? " selected" : ""}>${escapeHtml(o.label)}</option>`).join("");
       return `<div class="form-group"><label>${f.label}</label><select name="${f.name}">${opts}</select></div>`;
     }
     const listId = f.datalist ? `bdh-dl-${f.name}` : null;
     const list = listId
-      ? `<datalist id="${listId}">${f.datalist.map((v) => `<option value="${esc(v)}"></option>`).join("")}</datalist>`
+      ? `<datalist id="${listId}">${f.datalist.map((v) => `<option value="${escapeHtml(v)}"></option>`).join("")}</datalist>`
       : "";
     return `<div class="form-group"><label>${f.label}</label>`
       + `<input type="text" name="${f.name}"${listId ? ` list="${listId}"` : ""}`
-      + `${f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : ""}/>${list}</div>`;
+      + `${f.placeholder ? ` placeholder="${escapeHtml(f.placeholder)}"` : ""}/>${list}</div>`;
   }).join("");
   const content = `${picker}${checks}${fieldRows}${infoRows}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
     <input type="text" name="modifier" value="${defaultModifier}" autofocus/></div>`;

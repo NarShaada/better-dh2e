@@ -4,25 +4,34 @@
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import {
   installFoundryStub, resetCaptures, capturedRolls, capturedMessages,
-  primeDice, registerUuid, makeActor, makeCardHtml,
+  primeDice, primeDialog, registerUuid, makeActor, makeCardHtml,
 } from "./helpers/foundry-stub.mjs";
 
 const NS = "better-dh2e";
 
-let collectRequisitionSources, resolveRequisition, bindRequisitionButtons;
+let collectRequisitionSources, rollRequisition, resolveRequisition, bindRequisitionButtons;
 
-const PACKS = [{
-  label: "DH2e Weapons",
-  entries: [
-    { _id: "w1", name: "Bolt Pistol", type: "weapon", system: { availability: "veryRare" } },
-    { _id: "t1", name: "Ambidextrous", type: "talent", system: {} }
-  ]
-}];
+// Two packs carry a "Bolt Pistol" on purpose: buildSourceIndex disambiguates a shared name by
+// appending its source, and the dialog's picker is keyed on that DISAMBIGUATED label. Without a
+// collision in the fixture nothing would prove the label survives the round trip back to a uuid.
+const PACKS = [
+  {
+    label: "DH2e Weapons",
+    entries: [
+      { _id: "w1", name: "Bolt Pistol", type: "weapon", system: { availability: "veryRare" } },
+      { _id: "t1", name: "Ambidextrous", type: "talent", system: {} }
+    ]
+  },
+  {
+    label: "Homebrew",
+    entries: [{ _id: "w2", name: "Bolt Pistol", type: "weapon", system: { availability: "rare" } }]
+  }
+];
 const WORLD = [{ id: "i1", name: "Medikit", type: "gear", uuid: "Item.i1", system: { availability: "scarce" } }];
 
 beforeAll(async () => {
   installFoundryStub({ items: WORLD, packs: PACKS });
-  ({ collectRequisitionSources, resolveRequisition, bindRequisitionButtons } =
+  ({ collectRequisitionSources, rollRequisition, resolveRequisition, bindRequisitionButtons } =
     await import("../scripts/rolls/requisition.mjs"));
 });
 beforeEach(() => resetCaptures());
@@ -40,17 +49,20 @@ const actor = () => makeActor({
 describe("collectRequisitionSources", () => {
   it("merges world items and compendium entries, dropping non-acquirable types", async () => {
     const out = await collectRequisitionSources();
-    expect(out.map((x) => x.label)).toEqual(["Bolt Pistol", "Medikit"]);
+    // The talent is gone; the two Bolt Pistols are told apart by their pack.
+    expect(out.map((x) => x.label)).toEqual([
+      "Bolt Pistol (DH2e Weapons)", "Bolt Pistol (Homebrew)", "Medikit"
+    ]);
   });
 
   it("carries availability through from a pack index", async () => {
     const out = await collectRequisitionSources();
-    expect(out.find((x) => x.label === "Bolt Pistol").availability).toBe("veryRare");
+    expect(out.find((x) => x.label === "Bolt Pistol (DH2e Weapons)").availability).toBe("veryRare");
   });
 
   it("derives a compendium uuid from the pack when the index carries none", async () => {
     const out = await collectRequisitionSources();
-    expect(out.find((x) => x.label === "Bolt Pistol").uuid).toBe("Compendium.DH2e Weapons.w1");
+    expect(out.find((x) => x.label === "Bolt Pistol (Homebrew)").uuid).toBe("Compendium.Homebrew.w2");
   });
 });
 
@@ -145,6 +157,90 @@ describe("resolveRequisition — Ubiquitous", () => {
     expect(lastCard().automatic).toBe(true);
     expect(lastCard().success).toBe(true);
     expect(lastCard().canAdd).toBe(true);
+  });
+});
+
+// rollRequisition is the dialog half: it turns what the player typed into the `choice` that
+// resolveRequisition consumes. The stub's DialogV2 replays whatever primeDialog queued.
+describe("rollRequisition — turning the dialog into a choice", () => {
+  /** The shape promptTest's ok-callback returns. */
+  const answer = (fieldValues) => ({
+    modifier: "+0", characteristicKey: "influence", situationalIds: [], fieldValues
+  });
+  const choiceOf = () => lastFlags().reroll.choice;
+
+  it("resolves a picked label to that item's uuid", async () => {
+    primeDialog([answer({ itemLabel: "Medikit", availability: "average", craftsmanship: "normal" })]);
+    primeDice([5]);
+    await rollRequisition(actor());
+    expect(lastFlags().itemUuid).toBe("Item.i1");
+    expect(lastFlags().itemLabel).toBe("Medikit");
+  });
+
+  it("round-trips a disambiguated duplicate label to the right pack's uuid", async () => {
+    // "Bolt Pistol" exists in two packs, so the picker only ever offers the suffixed labels. The
+    // lookup map must be keyed the same way buildSourceIndex labelled them, or picking either one
+    // would silently fall through to freeform.
+    primeDialog([answer({ itemLabel: "Bolt Pistol (Homebrew)", availability: "average", craftsmanship: "normal" })]);
+    primeDice([5]);
+    await rollRequisition(actor());
+    expect(lastFlags().itemUuid).toBe("Compendium.Homebrew.w2");
+    expect(lastFlags().itemLabel).toBe("Bolt Pistol (Homebrew)");
+  });
+
+  it("picks the OTHER pack's uuid for the other half of the same duplicate name", async () => {
+    primeDialog([answer({ itemLabel: "Bolt Pistol (DH2e Weapons)", availability: "average", craftsmanship: "normal" })]);
+    primeDice([5]);
+    await rollRequisition(actor());
+    expect(lastFlags().itemUuid).toBe("Compendium.DH2e Weapons.w1");
+  });
+
+  it("keeps an unmatched typed name as a freeform label with no uuid", async () => {
+    // The bare "Bolt Pistol" is deliberately NOT a label any more — the duplicate suffixed both.
+    primeDialog([answer({ itemLabel: "Bolt Pistol", availability: "average", craftsmanship: "normal" })]);
+    primeDice([5]);
+    await rollRequisition(actor());
+    expect(lastFlags().itemUuid).toBeNull();
+    expect(lastFlags().itemLabel).toBe("Bolt Pistol");
+    expect(capturedRolls()).toEqual(["1d100"]);   // still a real test, just nothing to add afterwards
+  });
+
+  it("treats an empty item field as no item at all", async () => {
+    primeDialog([answer({ itemLabel: "", availability: "average", craftsmanship: "normal" })]);
+    primeDice([5]);
+    await rollRequisition(actor());
+    expect(lastFlags().itemLabel).toBeNull();
+    expect(lastFlags().itemUuid).toBeNull();
+    expect(lastCard().canAdd).toBe(false);
+  });
+
+  it("falls back to Average / Normal when the selects yield no value", async () => {
+    primeDialog([answer({})]);
+    primeDice([5]);
+    await rollRequisition(actor());
+    expect(choiceOf().availability).toBe("average");
+    expect(choiceOf().craftsmanship).toBe("normal");
+    expect(lastCard().parts).toEqual([
+      { label: "Average", value: 0, sign: "+" },
+      { label: "Normal", value: 0, sign: "+" }
+    ]);
+  });
+
+  it("carries the picked characteristic and typed modifier into the roll", async () => {
+    primeDialog([{ modifier: "-10", characteristicKey: "fellowship", situationalIds: [],
+                   fieldValues: { itemLabel: "", availability: "average", craftsmanship: "normal" } }]);
+    primeDice([5]);
+    await rollRequisition(actor());
+    expect(choiceOf().characteristicKey).toBe("fellowship");
+    // Fellowship is 40 in the fixture; -10 typed, nothing from Average/Normal.
+    expect(lastCard().target).toBe(30);
+  });
+
+  it("posts nothing when the dialog is dismissed", async () => {
+    primeDialog([null]);
+    await rollRequisition(actor());
+    expect(capturedMessages()).toEqual([]);
+    expect(capturedRolls()).toEqual([]);
   });
 });
 
