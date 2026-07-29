@@ -14,7 +14,9 @@ export const ACQUIRABLE_TYPES = [
  * @returns {Array<{label:string, uuid:string, type:string, availability:string|null}>}
  */
 export function buildSourceIndex(entries) {
-  const acquirable = (entries ?? []).filter((x) => ACQUIRABLE_TYPES.includes(x?.type));
+  // A real Foundry Item always has a name, but pack index data can be malformed; a nameless
+  // entry can't be labelled or sorted, so it's dropped here rather than left to crash `.sort`.
+  const acquirable = (entries ?? []).filter((x) => ACQUIRABLE_TYPES.includes(x?.type) && !!x?.name);
   // A datalist shows one string per option, so a name in two packs needs its source to tell them
   // apart. Names that appear once stay bare — most of the list would otherwise be noise.
   const seen = new Map();

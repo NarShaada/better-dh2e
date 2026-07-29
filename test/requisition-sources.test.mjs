@@ -57,4 +57,28 @@ describe("buildSourceIndex", () => {
     expect(buildSourceIndex([])).toEqual([]);
     expect(buildSourceIndex(undefined)).toEqual([]);
   });
+
+  it("does not throw on an entry with no name", () => {
+    expect(() => buildSourceIndex([{ type: "weapon" }])).not.toThrow();
+    expect(buildSourceIndex([{ type: "weapon" }])).toEqual([]);
+  });
+
+  it("does not throw on two entries with no name", () => {
+    expect(() => buildSourceIndex([{ type: "weapon" }, { type: "gear" }])).not.toThrow();
+    expect(buildSourceIndex([{ type: "weapon" }, { type: "gear" }])).toEqual([]);
+  });
+
+  it("drops nameless entries but keeps named ones in a mixed list", () => {
+    const out = buildSourceIndex([e("Lasgun", "weapon"), { type: "weapon" }, e("Autogun", "weapon")]);
+    expect(out.map((x) => x.label)).toEqual(["Autogun", "Lasgun"]);
+  });
+
+  it("disambiguates three-plus entries sharing a name, mixing sourced and unsourced", () => {
+    const out = buildSourceIndex([
+      e("Lasgun", "weapon", { source: "A" }),
+      e("Lasgun", "weapon", { source: "B" }),
+      e("Lasgun", "weapon")
+    ]);
+    expect(out.map((x) => x.label).sort()).toEqual(["Lasgun", "Lasgun (A)", "Lasgun (B)"]);
+  });
 });
