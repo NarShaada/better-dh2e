@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100 } from "../helpers/attack-math.mjs";
 import { computeArmour, corrodeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage, cripplingValue } from "../helpers/quality-modules.mjs";
 import { effectiveWeapon } from "../helpers/weapon-effects.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor, effectiveStrengthBonus } from "../helpers/item-bonuses.mjs";
@@ -22,7 +22,7 @@ import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs"
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
-import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless } from "./conditions.mjs";
+import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless, applyCrippled } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
 import { scatterDirection } from "../helpers/scatter.mjs";
 import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion } from "../canvas/region.mjs";
@@ -338,8 +338,14 @@ async function applySpray(message, html) {
   let dieDelta = 0;
   for (const d of roll.dice) for (const r of d.results) if (r.active) dieDelta += transform(r.result) - r.result;
   const damageTotal = roll.total + dieDelta;
-  // Jam: natural 9 on ANY active d10 damage die — ignores Reliable/Unreliable.
-  const jammed = roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 9));
+  // Jam: Spray has its own rule (p.149) — a natural 9 on ANY active d10 damage die, before
+  // modifiers. Reliable overrides it outright — p.148 exempts Reliable Spray weapons, and anything
+  // that makes no hit roll, from jamming at all. effectiveJamFloor already folds craftsmanship into
+  // reliability (Good promotes to Reliable, Best never jams, Poor cancels Reliable), so >= 100
+  // is exactly "counts as Reliable here".
+  const neverJams = effectiveJamFloor(qualities, weapon.system.craftsmanship) >= 100;
+  const jammed = !neverJams
+    && roll.dice.some((d) => d.faces === 10 && d.results.some((r) => r.active && r.result === 9));
   // A horde caught in the spray takes many separate hits, each its own roll (like a burst); non-hordes take the one shared roll.
   const sprayRolls = [];
   const rollSprayHit = async () => {
@@ -948,6 +954,12 @@ async function applyDamage(message) {
   if (battlemapEnabled() && toxPot > 0 && maxApplied >= 1) {
     await applyToxic(target, toxPot, f.damageType ?? "");
   }
+  // Crippling (X), page 145: a target that suffers one or more wounds is Crippled until it heals
+  // all damage or the encounter ends. Same >=1 effective damage trigger as Toxic.
+  const cripX = cripplingValue(qualities);
+  if (battlemapEnabled() && cripX > 0 && maxApplied >= 1) {
+    await applyCrippled(target, cripX);
+  }
   const crit = critTotal > 0 ? `<div class="bdh-card-line fail">Critical damage: ${critTotal}</div>` : "";
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
@@ -1222,6 +1234,10 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   const typeOpts = Object.entries(BDH.attackTypes)
     .filter(([k, t]) => (t.scope === "any" || t.scope === (isMelee ? "melee" : "ranged"))
       && !(k === "lightning" && (hasUnwieldy(eff.qualities) || hasUnbalanced(eff.qualities)))
+      // p.149 bars Spray weapons from Called Shot actions outright, on grounds of their spread.
+      // Only reachable with the battlemap off — with it on, rollSpray takes
+      // over before this dialog is built.
+      && !(k === "calledShot" && isSpray)
       && rofAllows(k))
     .map(([k, t]) => `<option value="${k}">${t.label}</option>`)
     .join("");

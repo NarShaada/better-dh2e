@@ -36,6 +36,7 @@ import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 import { registerGrantHooks } from "./cybernetics/grants.mjs";
 import { registerWeaponPartHooks } from "./weapons/parts.mjs";
+import { registerFatigueHooks } from "./rolls/conditions.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -255,6 +256,10 @@ Hooks.once("init", () => {
     // This marks WHY, and that the escape is a Full Action Strength or Agility test at -10 x X.
     { id: "immobilised", name: "Immobilised", img: "icons/svg/anchor.svg" },
     { id: "unconscious", name: "Unconscious", img: "icons/svg/unconscious.svg" },
+    // Crippled (X) from the Crippling quality, page 145. A marker, like the rest: the rule keys
+    // off spending more than a Half Action, and this system does not model action economy, so
+    // the combat tracker posts an end-of-turn reminder and the GM adjudicates.
+    { id: "crippled",    name: "Crippled",    img: "icons/svg/degen.svg" },
   ];
 
   console.log("Better DH2e | Initialized");
@@ -281,6 +286,7 @@ Hooks.once("ready", () => {
   initVehicleFacing();
   registerGrantHooks();
   registerWeaponPartHooks();
+  registerFatigueHooks();
   // Battlemap integration is default-on now — flip any existing world that still had it off so its
   // token/grid automation isn't stuck disabled (the setting is hidden as of v0.2.0).
   if (game.user.isGM && game.settings.get("better-dh2e", "enableBattlemap") !== true) {
