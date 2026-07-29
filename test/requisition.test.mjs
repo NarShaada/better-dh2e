@@ -5,6 +5,7 @@ import { describe, it, expect, beforeAll, beforeEach } from "vitest";
 import {
   installFoundryStub, resetCaptures, capturedRolls, capturedMessages,
   primeDice, primeDialog, registerUuid, makeActor, makeCardHtml,
+  primeDialogForm, makeDialogForm,
 } from "./helpers/foundry-stub.mjs";
 
 const NS = "better-dh2e";
@@ -426,5 +427,52 @@ describe("Fate integration", () => {
     await addDoSFromFate(requisitionMessage());
     expect(a.system.fate.value).toBe(2);
     expect(capturedMessages()).toEqual([]);
+  });
+});
+
+
+describe("the Availability dropdown follows the picked item", () => {
+  // The listener is registered while the dialog renders, which happens inside rollRequisition
+  // after it has awaited the source index. So these drive the field AFTER the call settles: by
+  // then onRender has run and the wiring is in place, which is what is under test here. The
+  // primed dialog response is what the roll itself consumes and is independent of the steering.
+  const runDialog = async (fieldValues, availability = "average") => {
+    const form = makeDialogForm({ itemLabel: "", availability });
+    primeDialogForm([form]);
+    primeDialog([{ modifier: "+0", characteristicKey: "influence", fieldValues }]);
+    primeDice([5]);
+    await rollRequisition(actor());
+    return form;
+  };
+
+  // The whole point: nobody should have to remember that a bolt pistol is Very Rare.
+  it("steers Availability to the picked item's own value", async () => {
+    const form = await runDialog({ itemLabel: "Medikit", availability: "average", craftsmanship: "normal" });
+    form.elements.itemLabel.value = "Medikit";     // Scarce in the world-items fixture
+    form.fire("itemLabel", "change");
+    expect(form.elements.availability.value).toBe("scarce");
+  });
+
+  it("steers to the right one of two items sharing a name", async () => {
+    const form = await runDialog({ itemLabel: "Bolt Pistol (DH2e Weapons)", availability: "average", craftsmanship: "normal" });
+    form.elements.itemLabel.value = "Bolt Pistol (DH2e Weapons)";
+    form.fire("itemLabel", "change");
+    expect(form.elements.availability.value).toBe("veryRare");
+  });
+
+  it("leaves a deliberate choice alone when the typed name matches nothing", async () => {
+    const form = await runDialog({ itemLabel: "Relic Blade of Nowhere", availability: "nearUnique", craftsmanship: "normal" }, "nearUnique");
+    form.elements.itemLabel.value = "Relic Blade of Nowhere";
+    form.fire("itemLabel", "change");
+    expect(form.elements.availability.value).toBe("nearUnique");
+  });
+
+  it("does not throw when the dialog has no such fields", async () => {
+    const form = makeDialogForm({ somethingElse: "" });
+    primeDialogForm([form]);
+    primeDialog([{ modifier: "+0", characteristicKey: "influence",
+                   fieldValues: { itemLabel: null, availability: "average", craftsmanship: "normal" } }]);
+    primeDice([5]);
+    await expect(rollRequisition(actor())).resolves.toBeUndefined();
   });
 });

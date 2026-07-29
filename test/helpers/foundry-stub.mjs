@@ -31,6 +31,7 @@ let _rolls = [];
 let _messages = [];
 let _diceQueue = [];
 let _dialogQueue = [];
+let _dialogFormQueue = [];
 let _uuidRegistry = new Map();
 let _idCounter = 0;
 let _origConsoleWarn = null;
@@ -53,6 +54,30 @@ export function primeDice(values) {
 
 /** Queue canned DialogV2.prompt/.wait responses (consumed FIFO). Unqueued calls fall back to a
  *  permissive default object (see defaultDialogResponse below). */
+export function primeDialogForm(forms) {
+  _dialogFormQueue.push(...forms);
+}
+
+/** A form-shaped stand-in for the dialog body: named controls that record listeners and can be
+ *  driven with `fire(name, "change")`. Deliberately hand-rolled — this repo's tests run under
+ *  vitest's node environment, with no jsdom. */
+export function makeDialogForm(values = {}) {
+  const elements = {};
+  for (const [name, value] of Object.entries(values)) {
+    elements[name] = {
+      value,
+      _listeners: {},
+      addEventListener(evt, cb) { (this._listeners[evt] ??= []).push(cb); },
+    };
+  }
+  return {
+    elements,
+    fire(name, evt = "change") {
+      for (const cb of elements[name]?._listeners?.[evt] ?? []) cb();
+    },
+  };
+}
+
 export function primeDialog(responses) {
   _dialogQueue.push(...responses);
 }
@@ -72,6 +97,7 @@ export function resetCaptures() {
   _messages = [];
   _diceQueue = [];
   _dialogQueue = [];
+  _dialogFormQueue = [];
 }
 
 // ---------------------------------------------------------------------------
@@ -154,10 +180,21 @@ function defaultDialogResponse() {
 }
 
 class FakeDialogV2 {
-  static async prompt() {
+  /** Invoke a caller's `render` hook the way DialogV2 does, handing it the dialog whose
+   *  `element.querySelector("form")` yields the form. Primed with primeDialogForm(); without a
+   *  primed form the hook is skipped, so every existing caller is unaffected. */
+  static #fireRender(config) {
+    if (!(config?.render instanceof Function)) return;
+    const form = _dialogFormQueue.length ? _dialogFormQueue.shift() : null;
+    if (!form) return;
+    config.render({}, { element: { querySelector: (sel) => (sel === "form" ? form : null) } });
+  }
+  static async prompt(config) {
+    FakeDialogV2.#fireRender(config);
     return _dialogQueue.length ? _dialogQueue.shift() : defaultDialogResponse();
   }
-  static async wait() {
+  static async wait(config) {
+    FakeDialogV2.#fireRender(config);
     return _dialogQueue.length ? _dialogQueue.shift() : defaultDialogResponse();
   }
 }

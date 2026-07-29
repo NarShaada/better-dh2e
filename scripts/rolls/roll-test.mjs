@@ -24,7 +24,7 @@ function bonusNote(auto, applied) {
  * Show the modifier dialog (plus an optional characteristic picker).
  * @returns {Promise<{modifier:string, characteristicKey:(string|null)}|null>} null if cancelled.
  */
-export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [], info = [], fields = [] }) {
+export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [], info = [], fields = [], onRender = null }) {
   let picker = "";
   if (characteristics) {
     const opts = characteristics.map((c) =>
@@ -69,6 +69,11 @@ export async function promptTest({ title, characteristics = null, defaultModifie
     window: { title },
     content,
     rejectClose: false,
+    // Live wiring between fields (Requisition steering Availability off the picked item). DialogV2
+    // renders `content` as an HTML string, so a caller that needs listeners can only get at the
+    // nodes here. `render` fires on every render, and re-adding an identical listener to the same
+    // node is a no-op, so this stays safe if the dialog re-renders.
+    ...(onRender ? { render: (_event, dialog) => onRender(dialog?.element?.querySelector?.("form")) } : {}),
     ok: {
       label: game.i18n.localize("BDH.Roll.Roll"),
       callback: (event, button) => ({

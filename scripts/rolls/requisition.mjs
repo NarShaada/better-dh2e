@@ -46,6 +46,26 @@ export async function collectRequisitionSources() {
   return buildSourceIndex(entries);
 }
 
+/**
+ * Point the Availability dropdown at whatever the picked item actually is, so nobody has to
+ * remember that a bolt pistol is Very Rare. It only ever steers — the dropdown stays editable,
+ * which p.141 requires anyway since availability for alternative craftsmanship is the GM's call.
+ *
+ * A name that matches nothing, or an item carrying no availability of its own, leaves the current
+ * selection alone: overwriting it there would throw away a deliberate choice for a freeform ask.
+ */
+function steerAvailability(form, byLabel) {
+  const item = form?.elements?.itemLabel;
+  const availability = form?.elements?.availability;
+  if (!item || !availability) return;
+  item.addEventListener("change", () => {
+    const picked = byLabel.get(item.value);
+    if (picked?.availability && picked.availability in BDH.availability) {
+      availability.value = picked.availability;
+    }
+  });
+}
+
 /** Open the Requisition dialog and resolve it. */
 export async function rollRequisition(actor) {
   const rs = ruleset();
@@ -67,7 +87,8 @@ export async function rollRequisition(actor) {
         options: Object.entries(BDH.availability).map(([value, label]) => ({ value, label, selected: value === "average" })) },
       { kind: "select", name: "craftsmanship", label: game.i18n.localize("BDH.Requisition.Craftsmanship"),
         options: Object.entries(BDH.craftsmanship).map(([value, label]) => ({ value, label, selected: value === "normal" })) }
-    ]
+    ],
+    onRender: (form) => steerAvailability(form, byLabel)
   });
   if (!choice) return;
 
