@@ -2,6 +2,7 @@
 import { performTest } from "./roll-test.mjs";
 import { resolveAttack } from "./attack.mjs";
 import { resolveManifest } from "./manifest.mjs";
+import { resolveRequisition } from "./requisition.mjs";
 
 const NS = "better-dh2e";
 
@@ -34,6 +35,11 @@ export async function rerollFromFate(message) {
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
     if (power) await resolveManifest(actor, power, { rulesetKey: rr.rulesetKey, state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName });
+  } else if (rr.kind === "requisition") {
+    // The whole choice is stored, so the rerolled card keeps its item and its Add button —
+    // the "test" branch passes only label/base/modifier and would drop both.
+    const actor2 = await fromUuid(rr.actorUuid);
+    if (actor2) await resolveRequisition(actor2, rr.choice);
   }
 }
 
@@ -41,6 +47,7 @@ export async function rerollFromFate(message) {
 export function canAddDoS(message) {
   const rr = message?.flags?.[NS]?.reroll;
   if (!rr || !rr.success || (rr.dosBonus ?? 0) !== 0) return false;
+  if (rr.kind === "requisition") return false;
   const actor = fromUuidSync(rr.actorUuid);
   return !!actor?.isOwner && (actor.system?.fate?.value ?? 0) >= 1;
 }
@@ -49,6 +56,7 @@ export function canAddDoS(message) {
 export async function addDoSFromFate(message) {
   const rr = message?.flags?.[NS]?.reroll;
   if (!rr || !rr.success || (rr.dosBonus ?? 0) !== 0) return;
+  if (rr.kind === "requisition") return;
   const actor = await fromUuid(rr.actorUuid);
   if (!actor?.isOwner) { ui.notifications.warn("You don't own this character."); return; }
   const fate = actor.system.fate?.value ?? 0;

@@ -10,6 +10,7 @@ import {
 const NS = "better-dh2e";
 
 let collectRequisitionSources, rollRequisition, resolveRequisition, bindRequisitionButtons;
+let canReroll, rerollFromFate, canAddDoS, addDoSFromFate;
 
 // Two packs carry a "Bolt Pistol" on purpose: buildSourceIndex disambiguates a shared name by
 // appending its source, and the dialog's picker is keyed on that DISAMBIGUATED label. Without a
@@ -33,6 +34,8 @@ beforeAll(async () => {
   installFoundryStub({ items: WORLD, packs: PACKS });
   ({ collectRequisitionSources, rollRequisition, resolveRequisition, bindRequisitionButtons } =
     await import("../scripts/rolls/requisition.mjs"));
+  ({ canReroll, rerollFromFate, canAddDoS, addDoSFromFate } =
+    await import("../scripts/rolls/fate.mjs"));
 });
 beforeEach(() => resetCaptures());
 
@@ -314,5 +317,74 @@ describe("the Add button", () => {
     const html = cardHtml();
     bindRequisitionButtons({ flags: { [NS]: { kind: "attack" } } }, html);
     expect(button(html)).not.toBeNull();   // untouched, not removed
+  });
+});
+
+// Fate can act on a requisition card's reroll flags three ways: a straight reroll, and (in theory,
+// since the flags carry `success`/`dosBonus` just like any other kind) a +1 DoS spend. Requisition's
+// quantity is chosen manually (p.141 leaves sourcing detail to the GM), so a degrees-of-success bonus
+// has nothing to attach to — only the reroll path is meaningful here.
+describe("Fate integration", () => {
+  const requisitionMessage = (over = {}) => ({
+    flags: { [NS]: { reroll: { kind: "requisition", actorUuid: "Actor.a1", success: true, dosBonus: 0, ...over } } }
+  });
+
+  it("replays the stored choice, so a rerolled card keeps its item and Add button", async () => {
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true, system: { fate: { value: 2 }, characteristics: { influence: { total: 40 } } } });
+    registerUuid("Actor.a1", a);
+    primeDice([5]);
+    const choice = { characteristicKey: "influence", modifier: "+0", availability: "average",
+                     craftsmanship: "good", itemUuid: "Item.i1", itemLabel: "Medikit" };
+    await rerollFromFate({ flags: { [NS]: { reroll: { kind: "requisition", actorUuid: "Actor.a1", choice } } } });
+    const card = lastCard();
+    expect(card.canAdd).toBe(true);
+    expect(lastFlags().reroll.choice).toEqual(choice);
+  });
+
+  it("actually spends the Fate point on a requisition reroll — it must not be a silent no-op", async () => {
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true, system: { fate: { value: 2 }, characteristics: { influence: { total: 40 } } } });
+    registerUuid("Actor.a1", a);
+    primeDice([5]);
+    const choice = { characteristicKey: "influence", modifier: "+0", availability: "average",
+                     craftsmanship: "normal", itemUuid: "Item.i1", itemLabel: "Medikit" };
+    await rerollFromFate({ flags: { [NS]: { reroll: { kind: "requisition", actorUuid: "Actor.a1", choice } } } });
+    // Before the fix, the function fell through every `if` after decrementing Fate: the point was
+    // spent but nothing else happened. Here it must both spend the point AND post a fresh
+    // requisition card that replaced/followed the "spends a Fate point" notice.
+    expect(a.system.fate.value).toBe(1);
+    const messages = capturedMessages();
+    expect(messages.length).toBeGreaterThanOrEqual(2);
+    expect(messages.at(0).content).toContain("spends a Fate point to reroll");
+    expect(lastFlags().kind).toBe("requisition");
+    expect(lastCard().canAdd).toBe(true);
+  });
+
+  it("still lets the owner reroll a requisition card (canReroll only needs ownership + Fate)", () => {
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true, system: { fate: { value: 1 } } });
+    registerUuid("Actor.a1", a);
+    expect(canReroll(requisitionMessage())).toBe(true);
+  });
+
+  it("offers no +1 DoS on a requisition card — quantity is manual by design", () => {
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true, system: { fate: { value: 2 } } });
+    registerUuid("Actor.a1", a);
+    expect(canAddDoS(requisitionMessage())).toBe(false);
+  });
+
+  it("still offers +1 DoS on an ordinary test card", () => {
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true, system: { fate: { value: 2 } } });
+    registerUuid("Actor.a1", a);
+    expect(canAddDoS({ flags: { [NS]: { reroll: { kind: "test", actorUuid: "Actor.a1", success: true, dosBonus: 0 } } } })).toBe(true);
+  });
+
+  it("refuses to spend Fate for +1 DoS on a requisition card even if called directly (defense in depth)", async () => {
+    // canAddDoS hides the button, but addDoSFromFate is the function that actually spends the
+    // point — a stale context menu, a macro, or a race could still invoke it directly. It must
+    // refuse on its own, not merely rely on the UI condition check upstream.
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true, system: { fate: { value: 2 } } });
+    registerUuid("Actor.a1", a);
+    await addDoSFromFate(requisitionMessage());
+    expect(a.system.fate.value).toBe(2);
+    expect(capturedMessages()).toEqual([]);
   });
 });
