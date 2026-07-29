@@ -236,10 +236,25 @@ Hooks.once("init", () => {
     { id: "toxic",   name: "Toxic",   img: "icons/svg/poison.svg" },
     { id: "onFire",   name: "On Fire",  img: "icons/svg/fire.svg" },
     { id: "helpless", name: "Helpless", img: "icons/svg/paralysis.svg" },
-    { id: "unaware",  name: "Unaware",  img: "icons/svg/blind.svg" },
+    // mystery-man, not blind.svg — Unaware is "does not know the attack is coming", and the
+    // eye-with-a-slash belongs to the actual Blinded condition below.
+    { id: "unaware",  name: "Unaware",  img: "icons/svg/mystery-man.svg" },
     { id: "pinned",   name: "Pinned",   img: "icons/svg/net.svg" },
     { id: "inCover",  name: "In Cover", img: "icons/svg/shield.svg" },
     { id: "weaponJammed", name: "Weapon Jammed", img: "icons/svg/clockwork.svg" },
+    // Chapter VII "Conditions and Special Damage" (printed pages 242-244). These are MARKERS
+    // only: the GM toggles them from the token HUD and applies the effects at the table. They are
+    // deliberately absent from condition-data.mjs, which drives to-hit/evade maths — an entry
+    // there would invite a modifier being hung on a pure marker later.
+    // Seventeen compendium items reference them (Photon Flash Grenade, Bleeder Rounds, the Snare
+    // weapons, Bionic Senses, Die Hard …), so without these the text had nothing to point at.
+    { id: "blinded",     name: "Blinded",     img: "icons/svg/blind.svg" },
+    { id: "deafened",    name: "Deafened",    img: "icons/svg/deaf.svg" },
+    { id: "bloodLoss",   name: "Blood Loss",  img: "icons/svg/blood.svg" },
+    // Snare already applies Helpless, which is what the quality's own entry (page 149) calls for.
+    // This marks WHY, and that the escape is a Full Action Strength or Agility test at -10 x X.
+    { id: "immobilised", name: "Immobilised", img: "icons/svg/anchor.svg" },
+    { id: "unconscious", name: "Unconscious", img: "icons/svg/unconscious.svg" },
   ];
 
   console.log("Better DH2e | Initialized");
