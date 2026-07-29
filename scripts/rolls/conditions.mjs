@@ -132,9 +132,14 @@ export async function checkFatigueThreshold(actor) {
 export function registerFatigueHooks() {
   Hooks.on("updateActor", (actor, change, options, userId) => {
     if (userId !== game.user.id) return;
-    // Characteristics matter too: the threshold is Toughness bonus + Willpower bonus, so
-    // characteristic damage can drop it under a Fatigue level that never changed.
-    if (change?.system?.fatigue?.value === undefined && change?.system?.characteristics === undefined) return;
+    // The threshold moves as well as the Fatigue level, so watch both sides of the comparison.
+    // `characteristics` covers a direct edit to Toughness or Willpower; `injuries` covers
+    // characteristic damage, which is stored there as `type: "charDamage"` entries and is applied
+    // by prepareDerivedData BEFORE fatigue.max is derived from the two bonuses. Either can drop
+    // the threshold under a Fatigue level that never changed.
+    if (change?.system?.fatigue?.value === undefined
+        && change?.system?.characteristics === undefined
+        && change?.system?.injuries === undefined) return;
     checkFatigueThreshold(actor);
   });
 }

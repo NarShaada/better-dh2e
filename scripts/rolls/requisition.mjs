@@ -31,7 +31,12 @@ export async function collectRequisitionSources() {
     if (pack.documentName !== "Item") continue;
     if (pack.visible === false) continue;   // hidden from this user by ownership/config
     // `availability` is not indexed by default — ask for it so picking an item can prefill.
-    const index = await pack.getIndex({ fields: ["system.availability"] }).catch(() => null);
+    // A pack that fails to index is skipped rather than aborting the whole picker, but say so:
+    // silently dropping a compendium looks identical to it not being installed.
+    const index = await pack.getIndex({ fields: ["system.availability"] }).catch((err) => {
+      console.warn(`better-dh2e | Requisition: skipping compendium "${pack.metadata?.label ?? pack.collection}" — its index could not be read.`, err);
+      return null;
+    });
     if (!index) continue;
     for (const e of index) {
       entries.push({ name: e.name, uuid: e.uuid ?? pack.getUuid(e._id), type: e.type,
@@ -139,11 +144,20 @@ export function bindRequisitionButtons(message, html) {
   const actor = fromUuidSync(f.reroll?.actorUuid);
   // Mutating someone else's sheet is not on offer, and an already-used button must not fire twice.
   if (f.added || !actor?.isOwner) { btn.remove(); return; }
-  btn.addEventListener("click", () => addRequisitionedItem(message));
+  btn.addEventListener("click", () => {
+    // Disable synchronously, before the first await: creating the item and stamping the `added`
+    // flag is a round trip, and the re-render that would remove this button only arrives after it.
+    // A disabled button dispatches no click, so the second half of a double-click is dropped here.
+    btn.disabled = true;
+    return addRequisitionedItem(message);
+  });
 }
 
 /** Copy the requisitioned item onto the actor, stamped with the craftsmanship asked for. */
 async function addRequisitionedItem(message) {
+  // Re-read the flag now rather than trusting the value bindRequisitionButtons saw: the card may
+  // have been used from another client, or by a macro, since this button was bound.
+  if (message.getFlag(NS, "added")) return;
   const f = message.flags[NS];
   const actor = await fromUuid(f.reroll?.actorUuid);
   if (!actor?.isOwner) return;

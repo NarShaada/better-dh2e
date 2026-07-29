@@ -254,6 +254,7 @@ describe("the Add button", () => {
     flags: { [NS]: { kind: "requisition", itemUuid: "Item.src", itemLabel: "Bolt Pistol",
                      craftsmanship: "good", added: false,
                      reroll: { kind: "requisition", actorUuid: "Actor.a1" }, ...over } },
+    getFlag: function (ns, k) { return this.flags[ns]?.[k]; },
     setFlag: async function (ns, k, v) { this.flags[ns][k] = v; }
   });
 
@@ -299,11 +300,50 @@ describe("the Add button", () => {
     expect(msg.flags[NS].added).toBe(true);
   });
 
-  it("removes the button once used, so a double-click cannot duplicate the item", () => {
+  it("removes the button for a card that was already used before this render", () => {
     registerUuid("Actor.a1", makeActor({ uuid: "Actor.a1", isOwner: true }));
     const html = cardHtml();
     bindRequisitionButtons(message({ added: true }), html);
     expect(button(html)).toBeNull();
+  });
+
+  // The removal above only covers a card that was ALREADY flagged when the button was bound.
+  // The live hazard is a second click landing inside the create -> setFlag round trip, while the
+  // button is still on screen and the flag still reads false.
+  it("creates exactly one item when the button is clicked twice before the first add resolves", async () => {
+    const created = [];
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true,
+      createEmbeddedDocuments: async (_t, docs) => { created.push(...docs); return docs; } });
+    registerUuid("Actor.a1", a);
+    registerUuid("Item.src", { toObject: () => ({ name: "Bolt Pistol", type: "weapon", system: { craftsmanship: "normal" } }) });
+
+    const msg = message();
+    const html = cardHtml();
+    bindRequisitionButtons(msg, html);
+    // Both clicks are dispatched before either add settles — awaiting them in turn would let the
+    // `added` flag land in between and prove nothing about the race.
+    await Promise.all([html.click("requisitionAdd"), html.click("requisitionAdd")]);
+
+    expect(created).toHaveLength(1);
+    expect(msg.flags[NS].added).toBe(true);
+    expect(button(html).disabled).toBe(true);
+  });
+
+  it("re-checks the flag at click time, so a stale card cannot add the item a second time", async () => {
+    const created = [];
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true,
+      createEmbeddedDocuments: async (_t, docs) => { created.push(...docs); return docs; } });
+    registerUuid("Actor.a1", a);
+    registerUuid("Item.src", { toObject: () => ({ name: "Bolt Pistol", type: "weapon", system: { craftsmanship: "normal" } }) });
+
+    const msg = message();
+    const html = cardHtml();
+    bindRequisitionButtons(msg, html);
+    // Someone else's client (or a macro) got there first, after this button was bound.
+    msg.flags[NS].added = true;
+    await html.click("requisitionAdd");
+
+    expect(created).toEqual([]);
   });
 
   it("removes the button for a non-owner", () => {

@@ -90,8 +90,8 @@ BDH.availability = {
 };
 
 /** Requisition test modifier per availability level — Table 5-1, printed page 141.
- *  `null` means no test is required: Ubiquitous items are simply Automatic. Unique is printed as
- *  "Hellish (-60)/GM's discretion", so -60 is the floor rather than the whole story. */
+ *  `null` means no test is required: Ubiquitous items are simply automatic. For Unique the table
+ *  gives -60 and then defers to the GM, so -60 is the floor rather than the whole story. */
 BDH.availabilityModifier = {
   ubiquitous: null, abundant: 30, plentiful: 20, common: 10, average: 0,
   scarce: -10, rare: -20, veryRare: -30, extremelyRare: -40, nearUnique: -50, unique: -60

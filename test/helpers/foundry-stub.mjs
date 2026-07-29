@@ -195,6 +195,8 @@ export function installFoundryStub(options = {}) {
   globalThis.game = {
     settings: { get: (_scope, key) => settings[key] },
     user: {
+      // Hooks that must fire for the acting client only compare against this.
+      id: options.userId ?? "user-1",
       isGM: options.isGM ?? true,
       targets: { first: () => targetToken },
       character: null,
@@ -346,6 +348,10 @@ export function makeActor(overrides = {}) {
     isOwner: overrides.isOwner ?? true,
     createEmbeddedDocuments: overrides.createEmbeddedDocuments ?? (async (_type, docs) => docs),
     statuses: overrides.statuses ?? new Set(),
+    flags: overrides.flags ?? {},
+    getFlag: overrides.getFlag ?? ((ns, key) => actor.flags[ns]?.[key]),
+    setFlag: overrides.setFlag ?? (async (ns, key, value) => { (actor.flags[ns] ??= {})[key] = value; return actor; }),
+    unsetFlag: overrides.unsetFlag ?? (async (ns, key) => { delete actor.flags[ns]?.[key]; return actor; }),
     getActiveTokens: overrides.getActiveTokens ?? (() => []),
     update: overrides.update ?? (async (changes) => { applyDotUpdate(actor, changes); return actor; }),
     statusToggles: [],
@@ -377,6 +383,9 @@ export function makeChoice(overrides = {}) {
 export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] } = {}) {
   const els = buttons.map((bdh) => ({
     dataset: { bdh },
+    // Modelled because handlers use it as a re-entrancy guard: the browser dispatches no click
+    // event on a disabled control, so a stub that fired one anyway would hide double-fire bugs.
+    disabled: false,
     _listeners: {},
     addEventListener(evt, cb) { this._listeners[evt] = cb; },
     remove() {
@@ -392,6 +401,7 @@ export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] 
       const el = els.find((b) => b.dataset.bdh === bdh);
       if (!el) throw new Error(`makeCardHtml: no button "${bdh}" — pass it in { buttons: [...] }`);
       if (!el._listeners.click) throw new Error(`makeCardHtml: bindCardButtons never registered a click handler for "${bdh}"`);
+      if (el.disabled) return;   // as in the DOM: no event is dispatched to a disabled control
       await el._listeners.click();
     },
     /** Only the `[data-bdh="X"]` form is modelled — the single selector bindRequisitionButtons uses. */

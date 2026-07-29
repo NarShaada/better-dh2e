@@ -9,17 +9,17 @@ describe("Availability modifiers — Table 5-1, printed page 141", () => {
 
   it("matches the printed ladder", () => {
     expect(BDH.availabilityModifier).toEqual({
-      ubiquitous: null,        // "Automatic" — no test at all
-      abundant: 30,            // Easy
-      plentiful: 20,           // Routine
-      common: 10,              // Ordinary
-      average: 0,              // Challenging
-      scarce: -10,             // Difficult
-      rare: -20,               // Hard
-      veryRare: -30,           // Very Hard
-      extremelyRare: -40,      // Arduous
-      nearUnique: -50,         // Punishing
-      unique: -60              // Hellish / GM's discretion
+      ubiquitous: null,        // no test at all — Ubiquitous items are simply automatic
+      abundant: 30,
+      plentiful: 20,
+      common: 10,
+      average: 0,
+      scarce: -10,
+      rare: -20,
+      veryRare: -30,
+      extremelyRare: -40,
+      nearUnique: -50,
+      unique: -60              // a floor; the rest of Unique is the GM's call
     });
   });
 
