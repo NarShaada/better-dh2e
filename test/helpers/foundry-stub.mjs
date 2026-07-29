@@ -31,6 +31,7 @@ let _rolls = [];
 let _messages = [];
 let _diceQueue = [];
 let _dialogQueue = [];
+let _dialogFormQueue = [];
 let _uuidRegistry = new Map();
 let _idCounter = 0;
 let _origConsoleWarn = null;
@@ -53,6 +54,30 @@ export function primeDice(values) {
 
 /** Queue canned DialogV2.prompt/.wait responses (consumed FIFO). Unqueued calls fall back to a
  *  permissive default object (see defaultDialogResponse below). */
+export function primeDialogForm(forms) {
+  _dialogFormQueue.push(...forms);
+}
+
+/** A form-shaped stand-in for the dialog body: named controls that record listeners and can be
+ *  driven with `fire(name, "change")`. Deliberately hand-rolled — this repo's tests run under
+ *  vitest's node environment, with no jsdom. */
+export function makeDialogForm(values = {}) {
+  const elements = {};
+  for (const [name, value] of Object.entries(values)) {
+    elements[name] = {
+      value,
+      _listeners: {},
+      addEventListener(evt, cb) { (this._listeners[evt] ??= []).push(cb); },
+    };
+  }
+  return {
+    elements,
+    fire(name, evt = "change") {
+      for (const cb of elements[name]?._listeners?.[evt] ?? []) cb();
+    },
+  };
+}
+
 export function primeDialog(responses) {
   _dialogQueue.push(...responses);
 }
@@ -72,6 +97,7 @@ export function resetCaptures() {
   _messages = [];
   _diceQueue = [];
   _dialogQueue = [];
+  _dialogFormQueue = [];
 }
 
 // ---------------------------------------------------------------------------
@@ -154,10 +180,21 @@ function defaultDialogResponse() {
 }
 
 class FakeDialogV2 {
-  static async prompt() {
+  /** Invoke a caller's `render` hook the way DialogV2 does, handing it the dialog whose
+   *  `element.querySelector("form")` yields the form. Primed with primeDialogForm(); without a
+   *  primed form the hook is skipped, so every existing caller is unaffected. */
+  static #fireRender(config) {
+    if (!(config?.render instanceof Function)) return;
+    const form = _dialogFormQueue.length ? _dialogFormQueue.shift() : null;
+    if (!form) return;
+    config.render({}, { element: { querySelector: (sel) => (sel === "form" ? form : null) } });
+  }
+  static async prompt(config) {
+    FakeDialogV2.#fireRender(config);
     return _dialogQueue.length ? _dialogQueue.shift() : defaultDialogResponse();
   }
-  static async wait() {
+  static async wait(config) {
+    FakeDialogV2.#fireRender(config);
     return _dialogQueue.length ? _dialogQueue.shift() : defaultDialogResponse();
   }
 }
@@ -195,11 +232,27 @@ export function installFoundryStub(options = {}) {
   globalThis.game = {
     settings: { get: (_scope, key) => settings[key] },
     user: {
+      // Hooks that must fire for the acting client only compare against this.
+      id: options.userId ?? "user-1",
       isGM: options.isGM ?? true,
       targets: { first: () => targetToken },
       character: null,
     },
-    i18n: { localize: (k) => k },
+    i18n: {
+      localize: (k) => k,
+      // No lang file is loaded, so `format` substitutes into the key itself — enough for tests to
+      // see that the right data reached the string.
+      format: (k, data = {}) => Object.entries(data).reduce((s, [dk, dv]) => s.replaceAll(`{${dk}}`, dv), k),
+    },
+    // Requisition reads both. `items` is the world Items directory; `packs` are compendia, whose
+    // getIndex() is async and whose entries carry only indexed fields.
+    items: itemsCollection(options.items ?? []),
+    packs: (options.packs ?? []).map((p) => ({
+      documentName: p.documentName ?? "Item",
+      metadata: { label: p.label },
+      getIndex: async () => p.entries ?? [],
+      getUuid: (id) => `Compendium.${p.label}.${id}`,
+    })),
   };
 
   globalThis.ui = {
@@ -327,7 +380,15 @@ export function makeActor(overrides = {}) {
     uuid: overrides.uuid ?? `Actor.${id}`,
     name: overrides.name ?? "Test Actor",
     system, items,
+    // Ownership gates every "write to this actor" button (Fate, Requisition's Add). Default true so
+    // existing callers, which never set it, keep behaving as they did when it was undefined-but-unused.
+    isOwner: overrides.isOwner ?? true,
+    createEmbeddedDocuments: overrides.createEmbeddedDocuments ?? (async (_type, docs) => docs),
     statuses: overrides.statuses ?? new Set(),
+    flags: overrides.flags ?? {},
+    getFlag: overrides.getFlag ?? ((ns, key) => actor.flags[ns]?.[key]),
+    setFlag: overrides.setFlag ?? (async (ns, key, value) => { (actor.flags[ns] ??= {})[key] = value; return actor; }),
+    unsetFlag: overrides.unsetFlag ?? (async (ns, key) => { delete actor.flags[ns]?.[key]; return actor; }),
     getActiveTokens: overrides.getActiveTokens ?? (() => []),
     update: overrides.update ?? (async (changes) => { applyDotUpdate(actor, changes); return actor; }),
     statusToggles: [],
@@ -353,13 +414,22 @@ export function makeChoice(overrides = {}) {
 /** A fake chat-card `html` root for bindCardButtons(message, html). Only `[data-bdh="X"]` buttons
  *  and the two `.bdh-*-hit:checked` checkbox selectors attack.mjs actually queries are modelled;
  *  the GM/owner-only removal selectors resolve to an empty list (a harmless no-op — the assertions
- *  in these tests click the button directly rather than relying on it surviving the removal pass). */
+ *  in these tests click the button directly rather than relying on it surviving the removal pass).
+ *  `remove()` also detaches the element from this root, so a caller that gates on a button's absence
+ *  (bindRequisitionButtons) can be asserted with querySelector without pulling in jsdom. */
 export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] } = {}) {
   const els = buttons.map((bdh) => ({
     dataset: { bdh },
+    // Modelled because handlers use it as a re-entrancy guard: the browser dispatches no click
+    // event on a disabled control, so a stub that fired one anyway would hide double-fire bugs.
+    disabled: false,
     _listeners: {},
     addEventListener(evt, cb) { this._listeners[evt] = cb; },
-    remove() { this.removed = true; },
+    remove() {
+      this.removed = true;
+      const i = els.indexOf(this);
+      if (i >= 0) els.splice(i, 1);
+    },
   }));
   const sprayBoxes = sprayChecked.map((uuid) => ({ dataset: { uuid }, checked: true }));
   const pinBoxes = pinChecked.map((uuid) => ({ dataset: { uuid }, checked: true }));
@@ -368,7 +438,14 @@ export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] 
       const el = els.find((b) => b.dataset.bdh === bdh);
       if (!el) throw new Error(`makeCardHtml: no button "${bdh}" — pass it in { buttons: [...] }`);
       if (!el._listeners.click) throw new Error(`makeCardHtml: bindCardButtons never registered a click handler for "${bdh}"`);
+      if (el.disabled) return;   // as in the DOM: no event is dispatched to a disabled control
       await el._listeners.click();
+    },
+    /** Only the `[data-bdh="X"]` form is modelled — the single selector bindRequisitionButtons uses. */
+    querySelector(selector) {
+      const m = /^\[data-bdh="([^"]+)"\]$/.exec(selector);
+      if (!m) throw new Error(`makeCardHtml.querySelector: unsupported selector "${selector}"`);
+      return els.find((b) => b.dataset.bdh === m[1]) ?? null;
     },
     querySelectorAll(selector) {
       if (selector === "[data-bdh]") return els;

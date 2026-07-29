@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { targetAttackModifiers, CONDITION_ATTACK_MODS } from "../scripts/helpers/condition-data.mjs";
+import { targetAttackModifiers, CONDITION_ATTACK_MODS, fatigueKnockoutAction } from "../scripts/helpers/condition-data.mjs";
 import { selfAttackModifiers, evadeConditionModifier } from "../scripts/helpers/condition-data.mjs";
 
 describe("targetAttackModifiers", () => {
@@ -78,5 +78,37 @@ describe("Unaware + Pinned", () => {
   it("Pinned attacker: -20 ranged only (Ballistic Skill)", () => {
     expect(selfAttackModifiers(new Set(["pinned"]), false)).toEqual([{ id: "pinned", label: "Pinned", mod: -20 }]);
     expect(selfAttackModifiers(new Set(["pinned"]), true)).toEqual([]);
+  });
+});
+
+describe("fatigueKnockoutAction (page 233 threshold, latched)", () => {
+  it("applies once when Fatigue exceeds the threshold", () => {
+    expect(fatigueKnockoutAction(5, 4, false)).toBe("apply");
+  });
+
+  it("does nothing at or below the threshold — exceeding it is the trigger", () => {
+    expect(fatigueKnockoutAction(4, 4, false)).toBe("none");
+    expect(fatigueKnockoutAction(0, 4, false)).toBe("none");
+  });
+
+  // The whole point of the latch: a GM clearing Unconscious by hand must not have it snap back.
+  it("stays quiet while latched, even though Fatigue is still over", () => {
+    expect(fatigueKnockoutAction(9, 4, true)).toBe("none");
+  });
+
+  it("re-arms once Fatigue drops back to the threshold or below", () => {
+    expect(fatigueKnockoutAction(4, 4, true)).toBe("rearm");
+    expect(fatigueKnockoutAction(1, 4, true)).toBe("rearm");
+  });
+
+  it("re-arming then exceeding again knocks out a second time", () => {
+    expect(fatigueKnockoutAction(2, 4, true)).toBe("rearm");
+    expect(fatigueKnockoutAction(5, 4, false)).toBe("apply");
+  });
+
+  it("ignores missing or non-numeric values rather than firing", () => {
+    expect(fatigueKnockoutAction(undefined, 4, false)).toBe("none");
+    expect(fatigueKnockoutAction(5, undefined, false)).toBe("none");
+    expect(fatigueKnockoutAction(NaN, 4, true)).toBe("none");
   });
 });

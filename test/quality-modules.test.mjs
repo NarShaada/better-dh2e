@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, hasUnbalanced, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, filterQualityChoices } from "../scripts/helpers/quality-modules.mjs";
+import { effectiveJamFloor } from "../scripts/helpers/craftsmanship-data.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, hasUnbalanced, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, hasSpray, cripplingValue, filterQualityChoices } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -258,5 +259,28 @@ describe("filterQualityChoices", () => {
   });
   it("keys by quality key and preserves labels", () => {
     expect(filterQualityChoices(cfg, true).radPhage).toBe("Rad-Phage");
+  });
+});
+
+describe("Spray and Crippling helpers", () => {
+  it("hasSpray detects the quality", () => {
+    expect(hasSpray([{ key: "spray", value: null }])).toBe(true);
+    expect(hasSpray([{ key: "flame", value: null }])).toBe(false);
+    expect(hasSpray([])).toBe(false);
+  });
+
+  it("cripplingValue reads the X", () => {
+    expect(cripplingValue([{ key: "crippling", value: 2 }])).toBe(2);
+    expect(cripplingValue([{ key: "tearing", value: null }])).toBe(0);
+  });
+
+  // p.148 exempts Reliable Spray weapons from jamming; Spray's own jam rule is a natural 9 on a
+  // damage die (p.149), so the guard must be reliability, not the d100 floor.
+  it("a Reliable spray weapon counts as never-jamming, an ordinary one does not", () => {
+    expect(effectiveJamFloor([{ key: "spray" }, { key: "reliable" }], "normal") >= 100).toBe(true);
+    expect(effectiveJamFloor([{ key: "spray" }], "normal") >= 100).toBe(false);
+    // Good craftsmanship promotes to Reliable; Poor cancels it back off.
+    expect(effectiveJamFloor([{ key: "spray" }], "good") >= 100).toBe(true);
+    expect(effectiveJamFloor([{ key: "spray" }, { key: "reliable" }], "poor") >= 100).toBe(false);
   });
 });

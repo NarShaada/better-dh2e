@@ -199,7 +199,8 @@
 .better-dh2e .bdh-notes { display:block; width:calc(100% - 28px); margin:8px 14px; padding:8px; box-sizing:border-box; min-height:280px; resize:vertical; border:1px solid var(--bdh-brown); border-radius:4px; background:#fff8e7; color:var(--bdh-ink); font-family:Georgia, serif; }
 
 /* Gear tab */
-.better-dh2e .bdh-gear-bar { margin:8px 14px 0; font-size:12px; color:var(--bdh-muted); }
+.better-dh2e .bdh-gear-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 14px 0; font-size:12px; color:var(--bdh-muted); }
+.better-dh2e .bdh-req { flex:0 0 auto; font-size:11px; padding:1px 8px; }
 .better-dh2e .bdh-gear-bar b { color:var(--bdh-ink); font-size:14px; }
 .better-dh2e .bdh-subhead { display:flex; align-items:center; gap:8px; padding:3px 10px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--bdh-muted); background:#e2d2ac; }
 .better-dh2e .bdh-subhead .bdh-hint2 { text-transform:none; letter-spacing:0; font-style:italic; opacity:.8; }

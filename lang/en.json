@@ -68,5 +68,16 @@
   "BDH.Roll.Success": "Success",
   "BDH.Roll.Failure": "Failure",
   "BDH.Roll.DoS": "Degrees of Success",
-  "BDH.Roll.DoF": "Degrees of Failure"
+  "BDH.Roll.DoF": "Degrees of Failure",
+  "BDH.Requisition.Title": "Requisition",
+  "BDH.Requisition.Button": "Requisition",
+  "BDH.Requisition.Item": "Item (optional)",
+  "BDH.Requisition.Availability": "Target Availability",
+  "BDH.Requisition.Craftsmanship": "Target Craftsmanship",
+  "BDH.Requisition.Automatic": "Automatic — no test required",
+  "BDH.Requisition.GmDiscretion": "Unique: subject to the GM's discretion.",
+  "BDH.Requisition.Add": "Add to sheet",
+  "BDH.Requisition.General": "general requisition",
+  "BDH.Requisition.Gone": "That item is no longer available — its pack may be disabled.",
+  "BDH.Requisition.Acquired": "{actor} acquires {item}."
 }

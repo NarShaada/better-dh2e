@@ -59,3 +59,21 @@ export function pickToxic(current, incoming) {
   if (!incoming) return current;
   return incoming.potency > current.potency ? incoming : current;
 }
+
+/**
+ * What the Fatigue threshold check should do this time round (page 233: exceeding the threshold
+ * knocks a character out). PURE — the caller applies the status and writes the latch.
+ *
+ * The latch exists so a GM who clears Unconscious by hand while Fatigue is still over the
+ * threshold does not have it snap straight back on. It re-arms only once Fatigue drops back to
+ * the threshold or below.
+ *
+ * Death at double the threshold is deliberately absent: that is the GM's call, not the system's.
+ *
+ * @returns {"apply"|"rearm"|"none"}
+ */
+export function fatigueKnockoutAction(value, max, latched) {
+  if (!Number.isFinite(value) || !Number.isFinite(max)) return "none";
+  if (value > max) return latched ? "none" : "apply";
+  return latched ? "rearm" : "none";
+}

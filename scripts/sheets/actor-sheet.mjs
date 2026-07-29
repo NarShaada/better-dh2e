@@ -7,6 +7,7 @@ import { clearStunned } from "../rolls/conditions.mjs";
 import { rollManifest } from "../rolls/manifest.mjs";
 import { corruptionTrack, insanityTrack, nextTestAt } from "../helpers/affliction-data.mjs";
 import { rollAfflictionTest } from "../rolls/roll-test.mjs";
+import { rollRequisition } from "../rolls/requisition.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
@@ -403,6 +404,11 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await rollAfflictionTest(this.actor, { label: `${label} (${track.tier})`, penalty: track.penalty });
   }
 
+  /** Action: open the Requisition dialog for this actor. */
+  static async #onRollRequisition() {
+    await rollRequisition(this.actor);
+  }
+
   /** Action: add a blank {name, description} entry to an affliction array. */
   static async #onAddAffliction(event, target) {
     const arr = target.dataset.array;
@@ -582,6 +588,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       addInjury: DarkHeresyActorSheet.#onAddInjury,
       removeInjury: DarkHeresyActorSheet.#onRemoveInjury,
       rollAffliction: DarkHeresyActorSheet.#onRollAffliction,
+      rollRequisition: DarkHeresyActorSheet.#onRollRequisition,
       addAffliction: DarkHeresyActorSheet.#onAddAffliction,
       removeAffliction: DarkHeresyActorSheet.#onRemoveAffliction,
       setMode: DarkHeresyActorSheet.#onSetMode,

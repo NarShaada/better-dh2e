@@ -80,12 +80,27 @@ BDH.skills = {
 /** Item craftsmanship tiers (key -> label). */
 BDH.craftsmanship = { poor: "Poor", normal: "Normal", good: "Good", best: "Best" };
 
-/** Availability ladder (key -> label). */
+/** Availability ladder (key -> label). Stays a flat key->label map: it is handed straight to
+ *  Handlebars `selectOptions` by the item sheet, which would render objects as [object Object].
+ *  The Requisition modifiers live alongside it in BDH.availabilityModifier. */
 BDH.availability = {
   ubiquitous: "Ubiquitous", abundant: "Abundant", plentiful: "Plentiful", common: "Common",
   average: "Average", scarce: "Scarce", rare: "Rare", veryRare: "Very Rare",
   extremelyRare: "Extremely Rare", nearUnique: "Near Unique", unique: "Unique"
 };
+
+/** Requisition test modifier per availability level — Table 5-1, printed page 141.
+ *  `null` means no test is required: Ubiquitous items are simply automatic. For Unique the table
+ *  gives -60 and then defers to the GM, so -60 is the floor rather than the whole story. */
+BDH.availabilityModifier = {
+  ubiquitous: null, abundant: 30, plentiful: 20, common: 10, average: 0,
+  scarce: -10, rare: -20, veryRare: -30, extremelyRare: -40, nearUnique: -50, unique: -60
+};
+
+/** Craftsmanship modifier to Requisition AND Repair tests — Table 5-2, printed page 141.
+ *  Note the book's "Common" tier is this system's `normal`. Better gear is harder to obtain, so
+ *  Good and Best are penalties here — the opposite sign to their combat bonuses. */
+BDH.craftsmanshipRequisition = { poor: 10, normal: 0, good: -20, best: -30 };
 
 /** Fixed aptitude list (values are also the labels). Used by talents and character advancement. */
 BDH.aptitudes = [
@@ -138,7 +153,7 @@ BDH.qualities = {
   blast:      { label: "Blast", takesValue: true, automation: "full", noteOn: "attack" },
   concussive: { label: "Concussive", takesValue: true, automation: "full" },
   corrosive:  { label: "Corrosive", takesValue: false, automation: "full", noteOn: "damage" },   // auto on single-target apply; note reminds on AoE paths
-  crippling:  { label: "Crippling", takesValue: true, noteOn: "damage" },
+  crippling:  { label: "Crippling", takesValue: true, automation: "full" },
   defensive:  { label: "Defensive", takesValue: false, automation: "full" },
   flame:         { label: "Flame", takesValue: false, automation: "full" },
   force:         { label: "Force", takesValue: false },

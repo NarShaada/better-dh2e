@@ -3,6 +3,7 @@
 import { parseModifier, evaluateTest } from "./test-logic.mjs";
 import { skillTotal, sizeStealthModifier, unnaturalDoSBonus } from "../helpers/derived.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor } from "../helpers/item-bonuses.mjs";
+import { escapeHtml } from "../helpers/html-escape.mjs";
 
 const NS = "better-dh2e";
 
@@ -23,7 +24,7 @@ function bonusNote(auto, applied) {
  * Show the modifier dialog (plus an optional characteristic picker).
  * @returns {Promise<{modifier:string, characteristicKey:(string|null)}|null>} null if cancelled.
  */
-export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [], info = [] }) {
+export async function promptTest({ title, characteristics = null, defaultModifier = "+0", situational = [], info = [], fields = [], onRender = null }) {
   let picker = "";
   if (characteristics) {
     const opts = characteristics.map((c) =>
@@ -43,19 +44,43 @@ export async function promptTest({ title, characteristics = null, defaultModifie
   const infoRows = info.length
     ? info.map((r) => `<div class="form-group"><label>${r.label}</label><span class="bdh-roll-info">${r.value}</span></div>`).join("")
     : "";
-  const content = `${picker}${checks}${infoRows}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
+  // Caller-supplied inputs (Requisition's Item / Availability / Craftsmanship). Rendered above the
+  // read-only info rows so the breakdown sits directly beneath what produced it.
+  // Values are escaped: unlike the other rows these carry user-authored data (item names), and a
+  // stray quote would otherwise break out of the attribute.
+  const fieldRows = fields.map((f) => {
+    if (f.kind === "select") {
+      const opts = (f.options ?? []).map((o) =>
+        `<option value="${escapeHtml(o.value)}"${o.selected ? " selected" : ""}>${escapeHtml(o.label)}</option>`).join("");
+      return `<div class="form-group"><label>${f.label}</label><select name="${f.name}">${opts}</select></div>`;
+    }
+    const listId = f.datalist ? `bdh-dl-${f.name}` : null;
+    const list = listId
+      ? `<datalist id="${listId}">${f.datalist.map((v) => `<option value="${escapeHtml(v)}"></option>`).join("")}</datalist>`
+      : "";
+    return `<div class="form-group"><label>${f.label}</label>`
+      + `<input type="text" name="${f.name}"${listId ? ` list="${listId}"` : ""}`
+      + `${f.placeholder ? ` placeholder="${escapeHtml(f.placeholder)}"` : ""}/>${list}</div>`;
+  }).join("");
+  const content = `${picker}${checks}${fieldRows}${infoRows}<div class="form-group"><label>${game.i18n.localize("BDH.Roll.Modifier")}</label>
     <input type="text" name="modifier" value="${defaultModifier}" autofocus/></div>`;
 
   return DialogV2.prompt({
     window: { title },
     content,
     rejectClose: false,
+    // Live wiring between fields (Requisition steering Availability off the picked item). DialogV2
+    // renders `content` as an HTML string, so a caller that needs listeners can only get at the
+    // nodes here. `render` fires on every render, and re-adding an identical listener to the same
+    // node is a no-op, so this stays safe if the dialog re-renders.
+    ...(onRender ? { render: (_event, dialog) => onRender(dialog?.element?.querySelector?.("form")) } : {}),
     ok: {
       label: game.i18n.localize("BDH.Roll.Roll"),
       callback: (event, button) => ({
         modifier: button.form.elements.modifier.value,
         characteristicKey: button.form.elements.characteristic?.value ?? null,
-        situationalIds: situational.filter((s) => button.form.elements[`sit_${s.id}`]?.checked).map((s) => s.id)
+        situationalIds: situational.filter((s) => button.form.elements[`sit_${s.id}`]?.checked).map((s) => s.id),
+        fieldValues: Object.fromEntries(fields.map((f) => [f.name, button.form.elements[f.name]?.value ?? null]))
       })
     }
   });

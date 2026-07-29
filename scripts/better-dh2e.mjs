@@ -5,6 +5,7 @@ import { hordesEnabled } from "./helpers/horde-data.mjs";
 import { themeChoices, themeBodyClasses, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
 import { registerTokenPrefix } from "./helpers/token-prefix.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
+import { bindRequisitionButtons } from "./rolls/requisition.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
 import { AcolyteModel } from "./data/actor/acolyte-model.mjs";
 import { NpcModel } from "./data/actor/npc-model.mjs";
@@ -36,6 +37,7 @@ import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 import { registerGrantHooks } from "./cybernetics/grants.mjs";
 import { registerWeaponPartHooks } from "./weapons/parts.mjs";
+import { registerFatigueHooks } from "./rolls/conditions.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -236,10 +238,29 @@ Hooks.once("init", () => {
     { id: "toxic",   name: "Toxic",   img: "icons/svg/poison.svg" },
     { id: "onFire",   name: "On Fire",  img: "icons/svg/fire.svg" },
     { id: "helpless", name: "Helpless", img: "icons/svg/paralysis.svg" },
-    { id: "unaware",  name: "Unaware",  img: "icons/svg/blind.svg" },
+    // mystery-man, not blind.svg — Unaware is "does not know the attack is coming", and the
+    // eye-with-a-slash belongs to the actual Blinded condition below.
+    { id: "unaware",  name: "Unaware",  img: "icons/svg/mystery-man.svg" },
     { id: "pinned",   name: "Pinned",   img: "icons/svg/net.svg" },
     { id: "inCover",  name: "In Cover", img: "icons/svg/shield.svg" },
     { id: "weaponJammed", name: "Weapon Jammed", img: "icons/svg/clockwork.svg" },
+    // Chapter VII "Conditions and Special Damage" (printed pages 242-244). These are MARKERS
+    // only: the GM toggles them from the token HUD and applies the effects at the table. They are
+    // deliberately absent from condition-data.mjs, which drives to-hit/evade maths — an entry
+    // there would invite a modifier being hung on a pure marker later.
+    // Seventeen compendium items reference them (Photon Flash Grenade, Bleeder Rounds, the Snare
+    // weapons, Bionic Senses, Die Hard …), so without these the text had nothing to point at.
+    { id: "blinded",     name: "Blinded",     img: "icons/svg/blind.svg" },
+    { id: "deafened",    name: "Deafened",    img: "icons/svg/deaf.svg" },
+    { id: "bloodLoss",   name: "Blood Loss",  img: "icons/svg/blood.svg" },
+    // Snare already applies Helpless, which is what the quality's own entry (page 149) calls for.
+    // This marks WHY, and that the escape is a Full Action Strength or Agility test at -10 x X.
+    { id: "immobilised", name: "Immobilised", img: "icons/svg/anchor.svg" },
+    { id: "unconscious", name: "Unconscious", img: "icons/svg/unconscious.svg" },
+    // Crippled (X) from the Crippling quality, page 145. A marker, like the rest: the rule keys
+    // off spending more than a Half Action, and this system does not model action economy, so
+    // the combat tracker posts an end-of-turn reminder and the GM adjudicates.
+    { id: "crippled",    name: "Crippled",    img: "icons/svg/degen.svg" },
   ];
 
   console.log("Better DH2e | Initialized");
@@ -266,6 +287,7 @@ Hooks.once("ready", () => {
   initVehicleFacing();
   registerGrantHooks();
   registerWeaponPartHooks();
+  registerFatigueHooks();
   // Battlemap integration is default-on now — flip any existing world that still had it off so its
   // token/grid automation isn't stuck disabled (the setting is hidden as of v0.2.0).
   if (game.user.isGM && game.settings.get("better-dh2e", "enableBattlemap") !== true) {
@@ -274,6 +296,8 @@ Hooks.once("ready", () => {
 });
 
 Hooks.on("renderChatMessageHTML", (message, html) => bindCardButtons(message, html));
+// Requisition binds its own card button in a second hook so the feature stays out of attack.mjs.
+Hooks.on("renderChatMessageHTML", (message, html) => bindRequisitionButtons(message, html));
 
 Hooks.on("getChatMessageContextOptions", (html, options) => {
   const idOf = (li) => li?.dataset?.messageId ?? li?.getAttribute?.("data-message-id") ?? li?.[0]?.dataset?.messageId;
