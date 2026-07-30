@@ -99,7 +99,13 @@ body.bdh-chrome.bdh-polarity-dark .application {
      the palette's fourth hue, so info reads as its own level rather than as the accent.
      Unlike --t-red2/--t-green2/--t-gold2 there is no deep warp tone, and the dark
      palettes' --t-warp is a BRIGHT violet, so the fill is mixed down into --t-bg to keep
-     core's pale --color-light-3 toast text legible on it. */
+     core's pale --color-light-3 toast text legible on it.
+     The other three severities pair a bright `--color-level-*` against a deep
+     `--color-level-*-border`; info cannot, for want of a --t-warp2. That costs nothing here:
+     --color-level-info-border has NO consumer in core's CSS — the info toast's border comes
+     from --color-level-info (`.notification.info`, ~7944), and the only `-border` consumers,
+     `#invitation-links .connection.*` (~5957) and the package badges (~6325), have no info
+     variant. It is declared for symmetry of the triplet, not because it renders. */
   --color-level-info: var(--t-warp);
   --color-level-info-bg: color-mix(in srgb, var(--t-warp) 35%, var(--t-bg));
   --color-level-info-border: var(--t-warp);
@@ -291,7 +297,10 @@ body.bdh-chrome.bdh-polarity-light .application {
   --color-level-warning-border: var(--t-gold2);
   /* Info was the one severity core kept: without this it stays #59a1f6 blue. --t-warp is
      the palette's fourth hue, so info reads as its own level rather than as the accent.
-     In this palette --t-warp is already a deep tone, so 80% of it matches the others. */
+     In this palette --t-warp is already a deep tone, so 80% of it matches the others.
+     --color-level-info-border repeats --t-warp rather than pairing a deeper tone against it,
+     as the other three do, because no palette defines a --t-warp2 — and nothing renders it:
+     see the dark block's note for the consumer audit. */
   --color-level-info: var(--t-warp);
   --color-level-info-bg: color-mix(in srgb, var(--t-warp) 80%, transparent);
   --color-level-info-border: var(--t-warp);
@@ -378,8 +387,12 @@ body.bdh-chrome.bdh-polarity-light #hotbar {
   --key-bg-color-empty: var(--t-panel2);
   --key-bg-color-full: var(--t-panel3);
   --key-text-color: var(--t-muted);
-  /* The page chevron doubles as the backing for .hotbar-page-number, which core colours
-     --color-light-2 (pale, foundry2.css ~7570). Dark, as in the dark block. */
+  /* --page-control-color is only the prev/next chevrons' --button-text-color (foundry2.css
+     ~7552) — it backs nothing. The centred .hotbar-page-number is a separate element,
+     absolutely positioned in the GAP between the two chevrons (~7562, the strip is
+     `justify-content: space-between`), and takes its colour from --color-light-2. Dark here
+     because the chevron glyphs sit against Dossier's pale hotbar chrome; core's light theme
+     uses a pale value instead, which suits its translucent-white hotbar and not ours. */
   --page-control-color: var(--t-ink);
 }
 body.bdh-chrome.bdh-polarity-light #chat-message {
@@ -411,6 +424,30 @@ body.bdh-chrome.bdh-polarity-light .menu-dialog.prosemirror {
   /* Core's default is --color-dark-1 (#111) under --hover-text-color, which resolves to
      --color-text-emphatic — a dark ink here. Pale hover surface, dark hover ink. */
   --hover-entry-background: var(--t-panel3);
+}
+/* ProseMirror's own three surfaces. Core declares all of them on
+   `.prosemirror, #prosemirror-dropdown, prose-mirror` (foundry2.css ~446), so the same
+   element list is needed here or the declaration is inherited and loses — the cascade trap
+   in this file's header. They are NOT all the same polarity, because core pairs them with
+   different text:
+
+   --dialog-background  is read by `.prosemirror.menu-dialog form` (~12735). That dialog also
+     carries the `application` class (foundry.mjs 66542), so the light .application block above
+     gives it dark --color-form-label/-hover — which needs a PALE surface. Core's own
+     --color-cool-5 default resolved to --t-ink2, i.e. dark ink on dark: 1.19:1.
+   --menu-background    is read by `.prosemirror menu` (~12495) and --dropdown-background by
+     `#prosemirror-dropdown ul` (~12663). Both regions render core's pale --button-text-color
+     (--color-light-3): `#prosemirror-dropdown` sets `color: var(--button-text-color)` directly
+     (~12648). Those two therefore stay DARK. --t-ink is what the ramp already resolved them to
+     under core's dark scheme; declaring it makes the value scheme-independent rather than
+     changing it (core's own theme-light swaps them for pale washes, ~2348). */
+body.bdh-chrome.bdh-polarity-light .prosemirror,
+body.bdh-chrome.bdh-polarity-light prose-mirror,
+body.bdh-chrome.bdh-polarity-light #prosemirror-dropdown,
+body.bdh-chrome.bdh-polarity-light .menu-dialog.prosemirror {
+  --dialog-background: var(--t-panel);
+  --menu-background: var(--t-ink);
+  --dropdown-background: var(--t-ink);
 }
 body.bdh-chrome.bdh-polarity-light .compendium-directory {
   /* Same pale --color-light-2 folder labels as the sidebar; see --sidebar-folder-color above. */
@@ -628,6 +665,33 @@ body.bdh-chrome .ui-control:disabled {
   color: var(--t-faint);
   border-color: var(--t-line);
 }
+/* Core deliberately un-borders these buttons. The `button` rule above uses the `border`
+   SHORTHAND, and because this file is unlayered it beats core's layered `border: none`
+   regardless of specificity — so every one of them would go from border-width 0 to 1px.
+   That is a layout change on core controls, which this branch forbids, and it shows on the
+   close/minimise control of every window. Restore the width only; the colour declarations
+   above still reach them. Verified in foundry2.css:
+     ~6485  .application .window-header button.header-control
+     ~6531  .application .controls-dropdown .header-control > button
+     ~7713  #players #performance-stats button
+     ~8681  .playlists-sidebar .global-control button / .directory-list button
+     ~9311  .combat-sidebar .combat-tracker .token-initiative button
+     ~12518 .prosemirror menu button / prose-mirror menu button
+   Core's remaining `border: none` buttons are out of our reach and need no entry here:
+   `body.game .app …` (~11336, ~11654, ~11684, ~12211) hangs off the ApplicationV1 root,
+   which neither core v13/v14 windows nor this system's sheets carry, and
+   `#setup-packages header.controls .view-modes button` (~13084) is the setup screen, where
+   no body.bdh-chrome class exists. */
+body.bdh-chrome .application .window-header button.header-control,
+body.bdh-chrome .application .controls-dropdown .header-control > button,
+body.bdh-chrome #players #performance-stats button,
+body.bdh-chrome .playlists-sidebar .global-control button,
+body.bdh-chrome .playlists-sidebar .directory-list button,
+body.bdh-chrome .combat-sidebar .combat-tracker .token-initiative button,
+body.bdh-chrome .prosemirror menu button,
+body.bdh-chrome prose-mirror menu button {
+  border: none;
+}
 body.bdh-chrome code,
 body.bdh-chrome code.block {
   background: var(--t-field);
@@ -646,8 +710,14 @@ body.bdh-chrome code.block {
    sheets are ItemSheetV2 / ActorSheetV2 (classes ["better-dh2e","sheet",…]). Core draws the
    same line: `.sheet.journal-entry .journal-entry-content` lives in @layer applications
    (foundry2.css ~9526) while `.app.journal-entry.sheet .journal-entry-content` is
-   @layer compatibility (~11115). So the roots are .sheet-based, and every override below
-   is applied to all of them — an item description gets the same treatment as a journal page. */
+   @layer compatibility (~11115). So the roots are .sheet-based, and every override below is
+   applied to all of them consistently.
+
+   `.sheet .editor-content` is a redundant safety root, not new coverage: core only ever
+   renders .editor-content inside a prose-mirror / .prosemirror wrapper, which the two roots
+   beside it already match. In particular it does NOT reach this system's item descriptions —
+   `grep -rn "editor\|prose" templates/` finds nothing; those are `textarea.bdh-desc`
+   (templates/item/item-sheet.hbs), styled in bdh-themes.css and untouched by this file. */
 body.bdh-chrome .sheet.journal-entry .journal-entry-content,
 body.bdh-chrome prose-mirror .editor-content,
 body.bdh-chrome .prosemirror .editor-content,
