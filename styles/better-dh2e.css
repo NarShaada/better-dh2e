@@ -436,17 +436,36 @@
 /* ---------- Dice tray (injected under core's chat form) ----------
    Every selector stays inside .bdh-dice-tray. Nothing here may match a bare button or input:
    this stylesheet is unlayered, so a broad selector would beat core's own rules on core's
-   elements — see styles/bdh-chrome.css's header for the full account of that hazard. */
-.bdh-dice-tray { position:relative; display:flex; align-items:center; gap:4px; padding:4px 6px; }
+   elements — see styles/bdh-chrome.css's header for the full account of that hazard.
+
+   pointer-events: all is structural, not thematic, and belongs here rather than in
+   bdh-themes.css: core makes #sidebar-content click-through whenever the chat tab is
+   showing (#sidebar-content.active-chat { pointer-events: none }, public/css/foundry2.css)
+   and re-enables it island by island for .chat-form, .chat-scroll.overflowed, etc. The
+   tray is a sibling of .chat-form, not inside it, so without this it inherits none and is
+   inert — no clicks, no hover — in all four themes.
+
+   width/padding match .chat-sidebar .chat-form (width: var(--sidebar-width);
+   padding-inline: var(--chat-message-spacing)) so the tray spans the sidebar instead of
+   shrink-wrapping to its content; #sidebar-content #chat sets align-items: flex-end, so an
+   unsized flex child hugs the right edge and margin-left: auto on .bdh-mod becomes a no-op.
+   Both custom properties are set on ancestors of the tray (:root and .chat-sidebar) and
+   inherit down to it. A full-width tray also keeps the count picker off the sidebar's
+   overflow: hidden edge, so the picker gets no right/max-width constraint of its own. */
+.bdh-dice-tray { position:relative; display:flex; align-items:center; gap:4px;
+  width:var(--sidebar-width); padding:4px var(--chat-message-spacing); pointer-events:all;
+  background:#e3d5b0; border:1px solid #b08d4f; border-radius:3px; }
 .bdh-dice-tray .bdh-die { flex:0 0 auto; min-width:42px; padding:3px 6px; cursor:pointer;
-  font-family:Georgia, serif; font-size:11.5px; color:#4a3a20; background:#e3d5b0;
+  font-family:Georgia, serif; font-size:11.5px; color:#4a3a20; background:#f3ecd9;
   border:1px solid #b08d4f; border-radius:3px; user-select:none; }
 .bdh-dice-tray .bdh-die:hover { border-color:#7a1f1f; }
 .bdh-dice-tray .bdh-mod { margin-left:auto; display:flex; align-items:center; gap:4px;
   font-family:Georgia, serif; font-size:10.5px; color:#4a3a20; text-transform:uppercase; letter-spacing:.5px; }
-.bdh-dice-tray .bdh-mod input { width:44px; text-align:center; font-family:Georgia, serif; font-size:11.5px; }
+.bdh-dice-tray .bdh-mod input { width:44px; text-align:center; font-family:Georgia, serif;
+  font-size:11.5px; color:#4a3a20; background:#f3ecd9; border:1px solid #b08d4f; border-radius:2px; }
 .bdh-dice-tray .bdh-count-picker { position:absolute; bottom:calc(100% - 2px); display:flex; gap:3px;
-  padding:3px; background:#e3d5b0; border:1px solid #b08d4f; border-radius:3px; z-index:10; }
+  padding:3px; background:#e3d5b0; border:1px solid #b08d4f; border-radius:3px;
+  z-index:10; } /* clears .chat-form (position:relative, z-index:auto) and #chat-message, both unpositioned */
 .bdh-dice-tray .bdh-count { min-width:26px; padding:2px 5px; cursor:pointer;
   font-family:Georgia, serif; font-size:11.5px; color:#4a3a20; background:#f3ecd9;
   border:1px solid #b08d4f; border-radius:2px; }

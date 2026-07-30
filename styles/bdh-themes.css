@@ -471,7 +471,11 @@ body.bdh-theme-heretic .better-dh2e .veh-roll { color:var(--t-ink2); }
 /* ---------- Dice tray ----------
    Themed whenever a theme is active, regardless of the uiChrome opt-in: the tray is our own
    element, like a chat card, not part of Foundry's chrome. Typography on .bdh-die is safe
-   because those buttons contain text ("d100"), and the selector cannot reach an icon button. */
+   because those buttons contain text ("d100"), and the selector cannot reach an icon button.
+   .bdh-dice-tray gets its own surface for the same reason as the classic sheet: core's chat
+   tab is transparent (.chat-sidebar:not(.sidebar-popout) { background: transparent }), so
+   without a background the "Mod" label would render directly over the canvas. */
+body.bdh-themed .bdh-dice-tray { background:var(--t-panel); border:1px solid var(--t-line2); border-radius:0; }
 body.bdh-themed .bdh-dice-tray .bdh-die { font-family:var(--t-cond); font-weight:600; font-size:11px;
   letter-spacing:1.5px; text-transform:uppercase; color:var(--t-muted); background:var(--t-panel2);
   border:1px solid var(--t-line2); border-radius:0; }
