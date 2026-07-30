@@ -704,12 +704,19 @@ body.bdh-chrome label.icon:has(> input:disabled) {
    and the notification severities. */
 body.bdh-chrome a.button.bright,
 body.bdh-chrome button.bright {
-  /* Core keeps .bright's palette in variables too (~433), including an off-palette #fda948
-     hover. Declaring all six keeps that orange out and preserves the reviewed flat look. */
+  /* Core keeps .bright's palette in variables too (~433), and hardcodes an off-palette #fda948
+     hover fill there. Declaring all six keeps that orange out while KEEPING the hover cue core
+     provides — .bright is the primary action in every core dialog, so it must lift on hover.
+     The lift is the palette's own accent: resting --t-gold2, hover --t-gold, the same resolution
+     the hotbar slot got earlier in this branch. The edge merges into the fill on hover by
+     design — the whole control shifts to the accent. --t-on-accent was checked against the new
+     hover fill and reads in all three palettes, better than against the resting one in each:
+     --t-gold 7.73 / 4.54 / 4.80 vs --t-gold2 5.28 / 3.28 / 2.75 (dataslate / dossier / heretic),
+     so it is unchanged. */
   --button-background-color: var(--t-gold2);
   --button-border-color: var(--t-gold);
   --button-text-color: var(--t-on-accent);
-  --button-hover-background-color: var(--t-gold2);
+  --button-hover-background-color: var(--t-gold);
   --button-hover-border-color: var(--t-gold);
   --button-hover-text-color: var(--t-on-accent);
 }
