@@ -578,18 +578,24 @@ body.bdh-chrome .app.journal-entry.sheet .directory-item.active .page-title {
    #interface and outside .application. */
 body.bdh-chrome.bdh-polarity-light #tooltip,
 body.bdh-chrome.bdh-polarity-light #tooltip.active,
-body.bdh-chrome.bdh-polarity-light .locked-tooltip,
 body.bdh-chrome.bdh-polarity-light .tour,
 body.bdh-chrome.bdh-polarity-light .tour-center-step {
+  background: var(--t-panel);
+  color: var(--t-ink);
+}
+body.bdh-chrome.bdh-polarity-light .locked-tooltip {
   background: var(--t-panel);
   border-color: var(--t-line2);
   color: var(--t-ink);
 }
 body.bdh-chrome.bdh-polarity-dark #tooltip,
 body.bdh-chrome.bdh-polarity-dark #tooltip.active,
-body.bdh-chrome.bdh-polarity-dark .locked-tooltip,
 body.bdh-chrome.bdh-polarity-dark .tour,
 body.bdh-chrome.bdh-polarity-dark .tour-center-step {
+  background: var(--t-panel2);
+  color: var(--t-ink);
+}
+body.bdh-chrome.bdh-polarity-dark .locked-tooltip {
   background: var(--t-panel2);
   border-color: var(--t-line2);
   color: var(--t-ink);
@@ -598,7 +604,4 @@ body.bdh-chrome .tour .step-title {
   color: var(--t-gold);
   font-family: var(--bdhc-label-font);
   letter-spacing: var(--bdhc-label-tracking);
-}
-body.bdh-chrome #notifications > .notification {
-  border-color: var(--t-gold2);
 }
