@@ -178,6 +178,26 @@ body.bdh-chrome.bdh-polarity-dark #measurement .waypoint-label:disabled {
   --control-hover-border-color: var(--control-border-color);
   --control-hover-icon-color: var(--control-icon-color);
 }
+/* Buttons. Core declares the whole --button-* set on the BUTTON ELEMENT (`a.button, button,
+   kbd`, foundry2.css ~411, repeated per theme at ~1048), so declaring it on body/.themed
+   would lose to core's element-level value — the cascade trap again. The hover values live in
+   this same rule, not on :hover, because that is where core declares them (~419).
+   kbd is included because core does: it paints no generic <kbd>, and the one real kbd border,
+   `#controls-config kbd` (~5768), reads all three of these plus --button-text-color for its
+   box-shadow. --button-focus-outline-color is left to core: it resolves to --color-warm-2,
+   already remapped to --t-gold2. */
+body.bdh-chrome.bdh-polarity-dark a.button,
+body.bdh-chrome.bdh-polarity-dark button,
+body.bdh-chrome.bdh-polarity-dark kbd {
+  --button-background-color: var(--t-panel2);
+  --button-border-color: var(--t-line2);
+  --button-text-color: var(--t-ink);
+  /* Core's default hover FILLS with --color-warm-2; the reviewed look signals hover with the
+     accent edge and brighter ink and leaves the fill alone, so it is restated here. */
+  --button-hover-background-color: var(--t-panel2);
+  --button-hover-border-color: var(--t-gold);
+  --button-hover-text-color: var(--t-ink2);
+}
 body.bdh-chrome.bdh-polarity-dark #hotbar {
   --slot-color: color-mix(in srgb, var(--t-panel) 85%, transparent);
   --key-bg-color-empty: var(--t-panel2);
@@ -207,6 +227,20 @@ body.bdh-chrome.bdh-polarity-dark #prosemirror-dropdown,
 body.bdh-chrome.bdh-polarity-dark .menu-dialog.prosemirror {
   --background-color: var(--t-panel2);
   --border-color: var(--t-line2);
+}
+/* ProseMirror's three surfaces — the dark half of the pair documented in the light block.
+   Owning them makes the values independent of the player's CORE colour scheme: core's own
+   `body.theme-light .prosemirror` (~2346) hands out a pale #d9d8c8 --dropdown-background and
+   derives --dialog-background from it, and those go pale-on-pale under this polarity's pale
+   --button-text-color / --color-form-label. --t-panel2 and --t-line are what the dark ramp
+   already resolves them to under core's dark scheme. */
+body.bdh-chrome.bdh-polarity-dark .prosemirror,
+body.bdh-chrome.bdh-polarity-dark prose-mirror,
+body.bdh-chrome.bdh-polarity-dark #prosemirror-dropdown,
+body.bdh-chrome.bdh-polarity-dark .menu-dialog.prosemirror {
+  --dialog-background: var(--t-panel2);
+  --menu-background: var(--t-line);
+  --dropdown-background: var(--t-line);
 }
 body.bdh-chrome.bdh-polarity-dark .compendium-directory {
   --sidebar-folder-color: var(--t-panel3);
@@ -382,6 +416,17 @@ body.bdh-chrome.bdh-polarity-light #measurement .waypoint-label:disabled {
   --control-hover-border-color: var(--control-border-color);
   --control-hover-icon-color: var(--control-icon-color);
 }
+/* Buttons — see the dark block for why this is declared on the button element itself. */
+body.bdh-chrome.bdh-polarity-light a.button,
+body.bdh-chrome.bdh-polarity-light button,
+body.bdh-chrome.bdh-polarity-light kbd {
+  --button-background-color: var(--t-panel2);
+  --button-border-color: var(--t-line2);
+  --button-text-color: var(--t-ink);
+  --button-hover-background-color: var(--t-panel2);
+  --button-hover-border-color: var(--t-gold);
+  --button-hover-text-color: var(--t-ink2);
+}
 body.bdh-chrome.bdh-polarity-light #hotbar {
   --slot-color: color-mix(in srgb, var(--t-panel) 92%, transparent);
   --key-bg-color-empty: var(--t-panel2);
@@ -436,11 +481,10 @@ body.bdh-chrome.bdh-polarity-light .menu-dialog.prosemirror {
      gives it dark --color-form-label/-hover — which needs a PALE surface. Core's own
      --color-cool-5 default resolved to --t-ink2, i.e. dark ink on dark: 1.19:1.
    --menu-background    is read by `.prosemirror menu` (~12495) and --dropdown-background by
-     `#prosemirror-dropdown ul` (~12663). Both regions render core's pale --button-text-color
-     (--color-light-3): `#prosemirror-dropdown` sets `color: var(--button-text-color)` directly
-     (~12648). Those two therefore stay DARK. --t-ink is what the ramp already resolved them to
-     under core's dark scheme; declaring it makes the value scheme-independent rather than
-     changing it (core's own theme-light swaps them for pale washes, ~2348). */
+     `#prosemirror-dropdown ul` (~12663). Both regions carry PALE ink, so they stay DARK.
+     --t-ink is what the ramp already resolved them to under core's dark scheme; declaring it
+     makes the value scheme-independent rather than changing it (core's own theme-light swaps
+     them for pale washes, ~2348). */
 body.bdh-chrome.bdh-polarity-light .prosemirror,
 body.bdh-chrome.bdh-polarity-light prose-mirror,
 body.bdh-chrome.bdh-polarity-light #prosemirror-dropdown,
@@ -448,6 +492,21 @@ body.bdh-chrome.bdh-polarity-light .menu-dialog.prosemirror {
   --dialog-background: var(--t-panel);
   --menu-background: var(--t-ink);
   --dropdown-background: var(--t-ink);
+}
+/* The pale ink on those two dark surfaces, spelled out.
+   #prosemirror-dropdown needs nothing: it reads `color: var(--button-text-color)` (~12648) and
+   core declares --button-text-color: var(--color-light-3) on the dropdown ELEMENT itself
+   (~456), which our --button-* remap — declared only on a.button/button/kbd — never reaches.
+   The toolbar buttons are different: they ARE button elements, so they take our dark --t-ink,
+   and core's `.prosemirror menu button { background: transparent }` (~12518, @layer
+   compatibility) means that ink lands straight on the dark strip. Restore core's pale value
+   for those. Only the base ink needs it — the hover ink comes from core's own
+   `.prosemirror menu button:hover { color: var(--color-form-label-hover) }` (~12539), which
+   resolves through the .prosemirror element to the pale --color-light-2, and the background
+   and border never reach these buttons at all (core's transparent/none win on layer order). */
+body.bdh-chrome.bdh-polarity-light .prosemirror menu button,
+body.bdh-chrome.bdh-polarity-light prose-mirror menu button {
+  --button-text-color: var(--t-panel2);
 }
 body.bdh-chrome.bdh-polarity-light .compendium-directory {
   /* Same pale --color-light-2 folder labels as the sidebar; see --sidebar-folder-color above. */
@@ -634,63 +693,42 @@ body.bdh-chrome label.icon:focus-within {
 body.bdh-chrome label.icon:has(> input:disabled) {
   color: var(--t-faint);
 }
-body.bdh-chrome button,
-body.bdh-chrome a.button {
-  background: var(--t-panel2);
-  border: 1px solid var(--t-line2);
-  color: var(--t-ink);
+/* Buttons: see the --button-* region rules in each polarity block. This file must NOT declare
+   background / border / color on `button` directly — core reads all three from variables
+   (`a.button, button { background: var(--button-background-color); border: 1px solid
+   var(--button-border-color); color: var(--button-text-color) }`, foundry2.css ~3688), and an
+   unlayered direct declaration steamrolls every per-button override core makes downstream:
+   `border: none` on window-header controls, `background: transparent` on ProseMirror toolbar
+   buttons, even `background: var(--initiative-icon)` on the combat tracker's initiative
+   control. Remapping the variables leaves all of those intact. Same lesson as .chat-message
+   and the notification severities. */
+body.bdh-chrome a.button.bright,
+body.bdh-chrome button.bright {
+  /* Core keeps .bright's palette in variables too (~433), including an off-palette #fda948
+     hover. Declaring all six keeps that orange out and preserves the reviewed flat look. */
+  --button-background-color: var(--t-gold2);
+  --button-border-color: var(--t-gold);
+  --button-text-color: var(--t-on-accent);
+  --button-hover-background-color: var(--t-gold2);
+  --button-hover-border-color: var(--t-gold);
+  --button-hover-text-color: var(--t-on-accent);
 }
-body.bdh-chrome kbd {
-  background: var(--t-panel2);
-  color: var(--t-ink);
-  /* Core draws no border on generic <kbd>; its only real <kbd> border is
-     `#controls-config kbd { border: 1px solid var(--button-border-color) }` (foundry2.css
-     ~5768). --button-border-color is not remapped here either — core declares it on the
-     kbd element under body.theme-*, so that one border stays core's. */
-}
-body.bdh-chrome button:hover,
-body.bdh-chrome a.button:hover {
-  border-color: var(--t-gold);
-  color: var(--t-ink2);
-}
-body.bdh-chrome button.bright,
-body.bdh-chrome a.button.bright {
-  background: var(--t-gold2);
-  border-color: var(--t-gold);
-  color: var(--t-on-accent);
-}
-body.bdh-chrome button[disabled],
+/* Must follow .bright and the polarity blocks: same specificity, so source order decides. */
 body.bdh-chrome a.button[disabled],
-body.bdh-chrome .ui-control:disabled {
-  color: var(--t-faint);
-  border-color: var(--t-line);
+body.bdh-chrome button[disabled],
+body.bdh-chrome kbd[disabled] {
+  --button-border-color: var(--t-line);
+  --button-text-color: var(--t-faint);
+  /* Core disarms hover on a disabled button (~423); our unlayered base rule would re-arm it. */
+  --button-hover-background-color: var(--button-background-color);
+  --button-hover-border-color: var(--button-border-color);
+  --button-hover-text-color: var(--button-text-color);
 }
-/* Core deliberately un-borders these buttons. The `button` rule above uses the `border`
-   SHORTHAND, and because this file is unlayered it beats core's layered `border: none`
-   regardless of specificity — so every one of them would go from border-width 0 to 1px.
-   That is a layout change on core controls, which this branch forbids, and it shows on the
-   close/minimise control of every window. Restore the width only; the colour declarations
-   above still reach them. Verified in foundry2.css:
-     ~6485  .application .window-header button.header-control
-     ~6531  .application .controls-dropdown .header-control > button
-     ~7713  #players #performance-stats button
-     ~8681  .playlists-sidebar .global-control button / .directory-list button
-     ~9311  .combat-sidebar .combat-tracker .token-initiative button
-     ~12518 .prosemirror menu button / prose-mirror menu button
-   Core's remaining `border: none` buttons are out of our reach and need no entry here:
-   `body.game .app …` (~11336, ~11654, ~11684, ~12211) hangs off the ApplicationV1 root,
-   which neither core v13/v14 windows nor this system's sheets carry, and
-   `#setup-packages header.controls .view-modes button` (~13084) is the setup screen, where
-   no body.bdh-chrome class exists. */
-body.bdh-chrome .application .window-header button.header-control,
-body.bdh-chrome .application .controls-dropdown .header-control > button,
-body.bdh-chrome #players #performance-stats button,
-body.bdh-chrome .playlists-sidebar .global-control button,
-body.bdh-chrome .playlists-sidebar .directory-list button,
-body.bdh-chrome .combat-sidebar .combat-tracker .token-initiative button,
-body.bdh-chrome .prosemirror menu button,
-body.bdh-chrome prose-mirror menu button {
-  border: none;
+/* Core paints a disabled .ui-control only with `opacity: 0.4` (~5571) and reads its colours
+   from --control-*, so go through those rather than the properties. */
+body.bdh-chrome .ui-control:disabled {
+  --control-border-color: var(--t-line);
+  --control-icon-color: var(--t-faint);
 }
 body.bdh-chrome code,
 body.bdh-chrome code.block {
