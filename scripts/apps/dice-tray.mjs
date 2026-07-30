@@ -70,9 +70,19 @@ function openCountPicker(tray, button, faces) {
   });
 
   // Dismiss on any pointer press outside the picker, or on Escape. Captured, so a press on
-  // another die closes this picker before that die's own handler runs.
+  // another die closes this picker before that die's own handler runs. The keydown listener
+  // must also stop the event here, in capture phase, before it reaches core's keyboard
+  // manager: an unstopped Escape reaches ClientKeybindings#onDismiss, which closes every
+  // open framed application (character sheets!), or else releases controlled tokens, or
+  // else toggles the main menu — closing a four-button picker must not do any of that.
   tray._bdhDismiss = (event) => { if (!picker.contains(event.target)) closeCountPicker(tray); };
-  tray._bdhKeydown = (event) => { if (event.key === "Escape") closeCountPicker(tray); };
+  tray._bdhKeydown = (event) => {
+    if (event.key !== "Escape") return;
+    if (!tray.querySelector("[data-bdh-count-picker]")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    closeCountPicker(tray);
+  };
   document.addEventListener("pointerdown", tray._bdhDismiss, true);
   document.addEventListener("keydown", tray._bdhKeydown, true);
 }
@@ -107,24 +117,41 @@ function bindDie(tray, button) {
 
 /**
  * Insert the tray under the chat form. Idempotent: renderChatLog fires on part re-renders too,
- * so any existing tray is removed first rather than accumulating duplicates.
+ * so any existing tray is removed first rather than accumulating duplicates. All DOM mutation
+ * happens in one synchronous block after the render-template await, not before it: splitting
+ * the remove-then-insert across the await let two overlapping calls each find no tray and each
+ * insert one, and the window was widest on the very first call (which also compiles the
+ * template) — exactly the call registerDiceTray() makes at ready, while the hook is already live.
  * @param {HTMLElement} element  the ChatLog application's root node
  */
 export async function injectDiceTray(element) {
   if (!element) return;
-  element.querySelectorAll(TRAY_SELECTOR).forEach((el) => { closeCountPicker(el); el.remove(); });
-  if (!enabled()) return;
+  if (!enabled()) {
+    element.querySelectorAll(TRAY_SELECTOR).forEach((el) => { closeCountPicker(el); el.remove(); });
+    return;
+  }
   const form = element.querySelector("form.chat-form");
   if (!form) return;                       // chat not rendered in the shape we expect; leave it alone
   const html = await foundry.applications.handlebars.renderTemplate(TEMPLATE, { dice: DICE });
+  element.querySelectorAll(TRAY_SELECTOR).forEach((el) => { closeCountPicker(el); el.remove(); });
   form.insertAdjacentHTML("afterend", html);
   const tray = element.querySelector(TRAY_SELECTOR);
   if (!tray) return;
   tray.querySelectorAll(".bdh-die").forEach((button) => bindDie(tray, button));
 }
 
-/** Install the chat hook. Also injects into an already-rendered chat log, since we register at ready. */
+/**
+ * Install the chat hook. Also injects into an already-rendered chat log, since we register at
+ * ready. Skips the popout: AbstractSidebarTab#renderPopout() does `new this.constructor(...)`,
+ * so the popped-out chat log is itself a ChatLog and renderChatLog fires for it too, with
+ * app.isPopout true (options.window.frame). The popout is out of scope for this tray, and the
+ * diceTray setting's onChange only reaches ui.chat?.element, so a tray injected into the
+ * popout could never be removed by toggling the setting off.
+ */
 export function registerDiceTray() {
-  Hooks.on("renderChatLog", (app, element) => injectDiceTray(element));
+  Hooks.on("renderChatLog", (app, element) => {
+    if (app.isPopout) return;
+    injectDiceTray(element);
+  });
   if (ui.chat?.element) injectDiceTray(ui.chat.element);
 }
