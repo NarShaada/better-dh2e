@@ -588,21 +588,28 @@ body.bdh-chrome .application .window-header {
 
 /* ---------- Chrome typography ----------
    Chrome labels only. Nothing here may reach .editor-content, .message-content,
-   .journal-entry-content or any other player-authored text. */
+   .journal-entry-content or any other player-authored text.
+
+   BUTTONS ARE DELIBERATELY ABSENT FROM THIS RULE. Core renders icon glyphs by putting
+   the icon font ON the button element itself — `button.icon, a.button.icon
+   { font-family: var(--font-awesome) }` (foundry2.css ~5940). A font-family here matches
+   those same elements, and because this file is unlayered it wins, replacing the icon
+   font with Barlow Condensed and rendering every icon button as a tofu box. Verified in
+   a live world: the scene controls, sidebar controls, hotbar and folder create-buttons
+   all lost their glyphs.
+
+   That also retires the reason buttons once needed :not(.bdh-card *):not(.better-dh2e *)
+   here — with no font-family, letter-spacing or text-transform reaching them, player-typed
+   text inside our own chat-card buttons is safe by construction rather than by exclusion.
+   Buttons still take their colours from the --button-* remap in the palette blocks. */
 body.bdh-chrome .application .window-header .window-title,
 body.bdh-chrome #scene-navigation .scene-navigation-menu .scene .scene-name,
 body.bdh-chrome #players h3,
-body.bdh-chrome fieldset > legend,
-body.bdh-chrome button:not(.bdh-card *):not(.better-dh2e *),
-body.bdh-chrome a.button:not(.bdh-card *):not(.better-dh2e *) {
+body.bdh-chrome fieldset > legend {
   font-family: var(--bdhc-label-font);
   letter-spacing: var(--bdhc-label-tracking);
   text-transform: var(--bdhc-label-transform);
 }
-
-/* The button exclusions protect player-typed text (character names, free-text
-   requisition labels) that appears inside our own chat-card buttons. Core's
-   buttons are fully themed; our own chat/sheet buttons are skipped. */
 
 /* ---------- Active states ----------
    Polarity-dependent by necessity: the dark recipe leans on --bdhc-glow, which is
