@@ -96,6 +96,7 @@ function bindDie(tray, button) {
   });
   button.addEventListener("pointerup", cancel);
   button.addEventListener("pointerleave", () => { cancel(); });
+  button.addEventListener("pointercancel", cancel);
   button.addEventListener("click", () => {
     if (held) { held = false; return; }   // the hold already opened the picker
     rollFromTray(tray, faces, 1);
@@ -111,7 +112,7 @@ function bindDie(tray, button) {
  */
 export async function injectDiceTray(element) {
   if (!element) return;
-  element.querySelectorAll(TRAY_SELECTOR).forEach((el) => el.remove());
+  element.querySelectorAll(TRAY_SELECTOR).forEach((el) => { closeCountPicker(el); el.remove(); });
   if (!enabled()) return;
   const form = element.querySelector("form.chat-form");
   if (!form) return;                       // chat not rendered in the shape we expect; leave it alone
