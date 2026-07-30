@@ -704,20 +704,30 @@ body.bdh-chrome label.icon:has(> input:disabled) {
    and the notification severities. */
 body.bdh-chrome a.button.bright,
 body.bdh-chrome button.bright {
-  /* Core keeps .bright's palette in variables too (~433), and hardcodes an off-palette #fda948
-     hover fill there. Declaring all six keeps that orange out while KEEPING the hover cue core
-     provides — .bright is the primary action in every core dialog, so it must lift on hover.
-     The lift is the palette's own accent: resting --t-gold2, hover --t-gold, the same resolution
-     the hotbar slot got earlier in this branch. The edge merges into the fill on hover by
-     design — the whole control shifts to the accent. --t-on-accent was checked against the new
-     hover fill and reads in all three palettes, better than against the resting one in each:
-     --t-gold 7.73 / 4.54 / 4.80 vs --t-gold2 5.28 / 3.28 / 2.75 (dataslate / dossier / heretic),
-     so it is unchanged. */
-  --button-background-color: var(--t-gold2);
-  --button-border-color: var(--t-gold);
+  /* .bright is the primary action in every core dialog (Save Changes, Create, Delete), so both
+     states have to clear AA and stay visibly apart, and core's hardcoded #fda948 hover fill
+     (~433) has to stay out — hence all six values are declared.
+
+     --t-on-accent is the palette's ink FOR the bright accent --t-gold; pairing it with the
+     deeper --t-gold2 was a token mismatch that measured 5.28 / 3.28 / 2.75 (dataslate / dossier
+     / heretic) and failed AA in two of three. So the resting fill is --t-gold, the tone the ink
+     was designed against, and the hover lift is a tint of that same tone — no new palette token.
+     Measured, ink against fill:
+       resting --t-gold                        7.73 / 4.54 / 4.80  — AA in all three
+       hover   --t-gold 82% + --t-ink2         8.85 / 5.76 / 6.00  — AA in all three
+     The mix moves each palette's accent AWAY from its own ink (--t-ink2 is pale where
+     --t-on-accent is dark and vice versa), so the lift raises contrast in every theme rather
+     than trading it away. Fill separation dL* = 4.4 / 6.5 / 6.5, all past the ~2.3 JND.
+
+     The edge is --t-gold2 in BOTH states, deliberately: --t-gold is now the resting fill, so
+     re-using it for the border would have merged the edge into the fill at rest. --t-gold2
+     against the two fills measures 1.46 / 1.38 / 1.74 resting and 1.67 / 1.76 / 2.18 hovered,
+     so the control keeps a defined edge throughout. */
+  --button-background-color: var(--t-gold);
+  --button-border-color: var(--t-gold2);
   --button-text-color: var(--t-on-accent);
-  --button-hover-background-color: var(--t-gold);
-  --button-hover-border-color: var(--t-gold);
+  --button-hover-background-color: color-mix(in srgb, var(--t-gold) 82%, var(--t-ink2));
+  --button-hover-border-color: var(--t-gold2);
   --button-hover-text-color: var(--t-on-accent);
 }
 /* Must follow .bright and the polarity blocks: same specificity, so source order decides. */
