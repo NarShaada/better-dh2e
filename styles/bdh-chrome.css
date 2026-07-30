@@ -1,0 +1,45 @@
+/* Better DH2e — theme Foundry's own interface (opt-in via the "Extend theme to
+   Foundry interface" client setting, which adds body.bdh-chrome).
+
+   WHY THIS FILE IS SEPARATE FROM bdh-themes.css: everything here targets CORE's
+   selectors. A selector that forgot the .bdh-chrome scope would repaint Foundry for
+   every user, including Parchment users who opted out. test/theme-css-scoping.test.mjs
+   enforces that every selector in this file contains "bdh-chrome".
+
+   HOW IT WINS: core wraps its CSS in @layer variables/blocks/applications/…; this file
+   is unlayered, and unlayered author rules beat layered ones regardless of specificity.
+   No !important is needed or permitted.
+
+   THE CASCADE TRAP: the cascade runs per element. Core declares its ramp on
+   `body.theme-dark` AND on `.themed.theme-dark` (which is #interface, sidebar tabs,
+   compendia, camera views, placeable HUDs and themed applications). A declaration on
+   the element beats a value inherited from body, so every variable block below is
+   applied to a selector LIST covering the same elements core declares on. Do not
+   collapse those lists to `body.bdh-chrome` alone — the override will appear not to work.
+
+   NAMESPACE: our own variables are --bdhc-*. --ui-* is core's (--ui-fade-opacity etc.). */
+
+/* ---------- Shared: typography and edges. Palette-independent. ---------- */
+body.bdh-chrome {
+  --font-body: var(--t-data);
+  --font-sans: var(--t-data);
+  --font-primary: var(--t-data);
+  --font-h1: var(--t-display);
+  --font-h2: var(--t-display);
+  --font-h3: var(--t-cond);
+  --font-h4: var(--t-cond);
+
+  /* Core hardcodes 3-4px radii as literals, not variables, so these tokens exist only
+     for our own consuming rules to read. Setting them alone changes nothing. */
+  --bdhc-radius: 0px;
+  --bdhc-clip: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+  --bdhc-clip-window: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+
+  /* Chrome labels only — tabs, window titles, scene names, buttons, legends.
+     Never applied to anything a player typed. */
+  --bdhc-label-font: var(--t-cond);
+  --bdhc-label-tracking: 2px;
+  --bdhc-label-transform: uppercase;
+
+  --bdhc-hairline: var(--t-line);
+}

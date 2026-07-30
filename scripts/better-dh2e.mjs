@@ -2,7 +2,7 @@
 import { BDH } from "./config.mjs";
 import { battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
 import { hordesEnabled } from "./helpers/horde-data.mjs";
-import { themeChoices, themeBodyClasses, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
+import { themeChoices, bodyClassesFor, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
 import { registerTokenPrefix } from "./helpers/token-prefix.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
 import { bindRequisitionButtons } from "./rolls/requisition.mjs";
@@ -132,7 +132,17 @@ Hooks.once("init", () => {
     type: String,
     choices: themeChoices(),
     default: "classic",
-    onChange: (value) => applyUiTheme(value)
+    onChange: () => applyUiTheme()
+  });
+
+  game.settings.register("better-dh2e", "uiChrome", {
+    name: "Extend theme to Foundry interface",
+    hint: "Applies the chosen theme to the sidebar, chat log, windows, controls and hotbar. No effect on Parchment, which leaves Foundry untouched.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: () => applyUiTheme()
   });
 
   game.settings.register("better-dh2e", "tokenPrefixes", {
@@ -274,14 +284,17 @@ Hooks.once("setup", () => {
 });
 
 /** Swap the theme classes on <body>. Pure CSS switch — no re-render needed; live chat cards re-skin instantly. */
-function applyUiTheme(value) {
+function applyUiTheme() {
   document.body.classList.remove(...ALL_THEME_CLASSES);
-  const classes = themeBodyClasses(value);
+  const classes = bodyClassesFor(
+    game.settings.get("better-dh2e", "uiTheme"),
+    game.settings.get("better-dh2e", "uiChrome")
+  );
   if (classes.length) document.body.classList.add(...classes);
 }
 
 Hooks.once("ready", () => {
-  applyUiTheme(game.settings.get("better-dh2e", "uiTheme"));
+  applyUiTheme();
   registerCoverAutomation();
   initCoverOverlay();
   initVehicleFacing();
