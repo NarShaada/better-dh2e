@@ -1,0 +1,12 @@
+{{!-- templates/apps/dice-tray.hbs — injected under core's chat form by scripts/apps/dice-tray.mjs --}}
+<div class="bdh-dice-tray" data-bdh-dice-tray>
+  {{#each dice}}
+  <button type="button" class="bdh-die" data-faces="{{this}}"
+          data-tooltip="Click to roll 1d{{this}} &middot; hold for multiple"
+          aria-label="Roll 1d{{this}}">d{{this}}</button>
+  {{/each}}
+  <label class="bdh-mod">
+    <span>Mod</span>
+    <input type="text" inputmode="numeric" value="+0" data-bdh="mod" aria-label="Roll modifier"/>
+  </label>
+</div>
