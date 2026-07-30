@@ -532,3 +532,41 @@ body.bdh-chrome code.block {
   color: var(--t-ink);
   border: 1px solid var(--t-line);
 }
+
+/* ---------- Prose reading surface ----------
+   The chrome around a document is themed; the document itself is displayed ON the
+   theme, not painted in it. Nothing here restyles the text's own typography. */
+body.bdh-chrome .app.journal-entry.sheet .journal-entry-content,
+body.bdh-chrome prose-mirror .editor-content,
+body.bdh-chrome .prosemirror .editor-content,
+body.bdh-chrome .sheet.app .editor-content {
+  background: var(--bdhc-prose-bg);
+  color: var(--bdhc-prose-ink);
+  box-shadow: var(--bdhc-prose-inset);
+}
+body.bdh-chrome .app.journal-entry.sheet .journal-entry-content h1,
+body.bdh-chrome .app.journal-entry.sheet .journal-entry-content h2,
+body.bdh-chrome .app.journal-entry.sheet .journal-entry-content h3,
+body.bdh-chrome prose-mirror .editor-content h1,
+body.bdh-chrome prose-mirror .editor-content h2,
+body.bdh-chrome prose-mirror .editor-content h3 {
+  color: var(--t-gold);
+  border-bottom-color: var(--t-line2);
+}
+body.bdh-chrome .app.journal-entry.sheet .journal-entry-content table,
+body.bdh-chrome prose-mirror .editor-content table {
+  border-color: var(--t-line2);
+}
+body.bdh-chrome .app.journal-entry.sheet .journal-entry-content th,
+body.bdh-chrome prose-mirror .editor-content th {
+  background: var(--t-panel3);
+  border-color: var(--t-line2);
+  color: var(--t-ink2);
+}
+body.bdh-chrome .app.journal-entry.sheet .journal-entry-content td,
+body.bdh-chrome prose-mirror .editor-content td {
+  border-color: var(--t-line2);
+}
+body.bdh-chrome .app.journal-entry.sheet .directory-item.active .page-title {
+  color: var(--t-gold);
+}
