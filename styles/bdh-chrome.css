@@ -342,10 +342,9 @@ body.bdh-chrome.bdh-polarity-light .application {
   --sidebar-background: color-mix(in srgb, var(--t-panel) 94%, transparent);
   --sidebar-separator: 1px solid var(--t-line);
   --sidebar-entry-hover-bg: color-mix(in srgb, var(--t-gold) 14%, transparent);
-  /* Core paints folder-header labels in --color-light-2 (pale) straight onto this, so it
-     has to be a dark band — core's light theme uses #a19e78, which our pale --color-light-2
-     does not clear. --t-ink does. */
-  --sidebar-folder-color: var(--t-ink);
+  /* Only the 6px indent guide on `.directory .directory-item .subdirectory` now — the
+     folder-header band itself is overridden below to an outline instead of a fill. */
+  --sidebar-folder-color: var(--t-line);
 
   --table-background-color: none;
   --table-header-bg-color: var(--t-panel2);
@@ -490,8 +489,19 @@ body.bdh-chrome.bdh-polarity-light prose-mirror,
 body.bdh-chrome.bdh-polarity-light #prosemirror-dropdown,
 body.bdh-chrome.bdh-polarity-light .menu-dialog.prosemirror {
   --dialog-background: var(--t-panel);
-  --menu-background: var(--t-ink);
-  --dropdown-background: var(--t-ink);
+  /* CORRECTION (verified in a live world): an earlier pass made the menu and dropdown DARK so
+     core's pale default ink would read on them. Wrong for this theme — the chat toolbar is a
+     wide strip directly under the chat log, and a dark band there reads as unthemed core
+     showing through. Core's own light theme shows the right shape: `body.theme-light
+     .prosemirror` (~2346) uses a translucent rgba(0,0,0,0.1) wash for the menu, a pale #d9d8c8
+     dropdown, and --button-text-color: var(--color-text-primary) — a dark ink. Mirrored here in
+     palette terms, so the strip tints the pale surface behind it instead of painting over it. */
+  --menu-background: color-mix(in srgb, var(--t-ink) 10%, transparent);
+  --dropdown-background: var(--t-panel);
+  /* Core declares --button-text-color on these elements too (~456, pale by default), and the
+     dropdown reads `color: var(--button-text-color)` (~12648) straight off this element. So
+     declaring it here is what turns the dropdown's ink dark to match its now-pale surface. */
+  --button-text-color: var(--t-ink);
 }
 /* The pale ink on those two dark surfaces, spelled out.
    #prosemirror-dropdown needs nothing: it reads `color: var(--button-text-color)` (~12648) and
@@ -504,13 +514,23 @@ body.bdh-chrome.bdh-polarity-light .menu-dialog.prosemirror {
    `.prosemirror menu button:hover { color: var(--color-form-label-hover) }` (~12539), which
    resolves through the .prosemirror element to the pale --color-light-2, and the background
    and border never reach these buttons at all (core's transparent/none win on layer order). */
-body.bdh-chrome.bdh-polarity-light .prosemirror menu button,
-body.bdh-chrome.bdh-polarity-light prose-mirror menu button {
-  --button-text-color: var(--t-panel2);
-}
+/* The toolbar buttons need no override now: the strip is a pale wash, and the dark
+   --button-text-color declared above reaches them through the same element list. */
 body.bdh-chrome.bdh-polarity-light .compendium-directory {
-  /* Same pale --color-light-2 folder labels as the sidebar; see --sidebar-folder-color above. */
-  --sidebar-folder-color: var(--t-ink);
+  --sidebar-folder-color: var(--t-line);
+}
+
+/* Folder rows: outlined, not filled.
+   Core is `li.folder > .folder-header { background: var(--sidebar-folder-color); color:
+   var(--color-light-2) }` — a filled band carrying pale ink. On parchment a filled band reads
+   wrong, because every other panel in this theme is outlined rather than filled (window headers
+   being the deliberate exception). So the fill goes, the label takes a dark ink, and the edge is
+   an INSET BOX-SHADOW rather than a border: core declares no border on this element, so a real
+   border would change its geometry and break the no-layout-changes rule. */
+body.bdh-chrome.bdh-polarity-light li.folder > .folder-header {
+  background: transparent;
+  color: var(--t-ink2);
+  box-shadow: inset 0 0 0 1px var(--t-line);
 }
 body.bdh-chrome.bdh-polarity-light #camera-views {
   --av-background-color: color-mix(in srgb, var(--t-panel) 92%, transparent);
