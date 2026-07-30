@@ -4,6 +4,7 @@ import { battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs
 import { hordesEnabled } from "./helpers/horde-data.mjs";
 import { themeChoices, bodyClassesFor, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
 import { registerTokenPrefix } from "./helpers/token-prefix.mjs";
+import { registerDiceTray, injectDiceTray } from "./apps/dice-tray.mjs";
 import { bindCardButtons } from "./rolls/attack.mjs";
 import { bindRequisitionButtons } from "./rolls/requisition.mjs";
 import { canReroll, rerollFromFate, canAddDoS, addDoSFromFate } from "./rolls/fate.mjs";
@@ -143,6 +144,16 @@ Hooks.once("init", () => {
     type: Boolean,
     default: false,
     onChange: () => applyUiTheme()
+  });
+
+  game.settings.register("better-dh2e", "diceTray", {
+    name: "Show the dice tray",
+    hint: "Adds a compact d100/d10/d5 tray under the chat box for quick rolls the system does not automate. Click a die to roll one; hold a die for multiple.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => injectDiceTray(ui.chat?.element)
   });
 
   game.settings.register("better-dh2e", "tokenPrefixes", {
@@ -301,6 +312,7 @@ Hooks.once("ready", () => {
   registerGrantHooks();
   registerWeaponPartHooks();
   registerFatigueHooks();
+  registerDiceTray();
   // Battlemap integration is default-on now — flip any existing world that still had it off so its
   // token/grid automation isn't stuck disabled (the setting is hidden as of v0.2.0).
   if (game.user.isGM && game.settings.get("better-dh2e", "enableBattlemap") !== true) {
