@@ -409,9 +409,13 @@ body.bdh-chrome .application .window-header .window-title,
 body.bdh-chrome #scene-navigation .scene-navigation-menu .scene .scene-name,
 body.bdh-chrome #players h3,
 body.bdh-chrome fieldset > legend,
-body.bdh-chrome button,
-body.bdh-chrome a.button {
+body.bdh-chrome button:not(.bdh-card *):not(.better-dh2e *),
+body.bdh-chrome a.button:not(.bdh-card *):not(.better-dh2e *) {
   font-family: var(--bdhc-label-font);
   letter-spacing: var(--bdhc-label-tracking);
   text-transform: var(--bdhc-label-transform);
 }
+
+/* The button exclusions protect player-typed text (character names, free-text
+   requisition labels) that appears inside our own chat-card buttons. Core's
+   buttons are fully themed; our own chat/sheet buttons are skipped. */
