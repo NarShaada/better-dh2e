@@ -33,7 +33,10 @@ body.bdh-chrome {
      for our own consuming rules to read. Setting them alone changes nothing. */
   --bdhc-radius: 0px;
   --bdhc-clip: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
-  --bdhc-clip-window: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  /* Windows are notched TOP-LEFT only. clip-path clips hit-testing as well as paint, and
+     core's resize grip lives at the bottom-right (.application .window-resize-handle is
+     11x11 at `inset: auto 1px 1px auto`), so a bottom-right notch would eat most of it. */
+  --bdhc-clip-window: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
 
   /* Chrome labels only — tabs, window titles, scene names, buttons, legends.
      Never applied to anything a player typed. */
@@ -92,6 +95,14 @@ body.bdh-chrome.bdh-polarity-dark .application {
   --color-level-warning: var(--t-gold);
   --color-level-warning-bg: color-mix(in srgb, var(--t-gold2) 80%, transparent);
   --color-level-warning-border: var(--t-gold2);
+  /* Info was the one severity core kept: without this it stays #59a1f6 blue. --t-warp is
+     the palette's fourth hue, so info reads as its own level rather than as the accent.
+     Unlike --t-red2/--t-green2/--t-gold2 there is no deep warp tone, and the dark
+     palettes' --t-warp is a BRIGHT violet, so the fill is mixed down into --t-bg to keep
+     core's pale --color-light-3 toast text legible on it. */
+  --color-level-info: var(--t-warp);
+  --color-level-info-bg: color-mix(in srgb, var(--t-warp) 35%, var(--t-bg));
+  --color-level-info-border: var(--t-warp);
 
   --sidebar-background: color-mix(in srgb, var(--t-bg) 92%, transparent);
   --sidebar-separator: 1px solid var(--t-line);
@@ -125,8 +136,7 @@ body.bdh-chrome.bdh-polarity-dark .application {
 
 /* Region variables core declares on specific elements. Same trap applies: these must
    match the element core declares on. */
-body.bdh-chrome.bdh-polarity-dark .application,
-body.bdh-chrome.bdh-polarity-dark.application {
+body.bdh-chrome.bdh-polarity-dark .application {
   --background: color-mix(in srgb, var(--t-bg) 94%, transparent);
   --color-header-background: var(--t-panel2);
 }
@@ -135,16 +145,32 @@ body.bdh-chrome.bdh-polarity-dark .placeable-hud,
 body.bdh-chrome.bdh-polarity-dark #measurement .waypoint-label {
   --control-bg-color: color-mix(in srgb, var(--t-panel) 80%, transparent);
   --control-border-color: var(--t-line2);
-  --control-icon-color: var(--t-muted);
   --control-hover-bg-color: var(--t-panel2);
   --control-hover-border-color: var(--t-line2);
-  --control-hover-icon-color: var(--t-ink);
   --control-active-bg-color: var(--t-panel3);
   --control-active-border-color: var(--t-gold);
-  --control-active-icon-color: var(--t-gold);
   --control-button-border-color: var(--t-gold2);
   --control-button-hover-bg-color: var(--t-gold2);
   --control-button-hover-border-color: var(--t-gold);
+}
+/* Icon colours are set WITHOUT .placeable-hud: core deliberately overrides those three on
+   .placeable-hud alone (rgba(255 255 255 / 70%) / #FFF, foundry2.css ~849) because token
+   HUD icons sit over an arbitrary map and must stay high-contrast. Painting them --t-muted
+   here would undo that; the bg/border/button values above are still wanted. */
+body.bdh-chrome.bdh-polarity-dark .ui-control,
+body.bdh-chrome.bdh-polarity-dark #measurement .waypoint-label {
+  --control-icon-color: var(--t-muted);
+  --control-hover-icon-color: var(--t-ink);
+  --control-active-icon-color: var(--t-gold);
+}
+/* Core resets the hover values on a disabled control so it stops reacting to the pointer
+   (foundry2.css ~842). Re-establishing hover values above re-armed it, so mirror the reset. */
+body.bdh-chrome.bdh-polarity-dark .ui-control:disabled,
+body.bdh-chrome.bdh-polarity-dark .placeable-hud:disabled,
+body.bdh-chrome.bdh-polarity-dark #measurement .waypoint-label:disabled {
+  --control-hover-bg-color: var(--control-bg-color);
+  --control-hover-border-color: var(--control-border-color);
+  --control-hover-icon-color: var(--control-icon-color);
 }
 body.bdh-chrome.bdh-polarity-dark #hotbar {
   --slot-color: color-mix(in srgb, var(--t-panel) 85%, transparent);
@@ -179,8 +205,7 @@ body.bdh-chrome.bdh-polarity-dark .menu-dialog.prosemirror {
 body.bdh-chrome.bdh-polarity-dark .compendium-directory {
   --sidebar-folder-color: var(--t-panel3);
 }
-body.bdh-chrome.bdh-polarity-dark #camera-views,
-body.bdh-chrome.bdh-polarity-dark.application#camera-views {
+body.bdh-chrome.bdh-polarity-dark #camera-views {
   --av-background-color: color-mix(in srgb, var(--t-bg) 90%, transparent);
   --av-border-color: var(--t-line2);
 }
@@ -202,22 +227,34 @@ body.bdh-chrome.bdh-polarity-dark .chat-message .message-header .message-sender 
 }
 
 /* ---------- Light polarity: Dossier ----------
-   Same variables, pale end and dark end placed where core's model expects them, so
-   nothing downstream needs special-casing. */
+   NOT an inversion of the dark block. Core's ramp is polarity-neutral and core's own
+   `body.theme-light` block remaps NONE of it: --color-cool-* stays the dark end,
+   --color-light-* the pale end, and core then deliberately PAIRS them — light windows get
+   `--color-header-background: var(--color-dark-3)` under a `--color-light-1` title
+   (foundry2.css ~2362, ~6462, ~6483), #menu is `--color-cool-5-75` under
+   `--color-light-1` items (~7375, ~7406), tooltips are `--color-cool-5-90` under
+   `--color-light-1` (~5415), and li.folder > .folder-header is `--sidebar-folder-color`
+   under `--color-light-2` (~8458). Mapping both ends pale broke every one of those.
+   So: the ramp keeps its polarity, and what the light theme actually changes is the
+   SEMANTIC layer — --color-text-*, the region surfaces, and the active-state recipe. */
 body.bdh-chrome.bdh-polarity-light,
 body.bdh-chrome.bdh-polarity-light .themed,
 body.bdh-chrome.bdh-polarity-light .application {
-  --color-cool-5: var(--t-panel2);
-  --color-cool-5-25: color-mix(in srgb, var(--t-panel2) 25%, transparent);
-  --color-cool-5-50: color-mix(in srgb, var(--t-panel2) 50%, transparent);
-  --color-cool-5-75: color-mix(in srgb, var(--t-panel2) 75%, transparent);
-  --color-cool-5-90: color-mix(in srgb, var(--t-panel2) 92%, transparent);
-  --color-cool-4: var(--t-line);
-  --color-cool-3: var(--t-panel3);
+  /* The dark end stays dark. Derived from the palette's inks (there is no dark scaffold
+     in a parchment palette), with the alphas mixed off --t-ink2 the way the dark block
+     mixes its own off --t-bg. */
+  --color-cool-5: var(--t-ink2);
+  --color-cool-5-25: color-mix(in srgb, var(--t-ink2) 25%, transparent);
+  --color-cool-5-50: color-mix(in srgb, var(--t-ink2) 50%, transparent);
+  --color-cool-5-75: color-mix(in srgb, var(--t-ink2) 75%, transparent);
+  --color-cool-5-90: color-mix(in srgb, var(--t-ink2) 90%, transparent);
+  --color-cool-4: var(--t-ink);
+  --color-cool-3: var(--t-muted);
   --color-warm-1: var(--t-gold);
   --color-warm-2: var(--t-gold2);
   --color-warm-3: var(--t-line2);
 
+  /* The pale end stays pale, exactly as core's light theme leaves it. */
   --color-light-1: var(--t-field);
   --color-light-2: var(--t-panel);
   --color-light-3: var(--t-panel2);
@@ -239,20 +276,33 @@ body.bdh-chrome.bdh-polarity-light .application {
   --color-shadow-primary: var(--t-gold2);
   --color-shadow-highlight: var(--t-gold);
 
+  /* Same recipe as the dark block, deliberately: core's toast text is pale in BOTH
+     schemes (.notification is --color-light-3, .notification.warning --color-light-2,
+     foundry2.css ~7920/~7953) and core's own -bg tokens are ~80%-opaque DARK fills. A
+     light wash here left error toasts as a near-transparent film with pale text on it. */
   --color-level-error: var(--t-red);
-  --color-level-error-bg: color-mix(in srgb, var(--t-red) 18%, transparent);
+  --color-level-error-bg: color-mix(in srgb, var(--t-red2) 80%, transparent);
   --color-level-error-border: var(--t-red2);
   --color-level-success: var(--t-green);
-  --color-level-success-bg: color-mix(in srgb, var(--t-green) 18%, transparent);
+  --color-level-success-bg: color-mix(in srgb, var(--t-green2) 80%, transparent);
   --color-level-success-border: var(--t-green2);
   --color-level-warning: var(--t-gold);
-  --color-level-warning-bg: color-mix(in srgb, var(--t-gold) 18%, transparent);
+  --color-level-warning-bg: color-mix(in srgb, var(--t-gold2) 80%, transparent);
   --color-level-warning-border: var(--t-gold2);
+  /* Info was the one severity core kept: without this it stays #59a1f6 blue. --t-warp is
+     the palette's fourth hue, so info reads as its own level rather than as the accent.
+     In this palette --t-warp is already a deep tone, so 80% of it matches the others. */
+  --color-level-info: var(--t-warp);
+  --color-level-info-bg: color-mix(in srgb, var(--t-warp) 80%, transparent);
+  --color-level-info-border: var(--t-warp);
 
   --sidebar-background: color-mix(in srgb, var(--t-panel) 94%, transparent);
   --sidebar-separator: 1px solid var(--t-line);
   --sidebar-entry-hover-bg: color-mix(in srgb, var(--t-gold) 14%, transparent);
-  --sidebar-folder-color: var(--t-line);
+  /* Core paints folder-header labels in --color-light-2 (pale) straight onto this, so it
+     has to be a dark band — core's light theme uses #a19e78, which our pale --color-light-2
+     does not clear. --t-ink does. */
+  --sidebar-folder-color: var(--t-ink);
 
   --table-background-color: none;
   --table-header-bg-color: var(--t-panel2);
@@ -280,33 +330,57 @@ body.bdh-chrome.bdh-polarity-light .application {
   --bdhc-prose-inset: inset 0 0 0 1px var(--t-line), inset 0 12px 22px -12px rgba(0, 0, 0, .18);
 }
 
-body.bdh-chrome.bdh-polarity-light .application,
-body.bdh-chrome.bdh-polarity-light.application {
+/* The application surface itself IS pale here: core paints it with --background and puts
+   the semantic --color-text-* (remapped to dark inks above) on it. Only the header bar
+   flips, because core's window title is the pale --color-light-1 and is not themeable. */
+body.bdh-chrome.bdh-polarity-light .application {
   --background: color-mix(in srgb, var(--t-panel) 96%, transparent);
-  --color-header-background: var(--t-panel3);
+  --color-header-background: var(--t-ink);
+  /* Core's .application base derives these from --color-light-4/5/2 (foundry2.css ~328),
+     which stay pale in this block — invisible on a pale --background. Core's own light
+     theme has the same problem and solves it the same way, by remapping the semantic
+     form-label/hint tokens to dark inks (`body.theme-light .application`, ~2361). */
+  --color-form-label: var(--t-ink);
+  --color-form-label-hover: var(--t-ink2);
+  --color-form-hint: var(--t-muted);
+  --color-form-hint-hover: var(--t-ink);
 }
 body.bdh-chrome.bdh-polarity-light .ui-control,
 body.bdh-chrome.bdh-polarity-light .placeable-hud,
 body.bdh-chrome.bdh-polarity-light #measurement .waypoint-label {
   --control-bg-color: color-mix(in srgb, var(--t-panel) 88%, transparent);
   --control-border-color: var(--t-line2);
-  --control-icon-color: var(--t-muted);
   --control-hover-bg-color: var(--t-panel3);
   --control-hover-border-color: var(--t-line2);
-  --control-hover-icon-color: var(--t-ink2);
   --control-active-bg-color: var(--t-gold);
   --control-active-border-color: var(--t-gold2);
-  --control-active-icon-color: var(--t-on-accent);
   --control-button-border-color: var(--t-gold2);
   --control-button-hover-bg-color: var(--t-gold2);
   --control-button-hover-border-color: var(--t-gold);
+}
+/* See the dark block: .placeable-hud is excluded from the icon colours on purpose, because
+   core pins those to near-black over an arbitrary map (foundry2.css ~1899). */
+body.bdh-chrome.bdh-polarity-light .ui-control,
+body.bdh-chrome.bdh-polarity-light #measurement .waypoint-label {
+  --control-icon-color: var(--t-muted);
+  --control-hover-icon-color: var(--t-ink2);
+  --control-active-icon-color: var(--t-on-accent);
+}
+body.bdh-chrome.bdh-polarity-light .ui-control:disabled,
+body.bdh-chrome.bdh-polarity-light .placeable-hud:disabled,
+body.bdh-chrome.bdh-polarity-light #measurement .waypoint-label:disabled {
+  --control-hover-bg-color: var(--control-bg-color);
+  --control-hover-border-color: var(--control-border-color);
+  --control-hover-icon-color: var(--control-icon-color);
 }
 body.bdh-chrome.bdh-polarity-light #hotbar {
   --slot-color: color-mix(in srgb, var(--t-panel) 92%, transparent);
   --key-bg-color-empty: var(--t-panel2);
   --key-bg-color-full: var(--t-panel3);
   --key-text-color: var(--t-muted);
-  --page-control-color: var(--t-panel2);
+  /* The page chevron doubles as the backing for .hotbar-page-number, which core colours
+     --color-light-2 (pale, foundry2.css ~7570). Dark, as in the dark block. */
+  --page-control-color: var(--t-ink);
 }
 body.bdh-chrome.bdh-polarity-light #chat-message {
   --text-color: var(--t-ink);
@@ -334,12 +408,15 @@ body.bdh-chrome.bdh-polarity-light #prosemirror-dropdown,
 body.bdh-chrome.bdh-polarity-light .menu-dialog.prosemirror {
   --background-color: var(--t-panel);
   --border-color: var(--t-line2);
+  /* Core's default is --color-dark-1 (#111) under --hover-text-color, which resolves to
+     --color-text-emphatic — a dark ink here. Pale hover surface, dark hover ink. */
+  --hover-entry-background: var(--t-panel3);
 }
 body.bdh-chrome.bdh-polarity-light .compendium-directory {
-  --sidebar-folder-color: var(--t-line);
+  /* Same pale --color-light-2 folder labels as the sidebar; see --sidebar-folder-color above. */
+  --sidebar-folder-color: var(--t-ink);
 }
-body.bdh-chrome.bdh-polarity-light #camera-views,
-body.bdh-chrome.bdh-polarity-light.application#camera-views {
+body.bdh-chrome.bdh-polarity-light #camera-views {
   --av-background-color: color-mix(in srgb, var(--t-panel) 92%, transparent);
   --av-border-color: var(--t-line2);
 }
@@ -368,30 +445,41 @@ body.bdh-chrome .ui-control,
 body.bdh-chrome .chat-message,
 body.bdh-chrome .dice-roll .dice-formula,
 body.bdh-chrome .dice-roll .dice-total,
-body.bdh-chrome #players,
+body.bdh-chrome #players #players-active,
+body.bdh-chrome #players #players-inactive,
 body.bdh-chrome #notifications > .notification,
 body.bdh-chrome #context-menu,
 body.bdh-chrome #tooltip,
+body.bdh-chrome .locked-tooltip,
 body.bdh-chrome input[type="text"],
 body.bdh-chrome input[type="number"],
+body.bdh-chrome input[type="search"],
 body.bdh-chrome select,
 body.bdh-chrome textarea,
+body.bdh-chrome code-mirror,
 body.bdh-chrome button,
 body.bdh-chrome a.button,
 body.bdh-chrome fieldset,
 body.bdh-chrome #hotbar #action-bar .slot,
+body.bdh-chrome #hotbar #action-bar .slot .key,
+body.bdh-chrome #hotbar #action-bar .slot .slot-icon,
 body.bdh-chrome #scene-navigation .scene-navigation-menu .scene {
   border-radius: var(--bdhc-radius);
 }
 
 /* The notch, reused from the sheet theme. Applied only where a clipped corner cannot
-   swallow a control's content. */
+   swallow a control's content OR a pseudo-element core places outside the border box:
+   #notifications > .notification is deliberately absent because core's dismiss badge is
+   `#notifications > .notification::after` at `top: -4px; right: -4px` (foundry2.css ~7898)
+   and clip-path clips pseudo-elements too — the border-radius above already squares it.
+   .application is notched top-left only; see --bdhc-clip-window. */
 body.bdh-chrome .ui-control,
 body.bdh-chrome .chat-message,
-body.bdh-chrome #players,
+body.bdh-chrome #players #players-active,
+body.bdh-chrome #players #players-inactive,
 body.bdh-chrome #hotbar #action-bar .slot,
-body.bdh-chrome #notifications > .notification,
-body.bdh-chrome #tooltip {
+body.bdh-chrome #tooltip,
+body.bdh-chrome .locked-tooltip {
   clip-path: var(--bdhc-clip);
 }
 body.bdh-chrome .application {
@@ -422,23 +510,24 @@ body.bdh-chrome a.button:not(.bdh-card *):not(.better-dh2e *) {
 
 /* ---------- Active states ----------
    Polarity-dependent by necessity: the dark recipe leans on --bdhc-glow, which is
-   invisible on parchment. Dossier fills the control with the accent instead. */
-body.bdh-chrome .ui-control[aria-pressed="true"],
-body.bdh-chrome a.ui-control[aria-pressed="true"],
-body.bdh-chrome button.ui-control[aria-pressed="true"],
-body.bdh-chrome li.ui-control[aria-pressed="true"] {
+   invisible on parchment. Dossier fills the control with the accent instead.
+   The border reads --control-active-border-color rather than --t-gold directly, so the
+   per-polarity token above stays the single source of truth (it is --t-gold2 in light).
+   Bare `.ui-control` already covers core's button/a/li variants — no need to list them. */
+body.bdh-chrome .ui-control[aria-pressed="true"] {
   background: var(--bdhc-active-fill);
   color: var(--bdhc-active-ink);
-  border-color: var(--t-gold);
+  border-color: var(--control-active-border-color);
   box-shadow: var(--bdhc-glow);
 }
 body.bdh-chrome #sidebar-tabs > menu .ui-control[data-action="tab"][aria-pressed="true"] {
   box-shadow: var(--bdhc-tab-glow);
 }
+/* .scene is an li.ui-control (templates/ui/scene-navigation.hbs), so the same token resolves. */
 body.bdh-chrome #scene-navigation .scene-navigation-menu .scene.active {
   background: var(--bdhc-active-fill);
   color: var(--bdhc-active-ink);
-  border-color: var(--t-gold);
+  border-color: var(--control-active-border-color);
   box-shadow: var(--bdhc-glow);
 }
 body.bdh-chrome #scene-navigation .scene-navigation-menu .scene.active .scene-name {
@@ -446,6 +535,13 @@ body.bdh-chrome #scene-navigation .scene-navigation-menu .scene.active .scene-na
 }
 body.bdh-chrome #hotbar #action-bar .slot.full {
   border-color: var(--t-gold2);
+}
+/* Must follow .slot.full: both selectors weigh the same, and our unlayered .full rule
+   otherwise beats core's layered `.slot:hover { border: 2px solid var(--color-warm-1) }`
+   (foundry2.css ~7517), leaving filled slots with no hover cue at all. border-color only —
+   core's 2px width must not change. */
+body.bdh-chrome #hotbar #action-bar .slot:hover {
+  border-color: var(--t-gold);
 }
 
 /* ---------- Form elements ----------
@@ -462,8 +558,11 @@ body.bdh-chrome textarea {
 body.bdh-chrome code-mirror {
   background: var(--t-field);
   color: var(--t-ink);
-  /* Core draws no border on code-mirror host; its inner .cm-editor elements already
-     resolve their borders through --input-border-color, remapped in the palette blocks. */
+  /* Core draws no border on the code-mirror host itself; the visible edge is
+     `code-mirror .cm-editor .cm-scroller { border: 1px solid var(--input-border-color) }`
+     (foundry2.css ~4427). --input-border-color is NOT remapped anywhere in this file — core
+     declares it on the code-mirror element (transparent in its dark theme, --color-dark-6 in
+     its light one), which beats anything we inherit from body, so that edge stays core's. */
 }
 body.bdh-chrome input:focus,
 body.bdh-chrome select:focus,
@@ -488,8 +587,9 @@ body.bdh-chrome input[type="radio"] {
 body.bdh-chrome label.icon {
   background: var(--t-panel2);
   color: var(--t-muted);
-  /* Core borders only .standard-form label.icon:has(> input); it does not border all
-     label.icon elements. Those borders resolve through --input-border-color, remapped above. */
+  /* Core borders only `.standard-form label.icon:has(> input)` (foundry2.css ~4898); it does
+     not border all label.icon elements. That border resolves through --input-border-color,
+     which this file does not remap — see the code-mirror note above. */
 }
 body.bdh-chrome label.icon:focus-within {
   border-color: var(--t-gold);
@@ -506,8 +606,10 @@ body.bdh-chrome a.button {
 body.bdh-chrome kbd {
   background: var(--t-panel2);
   color: var(--t-ink);
-  /* Core draws no border on generic <kbd>; its only real <kbd> border is on
-     #controls-config kbd, which resolves through --button-border-color, remapped above. */
+  /* Core draws no border on generic <kbd>; its only real <kbd> border is
+     `#controls-config kbd { border: 1px solid var(--button-border-color) }` (foundry2.css
+     ~5768). --button-border-color is not remapped here either — core declares it on the
+     kbd element under body.theme-*, so that one border stays core's. */
 }
 body.bdh-chrome button:hover,
 body.bdh-chrome a.button:hover {
@@ -535,39 +637,64 @@ body.bdh-chrome code.block {
 
 /* ---------- Prose reading surface ----------
    The chrome around a document is themed; the document itself is displayed ON the
-   theme, not painted in it. Nothing here restyles the text's own typography. */
-body.bdh-chrome .app.journal-entry.sheet .journal-entry-content,
+   theme, not painted in it. Nothing here restyles the text's own typography — background,
+   colour and border colour only.
+
+   ROOTS: `.app` is the ApplicationV1 root and matches nothing we ship on. v13/v14 opens
+   JournalEntrySheet as HandlebarsApplicationMixin(DocumentSheetV2) — classes
+   ["journal-sheet","journal-entry"] plus DocumentSheetV2's own "sheet" — and this system's
+   sheets are ItemSheetV2 / ActorSheetV2 (classes ["better-dh2e","sheet",…]). Core draws the
+   same line: `.sheet.journal-entry .journal-entry-content` lives in @layer applications
+   (foundry2.css ~9526) while `.app.journal-entry.sheet .journal-entry-content` is
+   @layer compatibility (~11115). So the roots are .sheet-based, and every override below
+   is applied to all of them — an item description gets the same treatment as a journal page. */
+body.bdh-chrome .sheet.journal-entry .journal-entry-content,
 body.bdh-chrome prose-mirror .editor-content,
 body.bdh-chrome .prosemirror .editor-content,
-body.bdh-chrome .sheet.app .editor-content {
+body.bdh-chrome .sheet .editor-content {
   background: var(--bdhc-prose-bg);
   color: var(--bdhc-prose-ink);
   box-shadow: var(--bdhc-prose-inset);
 }
-body.bdh-chrome .app.journal-entry.sheet .journal-entry-content h1,
-body.bdh-chrome .app.journal-entry.sheet .journal-entry-content h2,
-body.bdh-chrome .app.journal-entry.sheet .journal-entry-content h3,
+body.bdh-chrome .sheet.journal-entry .journal-entry-content h1,
+body.bdh-chrome .sheet.journal-entry .journal-entry-content h2,
+body.bdh-chrome .sheet.journal-entry .journal-entry-content h3,
 body.bdh-chrome prose-mirror .editor-content h1,
 body.bdh-chrome prose-mirror .editor-content h2,
-body.bdh-chrome prose-mirror .editor-content h3 {
+body.bdh-chrome prose-mirror .editor-content h3,
+body.bdh-chrome .prosemirror .editor-content h1,
+body.bdh-chrome .prosemirror .editor-content h2,
+body.bdh-chrome .prosemirror .editor-content h3,
+body.bdh-chrome .sheet .editor-content h1,
+body.bdh-chrome .sheet .editor-content h2,
+body.bdh-chrome .sheet .editor-content h3 {
   color: var(--t-gold);
   border-bottom-color: var(--t-line2);
 }
-body.bdh-chrome .app.journal-entry.sheet .journal-entry-content table,
-body.bdh-chrome prose-mirror .editor-content table {
+body.bdh-chrome .sheet.journal-entry .journal-entry-content table,
+body.bdh-chrome prose-mirror .editor-content table,
+body.bdh-chrome .prosemirror .editor-content table,
+body.bdh-chrome .sheet .editor-content table {
   border-color: var(--t-line2);
 }
-body.bdh-chrome .app.journal-entry.sheet .journal-entry-content th,
-body.bdh-chrome prose-mirror .editor-content th {
+body.bdh-chrome .sheet.journal-entry .journal-entry-content th,
+body.bdh-chrome prose-mirror .editor-content th,
+body.bdh-chrome .prosemirror .editor-content th,
+body.bdh-chrome .sheet .editor-content th {
   background: var(--t-panel3);
   border-color: var(--t-line2);
   color: var(--t-ink2);
 }
-body.bdh-chrome .app.journal-entry.sheet .journal-entry-content td,
-body.bdh-chrome prose-mirror .editor-content td {
+body.bdh-chrome .sheet.journal-entry .journal-entry-content td,
+body.bdh-chrome prose-mirror .editor-content td,
+body.bdh-chrome .prosemirror .editor-content td,
+body.bdh-chrome .sheet .editor-content td {
   border-color: var(--t-line2);
 }
-body.bdh-chrome .app.journal-entry.sheet .directory-item.active .page-title {
+/* The V2 table of contents marks the page in view as `.toc li.page.active`
+   (templates/journal/sidebar.hbs + JournalEntrySheet#_activatePagesInView); the V1
+   `.directory-item.active` this used to target does not exist there. */
+body.bdh-chrome .sheet.journal-entry .journal-sidebar .toc li.page.active .page-title {
   color: var(--t-gold);
 }
 
@@ -575,29 +702,27 @@ body.bdh-chrome .app.journal-entry.sheet .directory-item.active .page-title {
    Tooltips and Tour steps get `themed theme-dark` from foundry.mjs regardless of the
    player's scheme. Re-assert our polarity on those elements so a light theme doesn't
    seam. Listed separately from the Task 3 block because the elements are outside
-   #interface and outside .application. */
+   #interface and outside .application.
+
+   .locked-tooltip is folded in with #tooltip here and deliberately keeps core's
+   `border: 1px solid var(--color-warm-2)` (foundry2.css ~5474): --color-warm-2 is already
+   remapped to --t-gold2, and that accent edge is the only thing distinguishing a pinned
+   tooltip from a transient one — overriding it to --t-line2 was both redundant and lossy.
+   Both flavours get the same radius/clip in the Edges block. */
 body.bdh-chrome.bdh-polarity-light #tooltip,
 body.bdh-chrome.bdh-polarity-light #tooltip.active,
+body.bdh-chrome.bdh-polarity-light .locked-tooltip,
 body.bdh-chrome.bdh-polarity-light .tour,
 body.bdh-chrome.bdh-polarity-light .tour-center-step {
   background: var(--t-panel);
   color: var(--t-ink);
 }
-body.bdh-chrome.bdh-polarity-light .locked-tooltip {
-  background: var(--t-panel);
-  border-color: var(--t-line2);
-  color: var(--t-ink);
-}
 body.bdh-chrome.bdh-polarity-dark #tooltip,
 body.bdh-chrome.bdh-polarity-dark #tooltip.active,
+body.bdh-chrome.bdh-polarity-dark .locked-tooltip,
 body.bdh-chrome.bdh-polarity-dark .tour,
 body.bdh-chrome.bdh-polarity-dark .tour-center-step {
   background: var(--t-panel2);
-  color: var(--t-ink);
-}
-body.bdh-chrome.bdh-polarity-dark .locked-tooltip {
-  background: var(--t-panel2);
-  border-color: var(--t-line2);
   color: var(--t-ink);
 }
 body.bdh-chrome .tour .step-title {
