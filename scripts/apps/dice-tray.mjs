@@ -11,6 +11,12 @@ const TRAY_SELECTOR = "[data-bdh-dice-tray]";
 /** The dice the system actually uses. d5 is a native Foundry formula and already the convention here. */
 export const DICE = [100, 10, 5];
 
+/** Counts offered by the hold gesture. Anything larger is better typed as /r. */
+export const COUNTS = [2, 3, 4, 5];
+
+/** How long a press must last to count as a hold rather than a click. */
+const HOLD_MS = 350;
+
 /** Whether this client wants the tray. */
 function enabled() {
   return game.settings.get("better-dh2e", "diceTray") === true;
@@ -33,10 +39,69 @@ export async function rollFromTray(tray, faces, count) {
   );
 }
 
-/** Wire a single die button. Task 3 extends this with the hold gesture. */
+/** Remove any open count picker, and the document listeners that dismiss it. */
+function closeCountPicker(tray) {
+  tray.querySelectorAll("[data-bdh-count-picker]").forEach((el) => el.remove());
+  if (tray._bdhDismiss) document.removeEventListener("pointerdown", tray._bdhDismiss, true);
+  if (tray._bdhKeydown) document.removeEventListener("keydown", tray._bdhKeydown, true);
+  tray._bdhDismiss = null;
+  tray._bdhKeydown = null;
+}
+
+/** Open the count picker above a die button. Choosing a count rolls that many immediately. */
+function openCountPicker(tray, button, faces) {
+  closeCountPicker(tray);
+  const picker = document.createElement("div");
+  picker.className = "bdh-count-picker";
+  picker.setAttribute("data-bdh-count-picker", "");
+  picker.style.left = `${button.offsetLeft}px`;
+  picker.innerHTML = COUNTS
+    .map((n) => `<button type="button" class="bdh-count" data-count="${n}" aria-label="Roll ${n}d${faces}">${n}</button>`)
+    .join("");
+  tray.appendChild(picker);
+
+  picker.querySelectorAll(".bdh-count").forEach((choice) => {
+    choice.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const count = Number(choice.dataset.count);
+      closeCountPicker(tray);
+      rollFromTray(tray, faces, count);
+    });
+  });
+
+  // Dismiss on any pointer press outside the picker, or on Escape. Captured, so a press on
+  // another die closes this picker before that die's own handler runs.
+  tray._bdhDismiss = (event) => { if (!picker.contains(event.target)) closeCountPicker(tray); };
+  tray._bdhKeydown = (event) => { if (event.key === "Escape") closeCountPicker(tray); };
+  document.addEventListener("pointerdown", tray._bdhDismiss, true);
+  document.addEventListener("keydown", tray._bdhKeydown, true);
+}
+
+/**
+ * Wire a die button: a click rolls one, a press held for HOLD_MS opens the count picker.
+ * Right-click is deliberately not used — core has context menus in this sidebar.
+ */
 function bindDie(tray, button) {
   const faces = Number(button.dataset.faces);
-  button.addEventListener("click", () => rollFromTray(tray, faces, 1));
+  let timer = null;
+  let held = false;
+
+  const cancel = () => { if (timer) clearTimeout(timer); timer = null; };
+
+  button.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    held = false;
+    cancel();
+    timer = setTimeout(() => { held = true; openCountPicker(tray, button, faces); }, HOLD_MS);
+  });
+  button.addEventListener("pointerup", cancel);
+  button.addEventListener("pointerleave", () => { cancel(); });
+  button.addEventListener("click", () => {
+    if (held) { held = false; return; }   // the hold already opened the picker
+    rollFromTray(tray, faces, 1);
+  });
+  // A long press on touch and some desktop setups raises the OS context menu mid-hold.
+  button.addEventListener("contextmenu", (event) => event.preventDefault());
 }
 
 /**
