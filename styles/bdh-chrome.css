@@ -358,3 +358,60 @@ body.bdh-chrome.bdh-polarity-light .chat-message .message-header,
 body.bdh-chrome.bdh-polarity-light .chat-message .message-header .message-sender {
   color: var(--t-muted);
 }
+
+/* ---------- Edges ----------
+   Core hardcodes 3-4px radii as literals, so these are real property overrides rather
+   than variable swaps. No geometry changes: radius, clip and border only. */
+body.bdh-chrome .application,
+body.bdh-chrome .application .window-content,
+body.bdh-chrome .ui-control,
+body.bdh-chrome .chat-message,
+body.bdh-chrome .dice-roll .dice-formula,
+body.bdh-chrome .dice-roll .dice-total,
+body.bdh-chrome #players,
+body.bdh-chrome #notifications > .notification,
+body.bdh-chrome #context-menu,
+body.bdh-chrome #tooltip,
+body.bdh-chrome input[type="text"],
+body.bdh-chrome input[type="number"],
+body.bdh-chrome select,
+body.bdh-chrome textarea,
+body.bdh-chrome button,
+body.bdh-chrome a.button,
+body.bdh-chrome fieldset,
+body.bdh-chrome #hotbar #action-bar .slot,
+body.bdh-chrome #scene-navigation .scene-navigation-menu .scene {
+  border-radius: var(--bdhc-radius);
+}
+
+/* The notch, reused from the sheet theme. Applied only where a clipped corner cannot
+   swallow a control's content. */
+body.bdh-chrome .ui-control,
+body.bdh-chrome .chat-message,
+body.bdh-chrome #players,
+body.bdh-chrome #hotbar #action-bar .slot,
+body.bdh-chrome #notifications > .notification,
+body.bdh-chrome #tooltip {
+  clip-path: var(--bdhc-clip);
+}
+body.bdh-chrome .application {
+  clip-path: var(--bdhc-clip-window);
+}
+
+body.bdh-chrome .application .window-header {
+  border-bottom: 1px solid var(--bdhc-hairline);
+}
+
+/* ---------- Chrome typography ----------
+   Chrome labels only. Nothing here may reach .editor-content, .message-content,
+   .journal-entry-content or any other player-authored text. */
+body.bdh-chrome .application .window-header .window-title,
+body.bdh-chrome #scene-navigation .scene-navigation-menu .scene .scene-name,
+body.bdh-chrome #players h3,
+body.bdh-chrome fieldset > legend,
+body.bdh-chrome button,
+body.bdh-chrome a.button {
+  font-family: var(--bdhc-label-font);
+  letter-spacing: var(--bdhc-label-tracking);
+  text-transform: var(--bdhc-label-transform);
+}
