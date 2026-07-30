@@ -43,3 +43,312 @@ body.bdh-chrome {
 
   --bdhc-hairline: var(--t-line);
 }
+
+/* ---------- Dark polarity: Dataslate + Heretic ----------
+   Core's ramp is polarity-neutral: --color-light-* always means "the pale end" and
+   --color-dark-* "the dark end", regardless of which is the background. We follow that
+   model, which is why the light block below is not a mechanical inversion of this one. */
+body.bdh-chrome.bdh-polarity-dark,
+body.bdh-chrome.bdh-polarity-dark .themed,
+body.bdh-chrome.bdh-polarity-dark .application {
+  --color-cool-5: var(--t-bg);
+  --color-cool-5-25: color-mix(in srgb, var(--t-bg) 25%, transparent);
+  --color-cool-5-50: color-mix(in srgb, var(--t-bg) 50%, transparent);
+  --color-cool-5-75: color-mix(in srgb, var(--t-bg) 75%, transparent);
+  --color-cool-5-90: color-mix(in srgb, var(--t-bg) 90%, transparent);
+  --color-cool-4: var(--t-line);
+  --color-cool-3: var(--t-panel3);
+  --color-warm-1: var(--t-gold);
+  --color-warm-2: var(--t-gold2);
+  --color-warm-3: var(--t-line2);
+
+  --color-light-1: var(--t-ink2);
+  --color-light-2: var(--t-ink);
+  --color-light-3: var(--t-ink);
+  --color-light-4: var(--t-muted);
+  --color-light-5: var(--t-muted);
+  --color-light-6: var(--t-faint);
+
+  --color-text-emphatic: var(--t-ink2);
+  --color-text-primary: var(--t-ink);
+  --color-text-secondary: var(--t-muted);
+  --color-text-subtle: var(--t-faint);
+  --color-text-accent: var(--t-gold);
+  --color-text-selection: var(--t-on-accent);
+  --color-text-selection-bg: var(--t-gold);
+
+  --color-border: var(--t-line2);
+  --color-fieldset-border: var(--t-line);
+  --color-scrollbar: var(--t-gold2);
+  --color-shadow-primary: var(--t-gold2);
+  --color-shadow-highlight: var(--t-gold);
+
+  --color-level-error: var(--t-red);
+  --color-level-error-bg: color-mix(in srgb, var(--t-red2) 80%, transparent);
+  --color-level-error-border: var(--t-red2);
+  --color-level-success: var(--t-green);
+  --color-level-success-bg: color-mix(in srgb, var(--t-green2) 80%, transparent);
+  --color-level-success-border: var(--t-green2);
+  --color-level-warning: var(--t-gold);
+  --color-level-warning-bg: color-mix(in srgb, var(--t-gold2) 80%, transparent);
+  --color-level-warning-border: var(--t-gold2);
+
+  --sidebar-background: color-mix(in srgb, var(--t-bg) 92%, transparent);
+  --sidebar-separator: 1px solid var(--t-line);
+  --sidebar-entry-hover-bg: color-mix(in srgb, var(--t-gold) 12%, transparent);
+  --sidebar-folder-color: var(--t-panel3);
+
+  --table-background-color: color-mix(in srgb, var(--t-bg) 50%, transparent);
+  --table-header-bg-color: var(--t-panel3);
+  --table-header-border-color: var(--t-line2);
+  --table-row-color-even: color-mix(in srgb, var(--t-ink) 8%, transparent);
+  --table-row-color-odd: transparent;
+  --table-row-color-highlight: var(--t-panel3);
+
+  --content-link-background: var(--t-panel2);
+  --content-link-border-color: var(--t-line2);
+  --content-link-icon-color: var(--t-gold);
+  --content-link-text-color: var(--t-ink);
+
+  /* Active-state recipe. Dark themes lean on the glow; see the light block for why
+     that cannot be reused there. */
+  --bdhc-active-fill: var(--t-panel3);
+  --bdhc-active-ink: var(--t-gold);
+  --bdhc-glow: 0 0 8px var(--t-glow);
+  --bdhc-tab-glow: inset 0 2px 0 var(--t-gold), 0 0 8px var(--t-glow);
+
+  /* Prose reading surface — lifted two steps off the chrome, brightest ink. */
+  --bdhc-prose-bg: var(--t-panel2);
+  --bdhc-prose-ink: var(--t-ink2);
+  --bdhc-prose-inset: inset 0 0 0 1px var(--t-line2), inset 0 12px 22px -12px rgba(0, 0, 0, .75);
+}
+
+/* Region variables core declares on specific elements. Same trap applies: these must
+   match the element core declares on. */
+body.bdh-chrome.bdh-polarity-dark .application,
+body.bdh-chrome.bdh-polarity-dark.application {
+  --background: color-mix(in srgb, var(--t-bg) 94%, transparent);
+  --color-header-background: var(--t-panel2);
+}
+body.bdh-chrome.bdh-polarity-dark .ui-control,
+body.bdh-chrome.bdh-polarity-dark .placeable-hud,
+body.bdh-chrome.bdh-polarity-dark #measurement .waypoint-label {
+  --control-bg-color: color-mix(in srgb, var(--t-panel) 80%, transparent);
+  --control-border-color: var(--t-line2);
+  --control-icon-color: var(--t-muted);
+  --control-hover-bg-color: var(--t-panel2);
+  --control-hover-border-color: var(--t-line2);
+  --control-hover-icon-color: var(--t-ink);
+  --control-active-bg-color: var(--t-panel3);
+  --control-active-border-color: var(--t-gold);
+  --control-active-icon-color: var(--t-gold);
+  --control-button-border-color: var(--t-gold2);
+  --control-button-hover-bg-color: var(--t-gold2);
+  --control-button-hover-border-color: var(--t-gold);
+}
+body.bdh-chrome.bdh-polarity-dark #hotbar {
+  --slot-color: color-mix(in srgb, var(--t-panel) 85%, transparent);
+  --key-bg-color-empty: var(--t-panel2);
+  --key-bg-color-full: var(--t-panel3);
+  --key-text-color: var(--t-muted);
+  --page-control-color: var(--t-panel2);
+}
+body.bdh-chrome.bdh-polarity-dark #chat-message {
+  --text-color: var(--t-ink);
+  --placeholder-color: var(--t-faint);
+  --background-color: var(--t-field);
+  --border-color: var(--t-line2);
+}
+body.bdh-chrome.bdh-polarity-dark #players {
+  --background-color: color-mix(in srgb, var(--t-panel) 80%, transparent);
+  --border-color: var(--t-line2);
+  --player-name-idle-color: var(--t-muted);
+  --player-name-self-color: var(--t-gold);
+}
+body.bdh-chrome.bdh-polarity-dark .combat-tracker {
+  --active-input-bg-color: var(--t-field);
+  --entry-hover-bg: color-mix(in srgb, var(--t-gold) 12%, transparent);
+  --entry-active-bg: color-mix(in srgb, var(--t-gold) 18%, transparent);
+}
+body.bdh-chrome.bdh-polarity-dark #context-menu,
+body.bdh-chrome.bdh-polarity-dark #prosemirror-dropdown,
+body.bdh-chrome.bdh-polarity-dark .menu-dialog.prosemirror {
+  --background-color: var(--t-panel2);
+  --border-color: var(--t-line2);
+}
+body.bdh-chrome.bdh-polarity-dark .compendium-directory {
+  --sidebar-folder-color: var(--t-panel3);
+}
+body.bdh-chrome.bdh-polarity-dark #camera-views,
+body.bdh-chrome.bdh-polarity-dark.application#camera-views {
+  --av-background-color: color-mix(in srgb, var(--t-bg) 90%, transparent);
+  --av-border-color: var(--t-line2);
+}
+
+/* Chat message cards. A property rule rather than a variable because core styles
+   .chat-message directly. Dark themes drop the card below the sidebar tone. */
+body.bdh-chrome.bdh-polarity-dark .chat-message {
+  background: var(--t-panel);
+  border: 1px solid var(--t-line);
+  color: var(--t-ink);
+}
+body.bdh-chrome.bdh-polarity-dark .chat-message .message-header,
+body.bdh-chrome.bdh-polarity-dark .chat-message .message-header .message-sender {
+  color: var(--t-muted);
+}
+
+/* ---------- Light polarity: Dossier ----------
+   Same variables, pale end and dark end placed where core's model expects them, so
+   nothing downstream needs special-casing. */
+body.bdh-chrome.bdh-polarity-light,
+body.bdh-chrome.bdh-polarity-light .themed,
+body.bdh-chrome.bdh-polarity-light .application {
+  --color-cool-5: var(--t-panel2);
+  --color-cool-5-25: color-mix(in srgb, var(--t-panel2) 25%, transparent);
+  --color-cool-5-50: color-mix(in srgb, var(--t-panel2) 50%, transparent);
+  --color-cool-5-75: color-mix(in srgb, var(--t-panel2) 75%, transparent);
+  --color-cool-5-90: color-mix(in srgb, var(--t-panel2) 92%, transparent);
+  --color-cool-4: var(--t-line);
+  --color-cool-3: var(--t-panel3);
+  --color-warm-1: var(--t-gold);
+  --color-warm-2: var(--t-gold2);
+  --color-warm-3: var(--t-line2);
+
+  --color-light-1: var(--t-field);
+  --color-light-2: var(--t-panel);
+  --color-light-3: var(--t-panel2);
+  --color-light-4: var(--t-line);
+  --color-light-5: var(--t-line2);
+  --color-light-6: var(--t-muted);
+
+  --color-text-emphatic: var(--t-ink2);
+  --color-text-primary: var(--t-ink);
+  --color-text-secondary: var(--t-muted);
+  --color-text-subtle: var(--t-faint);
+  --color-text-accent: var(--t-gold);
+  --color-text-selection: var(--t-on-accent);
+  --color-text-selection-bg: var(--t-gold);
+
+  --color-border: var(--t-line2);
+  --color-fieldset-border: var(--t-line);
+  --color-scrollbar: var(--t-gold2);
+  --color-shadow-primary: var(--t-gold2);
+  --color-shadow-highlight: var(--t-gold);
+
+  --color-level-error: var(--t-red);
+  --color-level-error-bg: color-mix(in srgb, var(--t-red) 18%, transparent);
+  --color-level-error-border: var(--t-red2);
+  --color-level-success: var(--t-green);
+  --color-level-success-bg: color-mix(in srgb, var(--t-green) 18%, transparent);
+  --color-level-success-border: var(--t-green2);
+  --color-level-warning: var(--t-gold);
+  --color-level-warning-bg: color-mix(in srgb, var(--t-gold) 18%, transparent);
+  --color-level-warning-border: var(--t-gold2);
+
+  --sidebar-background: color-mix(in srgb, var(--t-panel) 94%, transparent);
+  --sidebar-separator: 1px solid var(--t-line);
+  --sidebar-entry-hover-bg: color-mix(in srgb, var(--t-gold) 14%, transparent);
+  --sidebar-folder-color: var(--t-line);
+
+  --table-background-color: none;
+  --table-header-bg-color: var(--t-panel2);
+  --table-header-border-color: var(--t-line2);
+  --table-row-color-even: color-mix(in srgb, var(--t-ink) 8%, transparent);
+  --table-row-color-odd: transparent;
+  --table-row-color-highlight: var(--t-panel3);
+
+  --content-link-background: var(--t-panel2);
+  --content-link-border-color: var(--t-line2);
+  --content-link-icon-color: var(--t-gold);
+  --content-link-text-color: var(--t-ink);
+
+  /* Active-state recipe, light. A glow is invisible on parchment and an accent hairline
+     reads as decoration — the mockup's first pass made active and inactive scene tabs
+     indistinguishable. So the active control FILLS with the accent and flips its ink.
+     This is the one place the two polarities genuinely diverge. */
+  --bdhc-active-fill: var(--t-gold);
+  --bdhc-active-ink: var(--t-on-accent);
+  --bdhc-glow: inset 0 0 0 1px color-mix(in srgb, var(--t-ink2) 25%, transparent);
+  --bdhc-tab-glow: inset 0 2px 0 var(--t-gold2);
+
+  --bdhc-prose-bg: var(--t-field);
+  --bdhc-prose-ink: var(--t-ink2);
+  --bdhc-prose-inset: inset 0 0 0 1px var(--t-line), inset 0 12px 22px -12px rgba(0, 0, 0, .18);
+}
+
+body.bdh-chrome.bdh-polarity-light .application,
+body.bdh-chrome.bdh-polarity-light.application {
+  --background: color-mix(in srgb, var(--t-panel) 96%, transparent);
+  --color-header-background: var(--t-panel3);
+}
+body.bdh-chrome.bdh-polarity-light .ui-control,
+body.bdh-chrome.bdh-polarity-light .placeable-hud,
+body.bdh-chrome.bdh-polarity-light #measurement .waypoint-label {
+  --control-bg-color: color-mix(in srgb, var(--t-panel) 88%, transparent);
+  --control-border-color: var(--t-line2);
+  --control-icon-color: var(--t-muted);
+  --control-hover-bg-color: var(--t-panel3);
+  --control-hover-border-color: var(--t-line2);
+  --control-hover-icon-color: var(--t-ink2);
+  --control-active-bg-color: var(--t-gold);
+  --control-active-border-color: var(--t-gold2);
+  --control-active-icon-color: var(--t-on-accent);
+  --control-button-border-color: var(--t-gold2);
+  --control-button-hover-bg-color: var(--t-gold2);
+  --control-button-hover-border-color: var(--t-gold);
+}
+body.bdh-chrome.bdh-polarity-light #hotbar {
+  --slot-color: color-mix(in srgb, var(--t-panel) 92%, transparent);
+  --key-bg-color-empty: var(--t-panel2);
+  --key-bg-color-full: var(--t-panel3);
+  --key-text-color: var(--t-muted);
+  --page-control-color: var(--t-panel2);
+}
+body.bdh-chrome.bdh-polarity-light #chat-message {
+  --text-color: var(--t-ink);
+  --placeholder-color: var(--t-faint);
+  --background-color: var(--t-field);
+  --border-color: var(--t-line2);
+}
+body.bdh-chrome.bdh-polarity-light #players {
+  --background-color: color-mix(in srgb, var(--t-panel) 88%, transparent);
+  --border-color: var(--t-line2);
+  --player-name-idle-color: var(--t-muted);
+  --player-name-self-color: var(--t-gold);
+  /* Core's lime/lemon status dots vanish on parchment. */
+  --color-rating-good: #2f6b3a;
+  --color-rating-fair: #8a6d1f;
+  --color-rating-poor: #962f25;
+}
+body.bdh-chrome.bdh-polarity-light .combat-tracker {
+  --active-input-bg-color: var(--t-field);
+  --entry-hover-bg: color-mix(in srgb, var(--t-gold) 14%, transparent);
+  --entry-active-bg: color-mix(in srgb, var(--t-gold) 20%, transparent);
+}
+body.bdh-chrome.bdh-polarity-light #context-menu,
+body.bdh-chrome.bdh-polarity-light #prosemirror-dropdown,
+body.bdh-chrome.bdh-polarity-light .menu-dialog.prosemirror {
+  --background-color: var(--t-panel);
+  --border-color: var(--t-line2);
+}
+body.bdh-chrome.bdh-polarity-light .compendium-directory {
+  --sidebar-folder-color: var(--t-line);
+}
+body.bdh-chrome.bdh-polarity-light #camera-views,
+body.bdh-chrome.bdh-polarity-light.application#camera-views {
+  --av-background-color: color-mix(in srgb, var(--t-panel) 92%, transparent);
+  --av-border-color: var(--t-line2);
+}
+
+/* Chat message cards — and the light-theme correction that matters: messages must sit
+   BRIGHTER than the sidebar here, not darker, or the log dissolves into one flat sheet
+   of parchment. --sidebar-background above is --t-panel; the card is --t-field. */
+body.bdh-chrome.bdh-polarity-light .chat-message {
+  background: var(--t-field);
+  border: 1px solid var(--t-line);
+  color: var(--t-ink);
+}
+body.bdh-chrome.bdh-polarity-light .chat-message .message-header,
+body.bdh-chrome.bdh-polarity-light .chat-message .message-header .message-sender {
+  color: var(--t-muted);
+}
