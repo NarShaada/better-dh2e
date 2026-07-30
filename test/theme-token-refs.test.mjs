@@ -27,7 +27,11 @@ const palettes = {
   heretic: tokensIn(blockFor(themesCss, "body.bdh-theme-heretic"))
 };
 
-const referenced = [...new Set([...chromeCss.matchAll(/var\((--t-[a-z0-9-]+)/g)].map((m) => m[1]))];
+const referencedIn = (css) => [...new Set([...css.matchAll(/var\((--t-[a-z0-9-]+)/g)].map((m) => m[1]))];
+const missingIn = (css) => referencedIn(css).filter((token) =>
+  !shared.has(token) && !Object.values(palettes).every((set) => set.has(token)));
+
+const referenced = referencedIn(chromeCss);
 
 describe("bdh-chrome.css palette token references", () => {
   it("finds the palettes and the references", () => {
@@ -37,15 +41,11 @@ describe("bdh-chrome.css palette token references", () => {
   });
 
   it("every referenced token is defined by the shared block or by all three palettes", () => {
-    const missing = referenced.filter((token) =>
-      !shared.has(token) && !Object.values(palettes).every((set) => set.has(token)));
-    expect(missing).toEqual([]);
+    expect(missingIn(chromeCss)).toEqual([]);
   });
 
   it("catches a token no palette defines", () => {
-    const refs = ["--t-panel4"];
-    const missing = refs.filter((token) =>
-      !shared.has(token) && !Object.values(palettes).every((set) => set.has(token)));
-    expect(missing).toEqual(["--t-panel4"]);
+    const leaked = chromeCss + "\nbody.bdh-chrome { color: var(--t-panel4); }\n";
+    expect(missingIn(leaked)).toEqual(["--t-panel4"]);
   });
 });

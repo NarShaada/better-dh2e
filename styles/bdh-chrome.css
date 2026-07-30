@@ -185,11 +185,15 @@ body.bdh-chrome.bdh-polarity-dark.application#camera-views {
   --av-border-color: var(--t-line2);
 }
 
-/* Chat message cards. A property rule rather than a variable because core styles
-   .chat-message directly. Dark themes drop the card below the sidebar tone. */
+/* Chat message cards. Core declares --chat-message-background and
+   --chat-message-border-color on .chat-message itself and uses them for the actual
+   background/border/border-radius rule, so we override those variables rather than the
+   properties — core keeps ownership of the geometry (a literal border: 1px would narrow
+   core's 2px border and violate the no-layout-changes constraint). Dark themes drop the
+   card below the sidebar tone. */
 body.bdh-chrome.bdh-polarity-dark .chat-message {
-  background: var(--t-panel);
-  border: 1px solid var(--t-line);
+  --chat-message-background: var(--t-panel);
+  --chat-message-border-color: var(--t-line);
   color: var(--t-ink);
 }
 body.bdh-chrome.bdh-polarity-dark .chat-message .message-header,
@@ -340,12 +344,14 @@ body.bdh-chrome.bdh-polarity-light.application#camera-views {
   --av-border-color: var(--t-line2);
 }
 
-/* Chat message cards — and the light-theme correction that matters: messages must sit
-   BRIGHTER than the sidebar here, not darker, or the log dissolves into one flat sheet
-   of parchment. --sidebar-background above is --t-panel; the card is --t-field. */
+/* Chat message cards — override --chat-message-background/--chat-message-border-color
+   rather than the properties (see the dark block's comment for why), and the
+   light-theme correction that matters: messages must sit BRIGHTER than the sidebar
+   here, not darker, or the log dissolves into one flat sheet of parchment.
+   --sidebar-background above is --t-panel; the card is --t-field. */
 body.bdh-chrome.bdh-polarity-light .chat-message {
-  background: var(--t-field);
-  border: 1px solid var(--t-line);
+  --chat-message-background: var(--t-field);
+  --chat-message-border-color: var(--t-line);
   color: var(--t-ink);
 }
 body.bdh-chrome.bdh-polarity-light .chat-message .message-header,
