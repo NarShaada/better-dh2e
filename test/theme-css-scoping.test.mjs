@@ -40,3 +40,30 @@ describe("bdh-themes.css scoping", () => {
     expect(selectors(leaked).filter((sel) => !isScoped(sel))).toEqual([".better-dh2e .bdh-header"]);
   });
 });
+
+const chromeCss = readFileSync(fileURLToPath(new URL("../styles/bdh-chrome.css", import.meta.url)), "utf8");
+
+// Stricter than the bdh-themes.css guard on purpose: this file targets CORE's own
+// selectors (.ui-control, #hotbar, .application), so a selector missing the chrome
+// class would repaint Foundry for every user — including Parchment users who opted out.
+const isChromeScoped = (sel) => sel.includes("bdh-chrome");
+
+describe("bdh-chrome.css scoping", () => {
+  it("actually finds selectors to check", () => {
+    expect(selectors(chromeCss).length).toBeGreaterThan(0);
+  });
+
+  it("every selector is scoped to the chrome body class", () => {
+    expect(selectors(chromeCss).filter((sel) => !isChromeScoped(sel))).toEqual([]);
+  });
+
+  it("catches a leaked bare core selector", () => {
+    const leaked = chromeCss + "\n.ui-control { background:red; }\n";
+    expect(selectors(leaked).filter((sel) => !isChromeScoped(sel))).toEqual([".ui-control"]);
+  });
+
+  it("catches a core selector scoped only to a theme class, without the chrome opt-in", () => {
+    const leaked = chromeCss + "\nbody.bdh-themed .ui-control { background:red; }\n";
+    expect(selectors(leaked).filter((sel) => !isChromeScoped(sel))).toEqual(["body.bdh-themed .ui-control"]);
+  });
+});
