@@ -432,3 +432,22 @@
    — 5 columns, gap 3px), so any spare height in the HUD column stretches the rows apart. Pack them
    to the top instead. Global on purpose — the token HUD is not inside .better-dh2e. */
 #token-hud .status-effects { align-content: start; }
+
+/* ---------- Dice tray (injected under core's chat form) ----------
+   Every selector stays inside .bdh-dice-tray. Nothing here may match a bare button or input:
+   this stylesheet is unlayered, so a broad selector would beat core's own rules on core's
+   elements — see styles/bdh-chrome.css's header for the full account of that hazard. */
+.bdh-dice-tray { position:relative; display:flex; align-items:center; gap:4px; padding:4px 6px; }
+.bdh-dice-tray .bdh-die { flex:0 0 auto; min-width:42px; padding:3px 6px; cursor:pointer;
+  font-family:Georgia, serif; font-size:11.5px; color:#4a3a20; background:#e3d5b0;
+  border:1px solid #b08d4f; border-radius:3px; user-select:none; }
+.bdh-dice-tray .bdh-die:hover { border-color:#7a1f1f; }
+.bdh-dice-tray .bdh-mod { margin-left:auto; display:flex; align-items:center; gap:4px;
+  font-family:Georgia, serif; font-size:10.5px; color:#4a3a20; text-transform:uppercase; letter-spacing:.5px; }
+.bdh-dice-tray .bdh-mod input { width:44px; text-align:center; font-family:Georgia, serif; font-size:11.5px; }
+.bdh-dice-tray .bdh-count-picker { position:absolute; bottom:calc(100% - 2px); display:flex; gap:3px;
+  padding:3px; background:#e3d5b0; border:1px solid #b08d4f; border-radius:3px; z-index:10; }
+.bdh-dice-tray .bdh-count { min-width:26px; padding:2px 5px; cursor:pointer;
+  font-family:Georgia, serif; font-size:11.5px; color:#4a3a20; background:#f3ecd9;
+  border:1px solid #b08d4f; border-radius:2px; }
+.bdh-dice-tray .bdh-count:hover { border-color:#7a1f1f; }
