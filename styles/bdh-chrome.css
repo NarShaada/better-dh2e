@@ -570,3 +570,35 @@ body.bdh-chrome prose-mirror .editor-content td {
 body.bdh-chrome .app.journal-entry.sheet .directory-item.active .page-title {
   color: var(--t-gold);
 }
+
+/* ---------- Surfaces core pins to theme-dark ----------
+   Tooltips and Tour steps get `themed theme-dark` from foundry.mjs regardless of the
+   player's scheme. Re-assert our polarity on those elements so a light theme doesn't
+   seam. Listed separately from the Task 3 block because the elements are outside
+   #interface and outside .application. */
+body.bdh-chrome.bdh-polarity-light #tooltip,
+body.bdh-chrome.bdh-polarity-light #tooltip.active,
+body.bdh-chrome.bdh-polarity-light .locked-tooltip,
+body.bdh-chrome.bdh-polarity-light .tour,
+body.bdh-chrome.bdh-polarity-light .tour-center-step {
+  background: var(--t-panel);
+  border-color: var(--t-line2);
+  color: var(--t-ink);
+}
+body.bdh-chrome.bdh-polarity-dark #tooltip,
+body.bdh-chrome.bdh-polarity-dark #tooltip.active,
+body.bdh-chrome.bdh-polarity-dark .locked-tooltip,
+body.bdh-chrome.bdh-polarity-dark .tour,
+body.bdh-chrome.bdh-polarity-dark .tour-center-step {
+  background: var(--t-panel2);
+  border-color: var(--t-line2);
+  color: var(--t-ink);
+}
+body.bdh-chrome .tour .step-title {
+  color: var(--t-gold);
+  font-family: var(--bdhc-label-font);
+  letter-spacing: var(--bdhc-label-tracking);
+}
+body.bdh-chrome #notifications > .notification {
+  border-color: var(--t-gold2);
+}
