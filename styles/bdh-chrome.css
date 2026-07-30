@@ -419,3 +419,105 @@ body.bdh-chrome a.button:not(.bdh-card *):not(.better-dh2e *) {
 /* The button exclusions protect player-typed text (character names, free-text
    requisition labels) that appears inside our own chat-card buttons. Core's
    buttons are fully themed; our own chat/sheet buttons are skipped. */
+
+/* ---------- Active states ----------
+   Polarity-dependent by necessity: the dark recipe leans on --bdhc-glow, which is
+   invisible on parchment. Dossier fills the control with the accent instead. */
+body.bdh-chrome .ui-control[aria-pressed="true"],
+body.bdh-chrome a.ui-control[aria-pressed="true"],
+body.bdh-chrome button.ui-control[aria-pressed="true"],
+body.bdh-chrome li.ui-control[aria-pressed="true"] {
+  background: var(--bdhc-active-fill);
+  color: var(--bdhc-active-ink);
+  border-color: var(--t-gold);
+  box-shadow: var(--bdhc-glow);
+}
+body.bdh-chrome #sidebar-tabs > menu .ui-control[data-action="tab"][aria-pressed="true"] {
+  box-shadow: var(--bdhc-tab-glow);
+}
+body.bdh-chrome #scene-navigation .scene-navigation-menu .scene.active {
+  background: var(--bdhc-active-fill);
+  color: var(--bdhc-active-ink);
+  border-color: var(--t-gold);
+  box-shadow: var(--bdhc-glow);
+}
+body.bdh-chrome #scene-navigation .scene-navigation-menu .scene.active .scene-name {
+  color: var(--bdhc-active-ink);
+}
+body.bdh-chrome #hotbar #action-bar .slot.full {
+  border-color: var(--t-gold2);
+}
+
+/* ---------- Form elements ----------
+   Core declares these on the elements themselves under body.theme-*, so we must too. */
+body.bdh-chrome input[type="text"],
+body.bdh-chrome input[type="number"],
+body.bdh-chrome input[type="search"],
+body.bdh-chrome select,
+body.bdh-chrome textarea,
+body.bdh-chrome code-mirror {
+  background: var(--t-field);
+  color: var(--t-ink);
+  border: 1px solid var(--t-line2);
+}
+body.bdh-chrome input:focus,
+body.bdh-chrome select:focus,
+body.bdh-chrome textarea:focus {
+  border-color: var(--t-gold);
+  box-shadow: 0 0 6px var(--t-glow);
+  outline: none;
+}
+body.bdh-chrome select option {
+  background: var(--t-field);
+  color: var(--t-ink);
+}
+body.bdh-chrome input[readonly] {
+  background: var(--t-panel2);
+  color: var(--t-muted);
+}
+body.bdh-chrome input[type="checkbox"],
+body.bdh-chrome input[type="radio"] {
+  accent-color: var(--t-gold);
+  border-color: var(--t-line2);
+}
+body.bdh-chrome label.icon {
+  background: var(--t-panel2);
+  border: 1px solid var(--t-line2);
+  color: var(--t-muted);
+}
+body.bdh-chrome label.icon:focus-within {
+  border-color: var(--t-gold);
+}
+body.bdh-chrome label.icon:has(> input:disabled) {
+  color: var(--t-faint);
+}
+body.bdh-chrome button,
+body.bdh-chrome a.button,
+body.bdh-chrome kbd {
+  background: var(--t-panel2);
+  border: 1px solid var(--t-line2);
+  color: var(--t-ink);
+}
+body.bdh-chrome button:hover,
+body.bdh-chrome a.button:hover {
+  border-color: var(--t-gold);
+  color: var(--t-ink2);
+}
+body.bdh-chrome button.bright,
+body.bdh-chrome a.button.bright {
+  background: var(--t-gold2);
+  border-color: var(--t-gold);
+  color: var(--t-on-accent);
+}
+body.bdh-chrome button[disabled],
+body.bdh-chrome a.button[disabled],
+body.bdh-chrome .ui-control:disabled {
+  color: var(--t-faint);
+  border-color: var(--t-line);
+}
+body.bdh-chrome code,
+body.bdh-chrome code.block {
+  background: var(--t-field);
+  color: var(--t-ink);
+  border: 1px solid var(--t-line);
+}
