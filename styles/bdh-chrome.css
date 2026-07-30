@@ -520,6 +520,19 @@ body.bdh-chrome.bdh-polarity-light .compendium-directory {
   --sidebar-folder-color: var(--t-line);
 }
 
+/* The chat tab needs the panel every other sidebar tab already has.
+   Core paints tabs with `.sidebar-tab { background: var(--sidebar-background) }` but then
+   singles the chat tab out: `.chat-sidebar:not(.sidebar-popout) { background: transparent }`
+   (foundry2.css 8891), so chat floats directly over the canvas. That reads as deliberate on
+   core's dark scheme — the map behind is dark either way — but on parchment the canvas shows
+   through as a dark hole around the chat input and the privacy buttons row, which is exactly
+   the seam this feature exists to remove. Verified in a live world: every ancestor from the
+   editor menu up to #ui-right computes rgba(0,0,0,0), so the "dark" area was never paint.
+   Light polarity only — the dark themes read correctly as-is, so they keep core's float. */
+body.bdh-chrome.bdh-polarity-light .chat-sidebar:not(.sidebar-popout) {
+  background: var(--sidebar-background);
+}
+
 /* Folder rows: outlined, not filled.
    Core is `li.folder > .folder-header { background: var(--sidebar-folder-color); color:
    var(--color-light-2) }` — a filled band carrying pale ink. On parchment a filled band reads
