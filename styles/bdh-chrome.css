@@ -454,11 +454,16 @@ body.bdh-chrome input[type="text"],
 body.bdh-chrome input[type="number"],
 body.bdh-chrome input[type="search"],
 body.bdh-chrome select,
-body.bdh-chrome textarea,
-body.bdh-chrome code-mirror {
+body.bdh-chrome textarea {
   background: var(--t-field);
   color: var(--t-ink);
   border: 1px solid var(--t-line2);
+}
+body.bdh-chrome code-mirror {
+  background: var(--t-field);
+  color: var(--t-ink);
+  /* Core draws no border on code-mirror host; its inner .cm-editor elements already
+     resolve their borders through --input-border-color, remapped in the palette blocks. */
 }
 body.bdh-chrome input:focus,
 body.bdh-chrome select:focus,
@@ -482,8 +487,9 @@ body.bdh-chrome input[type="radio"] {
 }
 body.bdh-chrome label.icon {
   background: var(--t-panel2);
-  border: 1px solid var(--t-line2);
   color: var(--t-muted);
+  /* Core borders only .standard-form label.icon:has(> input); it does not border all
+     label.icon elements. Those borders resolve through --input-border-color, remapped above. */
 }
 body.bdh-chrome label.icon:focus-within {
   border-color: var(--t-gold);
@@ -492,11 +498,16 @@ body.bdh-chrome label.icon:has(> input:disabled) {
   color: var(--t-faint);
 }
 body.bdh-chrome button,
-body.bdh-chrome a.button,
-body.bdh-chrome kbd {
+body.bdh-chrome a.button {
   background: var(--t-panel2);
   border: 1px solid var(--t-line2);
   color: var(--t-ink);
+}
+body.bdh-chrome kbd {
+  background: var(--t-panel2);
+  color: var(--t-ink);
+  /* Core draws no border on generic <kbd>; its only real <kbd> border is on
+     #controls-config kbd, which resolves through --button-border-color, remapped above. */
 }
 body.bdh-chrome button:hover,
 body.bdh-chrome a.button:hover {
