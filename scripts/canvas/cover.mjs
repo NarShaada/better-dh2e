@@ -92,7 +92,12 @@ let _painting = null;   // { template, onDown, onMove, onUp, onKey, onContext, p
 // propagation between PIXI display-tree targets, not between sibling listeners on the same target, so it
 // cannot suppress Foundry's own pan/click/drag handling. The actual suppression is the permissions gate
 // below: MouseInteractionManager#can() reads this.permissions[action] and honours a plain boolean.
-const DENIED_ACTIONS = ["clickLeft", "clickLeft2", "clickRight", "clickRight2", "dragLeftStart", "dragRightStart", "longPress"];
+// NOTE: this only covers what can() actually gates. #handleLongPress calls its callback directly and
+// unconditionally, without going through can("longPress", ...) — a "longPress" entry here would be inert,
+// so it is deliberately omitted. A left-button-down held still mid-stroke can therefore still reach
+// Foundry's own long-press handling; that gap is a known, separate, deferred concern, not something this
+// list can close.
+const DENIED_ACTIONS = ["clickLeft", "clickLeft2", "clickRight", "clickRight2", "dragLeftStart", "dragRightStart"];
 
 /** Cell key so a single drag never paints the same cell twice. */
 function cellKey(cell) {
