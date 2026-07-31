@@ -1,5 +1,5 @@
-// scripts/canvas/cover.mjs — cover-piece Regions: create, query overlap, AP lookup, clear, auto-mark, placement.
-import { coverAutoDecision } from "../helpers/cover-templates.mjs";
+// scripts/canvas/cover.mjs — cover-piece Regions: create, adjacency lookup, AP lookup, clear, placement.
+import { adjacentCellsOnSide } from "../helpers/cover.mjs";
 
 const NS = "better-dh2e";
 
@@ -28,7 +28,6 @@ export async function createCoverPiece(scene, point, template) {
     name: template.name,
     color: template.color,
     ap: template.ap,
-    sides: [...template.sides],
     locations: [...template.locations],
   };
   const [region] = await scene.createEmbeddedDocuments("Region", [{
@@ -40,23 +39,6 @@ export async function createCoverPiece(scene, point, template) {
     flags: { [NS]: { cover } },
   }]);
   return region;
-}
-
-/** Cover Regions whose area contains the token's footprint. */
-export function coverRegionsForToken(tokenDoc) {
-  if (!tokenDoc?.parent) return [];
-  return tokenDoc.parent.regions.filter((r) => isCoverRegion(r) && tokenDoc.testInsideRegion(r));
-}
-
-/** The highest-AP cover piece flag the target's token stands in, or null
- *  (mechanics off / no token / not in cover). Phase 2b reads its sides + locations for the pre-fill. */
-export function coverPieceForTarget(targetActor) {
-  if (!coverMechanicsEnabled()) return null;
-  const token = targetActor?.getActiveTokens?.()?.[0];
-  if (!token) return null;
-  const covers = coverRegionsForToken(token.document).map(coverFlag).filter(Boolean);
-  if (!covers.length) return null;
-  return covers.reduce((best, c) => ((Number(c.ap) || 0) > (Number(best.ap) || 0) ? c : best));
 }
 
 /** Delete every cover Region on a scene. Returns the count removed. */
@@ -72,40 +54,35 @@ function isPrimaryGM() {
   return game.user.isGM && (game.users.activeGM?.id === game.user.id);
 }
 
-/** Reconcile one token's In Cover condition with whether it stands in a cover piece. GM-only writes. */
-export async function updateTokenCover(tokenDoc) {
-  if (!isPrimaryGM() || !coverMechanicsEnabled()) return;
-  const actor = tokenDoc?.actor;
-  if (!actor) return;
-  const inCover = coverRegionsForToken(tokenDoc).length > 0;
-  const hasCondition = actor.statuses?.has?.("inCover") ?? false;
-  const wasAuto = !!tokenDoc.getFlag(NS, "coverAuto");
-  const decision = coverAutoDecision({ inCover, hasCondition, wasAuto });
-  if (decision === "apply") {
-    await actor.toggleStatusEffect("inCover", { active: true });
-    await tokenDoc.setFlag(NS, "coverAuto", true);
-  } else if (decision === "remove") {
-    await actor.toggleStatusEffect("inCover", { active: false });
-    await tokenDoc.unsetFlag(NS, "coverAuto");
-  }
-}
-
-/** Re-evaluate every token on a scene (after a cover piece is added/removed/changed). */
-export async function refreshAllCover(scene) {
-  if (!scene) return;
-  for (const t of scene.tokens) await updateTokenCover(t);
-}
-
-/** Wire auto-marking: token create/move, and cover-Region create/update/delete. */
-export function registerCoverAutomation() {
-  Hooks.on("createToken", (doc) => updateTokenCover(doc));
-  Hooks.on("updateToken", (doc, changes) => {
-    if ("x" in changes || "y" in changes || "width" in changes || "height" in changes) updateTokenCover(doc);
+/** The cover Regions occupying a given grid cell. */
+function coverRegionsAtCell(scene, cell) {
+  const px = canvas.grid.getTopLeftPoint({ i: cell.y, j: cell.x });
+  const cx = px.x + canvas.grid.sizeX / 2;
+  const cy = px.y + canvas.grid.sizeY / 2;
+  return scene.regions.filter((r) => {
+    if (!isCoverRegion(r)) return false;
+    const s = r.shapes?.[0];
+    return s?.type === "rectangle"
+      && cx >= s.x && cx < s.x + s.width
+      && cy >= s.y && cy < s.y + s.height;
   });
-  const onRegion = (region) => { if (isCoverRegion(region)) refreshAllCover(region.parent); };
-  Hooks.on("createRegion", onRegion);
-  Hooks.on("updateRegion", onRegion);
-  Hooks.on("deleteRegion", onRegion);
+}
+
+/**
+ * The highest-AP cover piece sitting in a cell adjacent to this token on `side`, or null.
+ * `side` is the shot's approach side from facingFromDelta — the direction the attack came FROM,
+ * which is the direction the shielding obstacle must lie in.
+ */
+export function coverPieceAdjacentTo(tokenDoc, side) {
+  if (!coverMechanicsEnabled() || !tokenDoc?.parent || !side) return null;
+  const origin = canvas.grid.getOffset({ x: tokenDoc.x, y: tokenDoc.y });
+  const footprint = { x: origin.j, y: origin.i, width: tokenDoc.width, height: tokenDoc.height };
+  const covers = adjacentCellsOnSide(footprint, side)
+    .flatMap((cell) => coverRegionsAtCell(tokenDoc.parent, cell))
+    .map(coverFlag)
+    .filter(Boolean);
+  if (!covers.length) return null;
+  return covers.reduce((best, c) => ((Number(c.ap) || 0) > (Number(best.ap) || 0) ? c : best));
 }
 
 let _placement = null;   // active placement session { template, onDown, onKey }

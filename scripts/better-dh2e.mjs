@@ -30,7 +30,6 @@ import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
 import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 import { makeDHCombat } from "./documents/combat.mjs";
 import { makeDHCombatant } from "./documents/combatant.mjs";
-import { registerCoverAutomation } from "./canvas/cover.mjs";
 import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
 import { initVehicleFacing } from "./canvas/vehicle-facing.mjs";
 import { clearAllCover, coverMechanicsEnabled } from "./canvas/cover.mjs";
@@ -175,7 +174,6 @@ Hooks.once("init", () => {
     onChange: () => {
       ui.controls?.render?.();                 // show/hide the cover scene-control buttons
       import("./canvas/cover-overlay.mjs").then((m) => m.redrawCoverOverlay());
-      import("./canvas/cover.mjs").then((m) => m.refreshAllCover(canvas?.scene));
     },
   });
 
@@ -306,7 +304,6 @@ function applyUiTheme() {
 
 Hooks.once("ready", () => {
   applyUiTheme();
-  registerCoverAutomation();
   initCoverOverlay();
   initVehicleFacing();
   registerGrantHooks();
