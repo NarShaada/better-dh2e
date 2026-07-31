@@ -85,31 +85,81 @@ export function coverPieceAdjacentTo(tokenDoc, side) {
   return covers.reduce((best, c) => ((Number(c.ap) || 0) > (Number(best.ap) || 0) ? c : best));
 }
 
-let _placement = null;   // active placement session { template, onDown, onKey }
+let _painting = null;   // { template, onDown, onMove, onUp, onKey, onContext, painted, erasing }
 
-/** Begin click-to-stamp placement of a template. Left-click = one piece; right-click / Esc = stop. */
-export function beginCoverPlacement(template) {
-  endCoverPlacement();
-  ui.notifications.info(`Placing "${template.name}" — left-click cells, right-click or Esc to stop.`);
-  const onDown = async (event) => {
-    // Foundry v13/v14 uses PIXI v7 FederatedPointerEvent — button + getLocalPosition live on the event itself.
-    const btn = event.button ?? event.originalEvent?.button ?? 0;
-    if (btn === 2) { endCoverPlacement(); return; }       // right-click cancels
-    if (btn !== 0) return;
-    const p = event.getLocalPosition(canvas.stage);       // scene coordinates
-    await createCoverPiece(canvas.scene, p, template);
-  };
-  const onKey = (e) => { if (e.key === "Escape") endCoverPlacement(); };
-  _placement = { template, onDown, onKey };
-  canvas.stage.eventMode = "static";
-  canvas.stage.on("pointerdown", onDown);
-  window.addEventListener("keydown", onKey);
+/** Cell key so a single drag never paints the same cell twice. */
+function cellKey(cell) {
+  return `${cell.x},${cell.y}`;
 }
 
-/** Stop any active placement session. */
-export function endCoverPlacement() {
-  if (!_placement) return;
-  canvas.stage.off("pointerdown", _placement.onDown);
-  window.removeEventListener("keydown", _placement.onKey);
-  _placement = null;
+/** Grid cell under a scene-coordinate point. */
+function cellAtPoint(point) {
+  const o = canvas.grid.getOffset(point);
+  return { x: o.j, y: o.i };
+}
+
+/** Paint one cell (skipping cells already covered) or erase every piece in it. */
+async function applyBrushAt(point, erasing) {
+  const scene = canvas.scene;
+  const cell = cellAtPoint(point);
+  const key = cellKey(cell);
+  if (_painting.painted.has(key)) return;      // one visit per cell per stroke
+  _painting.painted.add(key);
+  const existing = coverRegionsAtCell(scene, cell);
+  if (erasing) {
+    if (existing.length) await scene.deleteEmbeddedDocuments("Region", existing.map((r) => r.id));
+  } else if (!existing.length) {
+    await createCoverPiece(scene, point, _painting.template);
+  }
+}
+
+/** Begin painting. Left paints, right erases, both drag; Escape exits. */
+export function beginCoverPainting(template) {
+  endCoverPainting();
+  ui.notifications.info(`Painting "${template.name}" — left-drag to paint, right-drag to erase, Esc to stop.`);
+
+  const onDown = (event) => {
+    const btn = event.button ?? event.originalEvent?.button ?? 0;
+    if (btn !== 0 && btn !== 2) return;
+    event.stopPropagation();                       // keep right-drag from panning the canvas
+    _painting.erasing = btn === 2;
+    _painting.painted.clear();
+    applyBrushAt(event.getLocalPosition(canvas.stage), _painting.erasing);
+  };
+  const onMove = (event) => {
+    if (_painting.erasing === null) return;        // no button held
+    event.stopPropagation();
+    applyBrushAt(event.getLocalPosition(canvas.stage), _painting.erasing);
+  };
+  const onUp = () => { _painting.erasing = null; _painting.painted.clear(); };
+  const onKey = (e) => { if (e.key === "Escape") endCoverPainting(); };
+  const onContext = (e) => e.preventDefault();     // no browser/Foundry context menu while painting
+
+  _painting = { template, onDown, onMove, onUp, onKey, onContext, painted: new Set(), erasing: null };
+  canvas.stage.eventMode = "static";
+  canvas.stage.on("pointerdown", onDown);
+  canvas.stage.on("pointermove", onMove);
+  canvas.stage.on("pointerup", onUp);
+  canvas.stage.on("pointerupoutside", onUp);
+  window.addEventListener("keydown", onKey);
+  canvas.app.view.addEventListener("contextmenu", onContext);
+}
+
+/** Stop painting and restore normal canvas interaction. Safe to call when not painting. */
+export function endCoverPainting() {
+  if (!_painting) return;
+  const p = _painting;
+  _painting = null;                                 // clear first so a re-entrant call is a no-op
+  canvas.stage.off("pointerdown", p.onDown);
+  canvas.stage.off("pointermove", p.onMove);
+  canvas.stage.off("pointerup", p.onUp);
+  canvas.stage.off("pointerupoutside", p.onUp);
+  window.removeEventListener("keydown", p.onKey);
+  canvas.app?.view?.removeEventListener("contextmenu", p.onContext);
+  ui.notifications.info("Cover painting stopped.");
+}
+
+/** Stop painting if the scene changes underneath us. Call once at ready. */
+export function registerCoverPaintingGuards() {
+  Hooks.on("canvasReady", () => endCoverPainting());
 }

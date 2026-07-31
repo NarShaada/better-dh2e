@@ -3,7 +3,7 @@ import {
   LOCATION_KEYS, LOCATION_LABELS,
   newTemplate, validateTemplate, summarizeTemplate, loadLibrary, saveLibrary,
 } from "../helpers/cover-templates.mjs";
-import { beginCoverPlacement, endCoverPlacement } from "../canvas/cover.mjs";
+import { beginCoverPainting, endCoverPainting } from "../canvas/cover.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
@@ -104,12 +104,12 @@ export class CoverTemplatesApp extends HandlebarsApplicationMixin(ApplicationV2)
     const current = this.#find(target.dataset.id);
     if (!current) return;
     await this.minimize();
-    beginCoverPlacement(current);
+    beginCoverPainting(current);
   }
 
-  // Placement lives only as long as this manager is open (minimised still counts). Closing it stops stamping.
+  // Painting lives only as long as this manager is open (minimised still counts). Closing it stops painting.
   _onClose(options) {
     super._onClose?.(options);
-    endCoverPlacement();
+    endCoverPainting();
   }
 }
