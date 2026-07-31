@@ -265,6 +265,22 @@ body.bdh-chrome.bdh-polarity-dark .chat-message .message-header,
 body.bdh-chrome.bdh-polarity-dark .chat-message .message-header .message-sender {
   color: var(--t-muted);
 }
+/* Message-visibility variants. Core declares six more variables on .chat-message itself —
+   --color-whisper/blind/emote-background and their -border partners — and .chat-message.whisper /
+   .blind / .emote consume them via `background` + `border: 2px solid`. The v0.3.5 pass remapped
+   only the base pair, so a whisper stayed core's lavender (#e8e8ef) and a blind roll core's pale
+   pink (#f5eaf5) in every theme. Same treatment as above: override the VARIABLES on .chat-message,
+   never the properties, so core's 2px border width survives untouched.
+   Whisper leans on the warp accent (a message only some can read), blind on the danger red (a roll
+   the roller cannot see), emote on the neutral panel. */
+body.bdh-chrome.bdh-polarity-dark .chat-message {
+  --color-whisper-background: color-mix(in srgb, var(--t-warp) 18%, var(--t-panel));
+  --color-whisper-border: var(--t-warp);
+  --color-blind-background: color-mix(in srgb, var(--t-red2) 30%, var(--t-panel));
+  --color-blind-border: var(--t-red2);
+  --color-emote-background: var(--t-panel2);
+  --color-emote-border: var(--t-line2);
+}
 
 /* ---------- Light polarity: Dossier ----------
    NOT an inversion of the dark block. Core's ramp is polarity-neutral and core's own
@@ -563,6 +579,17 @@ body.bdh-chrome.bdh-polarity-light .chat-message {
 body.bdh-chrome.bdh-polarity-light .chat-message .message-header,
 body.bdh-chrome.bdh-polarity-light .chat-message .message-header .message-sender {
   color: var(--t-muted);
+}
+/* Message-visibility variants — see the dark block's comment for the mechanism. Tints are lighter
+   here so they read as a wash over parchment rather than a stain, and the borders carry most of
+   the signal. */
+body.bdh-chrome.bdh-polarity-light .chat-message {
+  --color-whisper-background: color-mix(in srgb, var(--t-warp) 10%, var(--t-field));
+  --color-whisper-border: var(--t-warp);
+  --color-blind-background: color-mix(in srgb, var(--t-red) 12%, var(--t-field));
+  --color-blind-border: var(--t-red2);
+  --color-emote-background: var(--t-panel2);
+  --color-emote-border: var(--t-line2);
 }
 
 /* ---------- Edges ----------
@@ -895,3 +922,34 @@ body.bdh-chrome .tour .step-title {
   font-family: var(--bdhc-label-font);
   letter-spacing: var(--bdhc-label-tracking);
 }
+
+/* ---------- Plain rolls ----------
+   Core's `/r` and dice-tray rolls render `.dice-roll` — a formula line above a total — with no
+   relation to the system's own test and damage cards, so a tray roll sat in the log looking like a
+   different application. This brings it into the same family WITHOUT restructuring core's markup:
+   the formula in the mono face the cards use for numbers, the total given the weight and accent a
+   card gives a result, flat corners, themed rules.
+
+   Core declares `.dice-roll .dice-formula { border: 1px solid #999; border-radius: 3px;
+   box-shadow: 0 0 2px #FFF inset }` and `.dice-total { font-size: var(--font-size-20);
+   font-weight: bold }`. We keep its 1px border width and only recolour, so nothing shifts; the
+   inset white glow is neutralised because it reads as a smear on every dark palette.
+
+   `.dice-total.success` / `.failure` are hardcoded `green` / `red` in core — literal keywords, not
+   variables — so those two need direct colour overrides rather than a remap. */
+body.bdh-chrome .dice-roll .dice-formula {
+  font-family: var(--t-mono);
+  font-size: 11.5px;
+  color: var(--t-muted);
+  background: var(--t-field);
+  border-color: var(--t-line2);
+  border-radius: var(--bdhc-radius);
+  box-shadow: none;
+}
+body.bdh-chrome .dice-roll .dice-total {
+  font-family: var(--t-mono);
+  color: var(--t-ink2);
+  letter-spacing: 1px;
+}
+body.bdh-chrome .dice-roll .dice-total.success { color: var(--t-green); }
+body.bdh-chrome .dice-roll .dice-total.failure { color: var(--t-red); }
