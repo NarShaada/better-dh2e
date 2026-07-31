@@ -1,6 +1,6 @@
 // scripts/apps/cover-templates-app.mjs — GM library manager (ApplicationV2) + per-template editor (DialogV2).
 import {
-  SIDE_KEYS, SIDE_LABELS, LOCATION_KEYS, LOCATION_LABELS,
+  LOCATION_KEYS, LOCATION_LABELS,
   newTemplate, validateTemplate, summarizeTemplate, loadLibrary, saveLibrary,
 } from "../helpers/cover-templates.mjs";
 import { beginCoverPlacement, endCoverPlacement } from "../canvas/cover.mjs";
@@ -9,9 +9,6 @@ const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applicat
 
 /** Modal editor for one template. Returns the validated template, or null if cancelled. */
 async function editTemplateDialog(template) {
-  const sideRow = SIDE_KEYS.map((s) =>
-    `<label class="bdh-cover-chk"><input type="checkbox" name="side-${s}" ${template.sides.includes(s) ? "checked" : ""}/> ${SIDE_LABELS[s]}</label>`,
-  ).join("");
   const locRow = LOCATION_KEYS.map((l) =>
     `<label class="bdh-cover-chk"><input type="checkbox" name="loc-${l}" ${template.locations.includes(l) ? "checked" : ""}/> ${LOCATION_LABELS[l]}</label>`,
   ).join("");
@@ -20,7 +17,6 @@ async function editTemplateDialog(template) {
       <div class="form-group"><label>Name</label><input type="text" name="name" value="${template.name}" autofocus/></div>
       <div class="form-group"><label>Colour</label><input type="color" name="color" value="${template.color}"/></div>
       <div class="form-group"><label>AP</label><input type="number" name="ap" value="${template.ap}" min="0" step="1"/></div>
-      <fieldset><legend>Protected sides</legend><div class="bdh-cover-chks">${sideRow}</div></fieldset>
       <fieldset><legend>Protected locations</legend><div class="bdh-cover-chks">${locRow}</div></fieldset>
     </div>`;
   return DialogV2.prompt({
@@ -36,7 +32,6 @@ async function editTemplateDialog(template) {
           name: f.name,
           color: f.color,
           ap: f.ap,
-          sides: SIDE_KEYS.filter((s) => f[`side-${s}`]),
           locations: LOCATION_KEYS.filter((l) => f[`loc-${l}`]),
         });
       },
