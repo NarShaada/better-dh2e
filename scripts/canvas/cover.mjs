@@ -85,7 +85,14 @@ export function coverPieceAdjacentTo(tokenDoc, side) {
   return covers.reduce((best, c) => ((Number(c.ap) || 0) > (Number(best.ap) || 0) ? c : best));
 }
 
-let _painting = null;   // { template, onDown, onMove, onUp, onKey, onContext, painted, erasing }
+let _painting = null;   // { template, onDown, onMove, onUp, onKey, onContext, painted, erasing, mgrPermissions }
+
+// canvas.stage is a *sibling* listener target to Foundry's own MouseInteractionManager (both are bound
+// directly to canvas.stage, and Foundry's is registered first) — event.stopPropagation() only stops
+// propagation between PIXI display-tree targets, not between sibling listeners on the same target, so it
+// cannot suppress Foundry's own pan/click/drag handling. The actual suppression is the permissions gate
+// below: MouseInteractionManager#can() reads this.permissions[action] and honours a plain boolean.
+const DENIED_ACTIONS = ["clickLeft", "clickLeft2", "clickRight", "clickRight2", "dragLeftStart", "dragRightStart", "longPress"];
 
 /** Cell key so a single drag never paints the same cell twice. */
 function cellKey(cell) {
@@ -115,27 +122,44 @@ async function applyBrushAt(point, erasing) {
 
 /** Begin painting. Left paints, right erases, both drag; Escape exits. */
 export function beginCoverPainting(template) {
-  endCoverPainting();
+  endCoverPainting({ silent: true });   // avoid a contradictory "stopped" toast on re-entry
   ui.notifications.info(`Painting "${template.name}" — left-drag to paint, right-drag to erase, Esc to stop.`);
 
   const onDown = (event) => {
+    if (!_painting) return;
     const btn = event.button ?? event.originalEvent?.button ?? 0;
     if (btn !== 0 && btn !== 2) return;
-    event.stopPropagation();                       // keep right-drag from panning the canvas
+    event.stopPropagation();
     _painting.erasing = btn === 2;
     _painting.painted.clear();
-    applyBrushAt(event.getLocalPosition(canvas.stage), _painting.erasing);
+    applyBrushAt(event.getLocalPosition(canvas.stage), _painting.erasing).catch((err) => {
+      console.error("better-dh2e | cover paint stroke failed", err);
+      ui.notifications.error("Cover painting: a stroke failed to save — see console.");
+    });
   };
   const onMove = (event) => {
-    if (_painting.erasing === null) return;        // no button held
+    if (!_painting || _painting.erasing === null) return;   // not painting, or no button held
     event.stopPropagation();
-    applyBrushAt(event.getLocalPosition(canvas.stage), _painting.erasing);
+    applyBrushAt(event.getLocalPosition(canvas.stage), _painting.erasing).catch((err) => {
+      console.error("better-dh2e | cover paint stroke failed", err);
+      ui.notifications.error("Cover painting: a stroke failed to save — see console.");
+    });
   };
-  const onUp = () => { _painting.erasing = null; _painting.painted.clear(); };
+  const onUp = () => { if (_painting) { _painting.erasing = null; _painting.painted.clear(); } };
   const onKey = (e) => { if (e.key === "Escape") endCoverPainting(); };
   const onContext = (e) => e.preventDefault();     // no browser/Foundry context menu while painting
 
-  _painting = { template, onDown, onMove, onUp, onKey, onContext, painted: new Set(), erasing: null };
+  // Snapshot and gate the canvas's own interaction permissions so Foundry can't also pan/click/drag
+  // underneath our listeners. Only touch it if a manager actually exists; only restore what we captured.
+  const mgr = canvas?.mouseInteractionManager;
+  const mgrPermissions = mgr ? mgr.permissions : undefined;
+  if (mgr) {
+    const denied = { ...mgr.permissions };
+    for (const action of DENIED_ACTIONS) denied[action] = false;
+    mgr.permissions = denied;
+  }
+
+  _painting = { template, onDown, onMove, onUp, onKey, onContext, painted: new Set(), erasing: null, mgrPermissions };
   canvas.stage.eventMode = "static";
   canvas.stage.on("pointerdown", onDown);
   canvas.stage.on("pointermove", onMove);
@@ -146,7 +170,7 @@ export function beginCoverPainting(template) {
 }
 
 /** Stop painting and restore normal canvas interaction. Safe to call when not painting. */
-export function endCoverPainting() {
+export function endCoverPainting({ silent = false } = {}) {
   if (!_painting) return;
   const p = _painting;
   _painting = null;                                 // clear first so a re-entrant call is a no-op
@@ -156,10 +180,17 @@ export function endCoverPainting() {
   canvas.stage.off("pointerupoutside", p.onUp);
   window.removeEventListener("keydown", p.onKey);
   canvas.app?.view?.removeEventListener("contextmenu", p.onContext);
-  ui.notifications.info("Cover painting stopped.");
+  const mgr = canvas?.mouseInteractionManager;
+  if (mgr && p.mgrPermissions !== undefined) mgr.permissions = p.mgrPermissions;
+  if (!silent) ui.notifications.info("Cover painting stopped.");
 }
 
-/** Stop painting if the scene changes underneath us. Call once at ready. */
+/**
+ * Stop painting if the canvas goes out from under us — either a normal scene swap (canvasReady) or a
+ * teardown to a blank/no scene, which returns before canvasReady would ever fire (canvasTearDown covers
+ * that path). endCoverPainting is idempotent, so both hooks firing for the same transition is harmless.
+ */
 export function registerCoverPaintingGuards() {
   Hooks.on("canvasReady", () => endCoverPainting());
+  Hooks.on("canvasTearDown", () => endCoverPainting());
 }
