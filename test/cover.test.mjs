@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { coverApFromInput, adjacentCellsOnSide } from "../scripts/helpers/cover.mjs";
+import { coverApFromInput, adjacentCellsOnSide, isLegacyCoverFlag } from "../scripts/helpers/cover.mjs";
 
 describe("coverApFromInput", () => {
   it("parses a plain number", () => {
@@ -52,5 +52,22 @@ describe("adjacentCellsOnSide", () => {
   it("treats a missing or zero size as a single cell", () => {
     expect(adjacentCellsOnSide({ x: 1, y: 1 }, "n")).toEqual([{ x: 1, y: 0 }]);
     expect(adjacentCellsOnSide({ x: 1, y: 1, width: 0, height: 0 }, "e")).toEqual([{ x: 2, y: 1 }]);
+  });
+});
+
+describe("isLegacyCoverFlag", () => {
+  it("recognises a phase-2 piece by its obsolete sides field", () => {
+    expect(isLegacyCoverFlag({ isCover: true, ap: 4, sides: ["n"], locations: ["body"] })).toBe(true);
+    expect(isLegacyCoverFlag({ isCover: true, ap: 4, sides: [], locations: ["body"] })).toBe(true);
+  });
+
+  it("leaves an obstacle-model piece alone", () => {
+    expect(isLegacyCoverFlag({ isCover: true, ap: 4, locations: ["body"] })).toBe(false);
+  });
+
+  it("is false for junk", () => {
+    expect(isLegacyCoverFlag(null)).toBe(false);
+    expect(isLegacyCoverFlag(undefined)).toBe(false);
+    expect(isLegacyCoverFlag({})).toBe(false);
   });
 });

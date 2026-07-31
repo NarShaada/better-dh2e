@@ -1,5 +1,5 @@
 // scripts/canvas/cover.mjs — cover-piece Regions: create, adjacency lookup, AP lookup, clear, placement.
-import { adjacentCellsOnSide } from "../helpers/cover.mjs";
+import { adjacentCellsOnSide, isLegacyCoverFlag } from "../helpers/cover.mjs";
 
 const NS = "better-dh2e";
 
@@ -45,6 +45,16 @@ export async function createCoverPiece(scene, point, template) {
 export async function clearAllCover(scene) {
   if (!scene) return 0;
   const ids = scene.regions.filter(isCoverRegion).map((r) => r.id);
+  if (ids.length) await scene.deleteEmbeddedDocuments("Region", ids);
+  return ids.length;
+}
+
+/** Delete phase-2 cover pieces from a scene. Returns how many were removed. */
+export async function clearLegacyCover(scene) {
+  if (!scene) return 0;
+  const ids = scene.regions
+    .filter((r) => isCoverRegion(r) && isLegacyCoverFlag(coverFlag(r)))
+    .map((r) => r.id);
   if (ids.length) await scene.deleteEmbeddedDocuments("Region", ids);
   return ids.length;
 }
@@ -198,4 +208,18 @@ export function endCoverPainting({ silent = false } = {}) {
 export function registerCoverPaintingGuards() {
   Hooks.on("canvasReady", () => endCoverPainting());
   Hooks.on("canvasTearDown", () => endCoverPainting());
+}
+
+/** On each scene the GM opens, clear any phase-2 cover and say so once. Call at ready. */
+export function registerLegacyCoverMigration() {
+  Hooks.on("canvasReady", async () => {
+    if (!isPrimaryGM() || !coverMechanicsEnabled()) return;   // kept from Task 3
+    const n = await clearLegacyCover(canvas.scene);
+    if (n) {
+      ui.notifications.warn(
+        `Better DH2e: removed ${n} old cover piece${n === 1 ? "" : "s"} from this scene. ` +
+        `Cover pieces are now the obstacle itself — repaint them where the cover actually is.`,
+      );
+    }
+  });
 }

@@ -26,3 +26,13 @@ export function adjacentCellsOnSide(footprint, side) {
   else if (side === "e") for (let j = 0; j < h; j++) cells.push({ x: x + w, y: y + j });
   return cells;
 }
+
+/**
+ * Was this cover payload written by the phase-2 "protected spot" model?
+ * Detected by the obsolete `sides` key, which obstacle-model pieces never carry — so the check is
+ * self-healing: once a scene is cleared nothing matches, and no migration flag is needed.
+ * @param {object|null} cover
+ */
+export function isLegacyCoverFlag(cover) {
+  return !!cover && Object.hasOwn(cover, "sides");
+}
