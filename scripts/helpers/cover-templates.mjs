@@ -85,6 +85,24 @@ export function coverContextLabel(piece, approachSide) {
   return `Shot approached from ${from} (${dir}) · protects ${locs}`;
 }
 
+/**
+ * Compact display grouping of a piece's protected locations, for the on-canvas H A B L badge.
+ * `a` and `l` mean "at least one" — a piece protecting only the right arm still lights A. That can
+ * over-promise on a half-ticked limb pair; the exact list stays available in the template summary
+ * and the damage prompt's context line.
+ * @param {string[]} locations
+ * @returns {{h: boolean, a: boolean, b: boolean, l: boolean}}
+ */
+export function locationBadge(locations) {
+  const set = new Set(locations ?? []);
+  return {
+    h: set.has("head"),
+    a: set.has("rightArm") || set.has("leftArm"),
+    b: set.has("body"),
+    l: set.has("rightLeg") || set.has("leftLeg"),
+  };
+}
+
 // --- world-setting wrappers (not unit-tested; thin) ---
 
 /** Read the template library from the world setting, validated. */

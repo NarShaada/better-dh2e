@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   SIDE_KEYS, LOCATION_KEYS,
-  newTemplate, validateTemplate, summarizeTemplate, highestCoverAp, coverAutoDecision,
+  newTemplate, validateTemplate, summarizeTemplate, highestCoverAp, coverAutoDecision, locationBadge,
 } from "../scripts/helpers/cover-templates.mjs";
 
 describe("newTemplate", () => {
@@ -66,5 +66,29 @@ describe("coverAutoDecision", () => {
     expect(coverAutoDecision({ inCover: false, hasCondition: true, wasAuto: false })).toBe("none"); // manual survives
     expect(coverAutoDecision({ inCover: true, hasCondition: true, wasAuto: true })).toBe("none");
     expect(coverAutoDecision({ inCover: false, hasCondition: false, wasAuto: false })).toBe("none");
+  });
+});
+
+describe("locationBadge", () => {
+  it("lights a glyph per covered group", () => {
+    expect(locationBadge(["head", "body", "rightArm", "leftLeg"]))
+      .toEqual({ h: true, a: true, b: true, l: true });
+  });
+
+  it("lights the limb glyph when only one of the pair is covered", () => {
+    expect(locationBadge(["rightArm"])).toEqual({ h: false, a: true, b: false, l: false });
+    expect(locationBadge(["leftLeg"])).toEqual({ h: false, a: false, b: false, l: true });
+  });
+
+  it("is all dark for an empty, missing or unrecognised list", () => {
+    const dark = { h: false, a: false, b: false, l: false };
+    expect(locationBadge([])).toEqual(dark);
+    expect(locationBadge(null)).toEqual(dark);
+    expect(locationBadge(undefined)).toEqual(dark);
+    expect(locationBadge(["nonsense"])).toEqual(dark);
+  });
+
+  it("lights only body for a body-only piece", () => {
+    expect(locationBadge(["body"])).toEqual({ h: false, a: false, b: true, l: false });
   });
 });
