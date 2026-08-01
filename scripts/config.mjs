@@ -219,3 +219,7 @@ BDH.disciplines = { biomancy: "Biomancy", divination: "Divination", pyromancy: "
 BDH.psychicTypes = { effect: "Effect", bolt: "Psychic Bolt", barrage: "Psychic Barrage", storm: "Psychic Storm", blast: "Psychic Blast" };
 /** Action to manifest (key -> label). */
 BDH.psychicActions = { free: "Free", half: "Half", full: "Full", reaction: "Reaction" };
+/** Sustain action cost of a psychic power (key -> label). `reaction` is deliberately absent:
+ *  the book never prints a Reaction sustain cost, and including it would make "the longest
+ *  action among the sustained powers" (p. 195) meaningless. */
+BDH.sustainActions = { no: "No", free: "Free Action", half: "Half Action", full: "Full Action" };
