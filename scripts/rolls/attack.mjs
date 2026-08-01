@@ -17,7 +17,7 @@ import { coverApFromInput } from "../helpers/cover.mjs";
 import { facingFromDelta, armourSideFromAttack } from "../helpers/facing.mjs";
 import { woundsShown, reverseWoundsEnabled } from "../helpers/wounds-display.mjs";
 import { vehicleHitLocation, VEHICLE_LOCATION_LABELS, applyIntegrity } from "../helpers/vehicle-data.mjs";
-import { coverPieceForTarget } from "../canvas/cover.mjs";
+import { coverPieceAdjacentTo } from "../canvas/cover.mjs";
 import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal } from "../helpers/derived.mjs";
@@ -872,14 +872,17 @@ async function applyDamage(message) {
     });
     return;
   }
-  // Cover: the prompt appears whenever the target is In Cover. Phase 2b only chooses the pre-filled value —
-  // the piece's AP when the shot crossed a defended side AND struck a protected location, else 0 — and the
-  // GM's confirmed value always applies (geometry never blocks the GM). Manual In Cover (no piece) pre-fills 0.
+  // Cover: an adjacent piece on the shot's approach side, or a manual In Cover flag, opens the prompt.
+  // The piece only chooses the pre-filled value — the GM's confirmed number always applies, and an
+  // open-ground shot is never interrupted.
   let coverAp = 0;
-  if (target.statuses?.has?.("inCover")) {
-    const piece = coverPieceForTarget(target);
-    const prefill = coverPrefill(piece, f.coverApproach ?? null, (f.hits ?? []).map((h) => h.location));
-    const ctxLine = piece ? `<p class="notes">${coverContextLabel(piece, f.coverApproach ?? null)}</p>` : "";
+  const targetToken = target?.getActiveTokens?.()?.[0];
+  const approach = f.coverApproach ?? null;
+  const piece = targetToken ? coverPieceAdjacentTo(targetToken.document, approach) : null;
+  const manualCover = target.statuses?.has?.("inCover") ?? false;
+  if (piece || manualCover) {
+    const prefill = coverPrefill(piece, (f.hits ?? []).map((h) => h.location));
+    const ctxLine = piece ? `<p class="notes">${coverContextLabel(piece, approach)}</p>` : "";
     const choice = await DialogV2.prompt({
       window: { title: "Apply Damage — Cover" },
       content: `<div class="form-group"><label>Cover (AP)</label><input type="text" name="cover" value="${prefill}" autofocus/></div>${ctxLine}`,

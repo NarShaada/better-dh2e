@@ -30,10 +30,9 @@ import { DarkHeresyItemSheet } from "./sheets/item-sheet.mjs";
 import { makeDHTokenRuler } from "./canvas/token-ruler.mjs";
 import { makeDHCombat } from "./documents/combat.mjs";
 import { makeDHCombatant } from "./documents/combatant.mjs";
-import { registerCoverAutomation } from "./canvas/cover.mjs";
 import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
 import { initVehicleFacing } from "./canvas/vehicle-facing.mjs";
-import { clearAllCover, coverMechanicsEnabled } from "./canvas/cover.mjs";
+import { clearAllCover, coverMechanicsEnabled, registerCoverPaintingGuards, registerLegacyCoverMigration, runLegacyCoverMigration } from "./canvas/cover.mjs";
 import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 import { registerGrantHooks } from "./cybernetics/grants.mjs";
@@ -175,7 +174,10 @@ Hooks.once("init", () => {
     onChange: () => {
       ui.controls?.render?.();                 // show/hide the cover scene-control buttons
       import("./canvas/cover-overlay.mjs").then((m) => m.redrawCoverOverlay());
-      import("./canvas/cover.mjs").then((m) => m.refreshAllCover(canvas?.scene));
+      // A GM enabling this mid-session may be sitting on a scene that still carries phase-2 pieces or
+      // token residue from before the setting existed — canvasReady already fired for this scene, and
+      // won't fire again until the next scene change, so run the migration directly.
+      runLegacyCoverMigration();
     },
   });
 
@@ -306,8 +308,9 @@ function applyUiTheme() {
 
 Hooks.once("ready", () => {
   applyUiTheme();
-  registerCoverAutomation();
   initCoverOverlay();
+  registerCoverPaintingGuards();
+  registerLegacyCoverMigration();
   initVehicleFacing();
   registerGrantHooks();
   registerWeaponPartHooks();

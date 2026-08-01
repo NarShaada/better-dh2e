@@ -1,6 +1,7 @@
-// scripts/canvas/cover-overlay.mjs — draws cover pieces (protected-side borders + AP label) on the canvas.
+// scripts/canvas/cover-overlay.mjs — draws cover pieces (AP label + location badge) on the canvas.
 // The Region itself stays a faint tint; this overlay is the visible cover piece. Per-client visibility toggle.
 import { isCoverRegion, coverFlag, coverMechanicsEnabled } from "./cover.mjs";
+import { locationBadge } from "../helpers/cover-templates.mjs";
 
 let _layer = null;
 let _visible = true;
@@ -14,35 +15,51 @@ function ensureLayer() {
   return _layer;
 }
 
+const BADGE = [["h", "H"], ["a", "A"], ["b", "B"], ["l", "L"]];
+
 function drawPiece(layer, shape, cover) {
   const { x, y, width: w, height: h } = shape;
-  const protectedSides = new Set(cover.sides ?? []);
+
+  // A single outline: the piece is an obstacle now, so no side is special.
   const g = new PIXI.Graphics();
-  // edges: gold + thick if protected, dim + thin otherwise. order: n(top) e(right) s(bottom) w(left)
-  const edges = [
-    ["n", x, y, x + w, y],
-    ["e", x + w, y, x + w, y + h],
-    ["s", x, y + h, x + w, y + h],
-    ["w", x, y, x, y + h],
-  ];
-  for (const [key, x1, y1, x2, y2] of edges) {
-    const on = protectedSides.has(key);
-    g.lineStyle(on ? 6 : 2, on ? 0xffcc44 : 0x5b6b7d, on ? 0.95 : 0.5);
-    g.moveTo(x1, y1).lineTo(x2, y2);
-  }
+  g.lineStyle(3, 0xffcc44, 0.9);
+  g.beginFill(0x000000, 0.15);
+  g.drawRect(x, y, w, h);
+  g.endFill();
   layer.addChild(g);
-  // AP label, centred
-  const label = new PIXI.Text(String(cover.ap ?? 0), {
+
+  // AP, sitting a little above centre to leave room for the badge row.
+  const ap = new PIXI.Text(String(cover.ap ?? 0), {
     fontFamily: "Georgia, serif",
-    fontSize: Math.round(Math.min(w, h) * 0.34),
+    fontSize: Math.round(Math.min(w, h) * 0.32),
     fontWeight: "bold",
     fill: 0xffe08a,
     stroke: 0x1a1207,
     strokeThickness: 3,
   });
-  label.anchor.set(0.5);
-  label.position.set(x + w / 2, y + h / 2);
-  layer.addChild(label);
+  ap.anchor.set(0.5);
+  ap.position.set(x + w / 2, y + h * 0.38);
+  layer.addChild(ap);
+
+  // H A B L — bright where the piece covers that group, dim where it does not.
+  const badge = locationBadge(cover.locations);
+  const size = Math.round(Math.min(w, h) * 0.17);
+  const gap = size * 1.25;
+  const startX = x + w / 2 - (gap * (BADGE.length - 1)) / 2;
+  for (const [i, [key, glyph]] of BADGE.entries()) {
+    const on = badge[key];
+    const t = new PIXI.Text(glyph, {
+      fontFamily: "Georgia, serif",
+      fontSize: size,
+      fontWeight: "bold",
+      fill: on ? 0xffe08a : 0x6b6357,
+      stroke: 0x1a1207,
+      strokeThickness: 2,
+    });
+    t.anchor.set(0.5);
+    t.position.set(startX + gap * i, y + h * 0.72);
+    layer.addChild(t);
+  }
 }
 
 /** Rebuild the whole cover overlay from the current scene's cover Regions. */
