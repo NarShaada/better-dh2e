@@ -1,5 +1,6 @@
 // scripts/documents/combat.mjs — end-of-turn / end-of-round condition ticks.
 import { battlemapEnabled } from "../helpers/battlemap-data.mjs";
+import { postSustainReminder } from "../rolls/sustain.mjs";
 import { consumeToxic, tickStunned, tickOnFire, crippledValue } from "../rolls/conditions.mjs";
 
 const NS = "better-dh2e";
@@ -9,9 +10,13 @@ export function makeDHCombat(Base) {
   return class DHCombat extends Base {
     async _onStartTurn(combatant, context) {
       await super._onStartTurn(combatant, context);
-      if (!battlemapEnabled()) return;
       const actor = combatant?.actor;
       if (!actor) return;
+      // Sustaining is not a battlemap feature, so the reminder sits ABOVE the battlemap guard
+      // rather than inheriting a gate unrelated to it. (No behavioural difference today —
+      // enableBattlemap is force-set true in every world — but the intent should not be implied.)
+      await postSustainReminder(actor);
+      if (!battlemapEnabled()) return;
       if (actor.statuses?.has?.("run")) await actor.toggleStatusEffect("run", { active: false });
       await tickStunned(actor);
       await tickOnFire(actor);
