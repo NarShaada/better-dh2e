@@ -20,6 +20,7 @@ export function readSustained(actor) {
  *  higher PR upgrades the running effect instead of double-counting toward the psyker's own
  *  penalty. Then apply the PR-0 cascade and report anything it ended. */
 export async function addSustained(actor, entry) {
+  if (!actor) return;
   const entries = readSustained(actor);
   const at = entries.findIndex((x) => x.powerId === entry.powerId);
   if (at >= 0) entries[at] = entry; else entries.push(entry);
@@ -31,6 +32,7 @@ export async function addSustained(actor, entry) {
 
 /** Release one held power. The only way the block empties, apart from the PR-0 cascade. */
 export async function releaseSustained(actor, powerId) {
+  if (!actor) return;
   await actor.setFlag(NS, KEY, readSustained(actor).filter((x) => x.powerId !== powerId));
 }
 
@@ -48,6 +50,7 @@ async function postDropped(actor, dropped) {
 /** Turn-start reminder of the action cost, and the phenomena bonus when it applies.
  *  No-op when the actor is sustaining nothing. */
 export async function postSustainReminder(actor) {
+  if (!actor) return;
   const lines = reminderLines(actor.name, readSustained(actor));
   if (!lines.length) return;
   await ChatMessage.create({
