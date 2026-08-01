@@ -9,6 +9,8 @@ import { effectivePenetration } from "../helpers/quality-modules.mjs";
 import { unnaturalDoSBonus } from "../helpers/derived.mjs";
 import { battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { safeRoll } from "./dice.mjs";
+import { phenomenaSustainBonus } from "../helpers/sustain-data.mjs";
+import { readSustained, addSustained } from "./sustain.mjs";
 
 const NS = "better-dh2e";
 const { DialogV2 } = foundry.applications.api;
@@ -53,11 +55,17 @@ export async function rollManifest(actor, powerId) {
     }
   }
 
+  // Only sustainable powers offer the choice. Default on: the player picked a sustained-type power.
+  const sustainRow = s.sustained !== "no"
+    ? `<div class="form-group"><label>Sustain this power?</label><input type="checkbox" name="sustain" checked/></div>`
+    : "";
+
   const dialogContent = `
     ${rangeRow}
     <div class="form-group"><label>Effective PR</label><select name="castChoice">${prOpts.join("")}</select></div>
     <div class="form-group"><label>PR Bonus</label><input type="number" step="1" name="prBonus" value="0"/></div>
-    <div class="form-group"><label>Circumstance Modifier</label><input type="text" name="modifier" value="+0"/></div>`;
+    <div class="form-group"><label>Circumstance Modifier</label><input type="text" name="modifier" value="+0"/></div>
+    ${sustainRow}`;
 
   const choice = await DialogV2.prompt({
     window: { title: `${power.name} — Cast` },
@@ -74,7 +82,8 @@ export async function rollManifest(actor, powerId) {
   const statePR = Number(chosenPR);
   const prBonus = Math.trunc(Number(choice.prBonus)) || 0;
   const circ = parseInt(String(choice.modifier).replace(/[^-\d]/g, ""), 10) || 0;
-  return resolveManifest(actor, power, { state: chosenState, statePR, prBonus, circ });
+  const sustain = s.sustained !== "no" && !!choice.sustain;
+  return resolveManifest(actor, power, { state: chosenState, statePR, prBonus, circ, sustain });
 }
 
 /**
@@ -87,7 +96,7 @@ export async function rollManifest(actor, powerId) {
  * @returns {Promise<true|null>}
  */
 export async function resolveManifest(actor, power, opts) {
-  const { circ = 0, prBonus = 0, fixedRoll = null, dosBonus = 0, targetUuid: optsTargetUuid, targetName: optsTargetName } = opts;
+  const { circ = 0, prBonus = 0, fixedRoll = null, dosBonus = 0, sustain = false, targetUuid: optsTargetUuid, targetName: optsTargetName } = opts;
   const s = power.system;
 
   const normalPR = actor.system.psyRating ?? 0;
@@ -116,14 +125,20 @@ export async function resolveManifest(actor, power, opts) {
 
   // Phenomena (keep the Roll objects so the dice sound/animation plays)
   // Gate on fixedRoll == null — a +DoS re-resolution must NOT roll fresh phenomena.
+  // The sustain count is read LIVE, not pinned to the reroll payload: a reroll re-plays this
+  // moment. It counts only powers ALREADY held — the power being cast has not entered the block
+  // and must not add to its own strain.
   let phenTriggered = false, phenRoll = null, phenMod = 0, phenTotal = null, perilRoll = null;
+  let phenSustain = 0;
+  const sustainCount = readSustained(actor).length;
   const extraRolls = [];
   if (fixedRoll == null) {
     phenTriggered = rs.phenomenaTriggers(psykerClass, state, doubles);
     if (phenTriggered) {
       const pr = await new Roll("1d100").evaluate(); extraRolls.push(pr);
       phenRoll = pr.total;
-      phenMod = rs.phenomenaModifier(psykerClass, state, pushPts);
+      phenSustain = phenomenaSustainBonus(sustainCount);
+      phenMod = rs.phenomenaModifier(psykerClass, state, pushPts) + phenSustain;
       phenTotal = phenRoll + phenMod;
       if (phenTotal >= 75) { const per = await new Roll("1d100").evaluate(); extraRolls.push(per); perilRoll = per.total; }
     }
@@ -150,7 +165,7 @@ export async function resolveManifest(actor, power, opts) {
     ? "Daemonic — unaffected by its own phenomena." : "";
 
   // Reroll payload — stored on both flag shapes so the new card is itself rerollable
-  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, rulesetKey: rs.key, state, statePR, prBonus, circ, targetUuid, targetName, roll: roll.total, success, dosBonus };
+  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, rulesetKey: rs.key, state, statePR, prBonus, circ, targetUuid, targetName, roll: roll.total, success, dosBonus, sustain };
 
   // --- Attack-type branch (Bolt / Barrage / Storm / Blast) ---
   let attackFlags = null;
@@ -203,6 +218,8 @@ export async function resolveManifest(actor, power, opts) {
     phenMod,
     phenSign: phenMod >= 0 ? "+" : "",
     phenTotal,
+    phenSustain,
+    sustainCount,
     perilRoll,
     daemonicNote,
     opposed: s.opposed && success,
@@ -233,5 +250,12 @@ export async function resolveManifest(actor, power, opts) {
   if (fixedRoll == null) messageData.rolls = [roll, ...extraRolls];
   ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
+
+  // After the cast card, so chat reads cast-then-consequence.
+  if (success && sustain && s.sustained !== "no") {
+    await addSustained(actor, {
+      powerId: power.id, name: power.name, castEffPR: effPR, sustainAction: s.sustained
+    });
+  }
   return true;
 }

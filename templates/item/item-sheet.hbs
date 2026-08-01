@@ -144,7 +144,7 @@
       {{#if psyOpposed}}<label>Opposed By</label><select name="system.opposedBy">{{selectOptions charChoices selected=system.opposedBy}}</select>{{/if}}
       <label>Range</label><input type="text" name="system.range" value="{{system.range}}"/>
       <label>Duration</label><input type="text" name="system.duration" value="{{system.duration}}"/>
-      <label>Sustained</label><input type="checkbox" name="system.sustained" {{checked system.sustained}}/>
+      <label>Sustained</label><select name="system.sustained">{{selectOptions sustainActions selected=system.sustained}}</select>
       <label>Prerequisite</label><input type="text" name="system.prerequisite" value="{{system.prerequisite}}"/>
       <label>XP Cost</label><input type="number" name="system.cost" value="{{system.cost}}" min="0"/>
       {{#if psyIsAttack}}

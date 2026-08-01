@@ -259,6 +259,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       context.disciplines = BDH.disciplines;
       context.psychicTypes = BDH.psychicTypes;
       context.psychicActions = BDH.psychicActions;
+      context.sustainActions = BDH.sustainActions;
       context.damageTypes = BDH.damageTypes;
       context.charChoices = Object.fromEntries(Object.entries(BDH.characteristics).map(([k, c]) => [k, game.i18n.localize(c.label)]));
       context.focusOptions = [

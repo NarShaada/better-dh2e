@@ -1,6 +1,7 @@
 // scripts/data/item/psychic-power-model.mjs
 import { BaseItemModel } from "./base-item-model.mjs";
 import { BDH } from "../../config.mjs";
+import { normalizeSustain } from "../../helpers/sustain-data.mjs";
 
 export class PsychicPowerModel extends BaseItemModel {
   static defineSchema() {
@@ -15,7 +16,7 @@ export class PsychicPowerModel extends BaseItemModel {
       opposed:       new fields.BooleanField({ required: true, initial: false }),
       opposedBy:     new fields.StringField({ required: true, choices: Object.keys(BDH.characteristics), initial: "willpower" }),
       range:         new fields.StringField({ required: true, initial: "" }),
-      sustained:     new fields.BooleanField({ required: true, initial: false }),
+      sustained:     new fields.StringField({ required: true, choices: Object.keys(BDH.sustainActions), initial: "no" }),
       duration:      new fields.StringField({ required: true, initial: "" }),
       action:        new fields.StringField({ required: true, choices: Object.keys(BDH.psychicActions), initial: "half" }),
       damage:        new fields.StringField({ required: true, initial: "" }),
@@ -30,5 +31,15 @@ export class PsychicPowerModel extends BaseItemModel {
       favourite:     new fields.BooleanField({ required: true, initial: false }),
       purchased:     new fields.BooleanField({ required: true, initial: false }),
     };
+  }
+
+  /** `sustained` was a BooleanField before the sustain-action enum. A choices-constrained
+   *  StringField THROWS when handed a boolean, and that throw cascades into Foundry's "You may
+   *  only push instances of Combat" error, breaking the initiative tracker — see the note on
+   *  BaseItemModel.migrateData. Coerce so existing worlds self-heal on load. `super` is called so
+   *  the inherited craftsmanship normalization still runs. */
+  static migrateData(source) {
+    if (source && "sustained" in source) source.sustained = normalizeSustain(source.sustained);
+    return super.migrateData(source);
   }
 }

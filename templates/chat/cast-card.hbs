@@ -17,7 +17,7 @@
   </div>
   {{#if phenTriggered}}
     <div class="bdh-phenomena">
-      Psychic Phenomena: d100 {{phenRoll}}{{#if phenMod}} {{phenSign}}{{phenMod}}{{/if}} = <b>{{phenTotal}}</b>
+      Psychic Phenomena: d100 {{phenRoll}}{{#if phenMod}} {{phenSign}}{{phenMod}}{{/if}} = <b>{{phenTotal}}</b>{{#if phenSustain}} <span class="bdh-note">(+{{phenSustain}} from {{sustainCount}} sustained)</span>{{/if}}
       {{#if perilRoll}} — <b>Perils of the Warp!</b> d100 {{perilRoll}}{{/if}}
     </div>
   {{/if}}
