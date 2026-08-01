@@ -460,6 +460,18 @@
         {{/if}}
       </div>
     {{/if}}
+    {{#if sustainedPowers.length}}
+    <div class="bdh-section">
+      <div class="bdh-section-head">Active Powers</div>
+      {{#each sustainedPowers as |a|}}
+        <div class="bdh-item-row" data-item-id="{{a.powerId}}">
+          <span class="bdh-name">{{a.name}}</span>
+          <span class="bdh-desc-line">Effective PR {{a.currentPR}}</span>
+          <a class="bdh-del" data-action="releaseSustain" title="Stop sustaining">✖</a>
+        </div>
+      {{/each}}
+    </div>
+    {{/if}}
     <div class="bdh-section">
       <div class="bdh-section-head">Psychic Powers {{#if isCustom}}<button type="button" class="bdh-add" data-action="createItem" data-type="psychicPower">＋</button>{{/if}}{{#if isSimple}}<button type="button" class="bdh-add" data-action="createItem" data-type="psychicPower">＋</button>{{/if}}</div>
       {{#each psychicPowers as |p|}}

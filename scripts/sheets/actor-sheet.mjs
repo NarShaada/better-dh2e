@@ -5,6 +5,8 @@ import { rollCharacteristic, rollSkill } from "../rolls/roll-test.mjs";
 import { rollAttack } from "../rolls/attack.mjs";
 import { clearStunned } from "../rolls/conditions.mjs";
 import { rollManifest } from "../rolls/manifest.mjs";
+import { readSustained, releaseSustained } from "../rolls/sustain.mjs";
+import { currentPR } from "../helpers/sustain-data.mjs";
 import { corruptionTrack, insanityTrack, nextTestAt } from "../helpers/affliction-data.mjs";
 import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { rollRequisition } from "../rolls/requisition.mjs";
@@ -268,6 +270,14 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       return;
     }
     await rollManifest(this.actor, power.id);
+  }
+
+  /** Action: stop sustaining a power. The only manual way the Active Powers block empties.
+   *  Keys on powerId, not on the Item, so an entry outlives its power being deleted. */
+  static async #onReleaseSustain(event, target) {
+    const id = target.closest("[data-item-id]")?.dataset.itemId;
+    if (!id) return;
+    await releaseSustained(this.actor, id);
   }
 
   /** Action: buy a psychic power (Simple) — charge its XP cost once, then it can be cast. */
@@ -606,7 +616,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       refund: DarkHeresyActorSheet.#onRefund,
       addAptitude: DarkHeresyActorSheet.#onAddAptitude,
       removeAptitude: DarkHeresyActorSheet.#onRemoveAptitude,
-      castPower: DarkHeresyActorSheet.#onCastPower
+      castPower: DarkHeresyActorSheet.#onCastPower,
+      releaseSustain: DarkHeresyActorSheet.#onReleaseSustain
     }
   };
 
@@ -793,6 +804,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         favourite: s.favourite ?? false, purchased: s.purchased ?? false, cost: s.cost ?? 0,
       };
     });
+    // Live effective PR: the count changes as powers come and go, so a cast-time number would go
+    // stale the moment a second power is sustained.
+    const sustained = readSustained(this.document);
+    context.sustainedPowers = sustained.map((x) => ({
+      powerId: x.powerId, name: x.name, currentPR: currentPR(x.castEffPR, sustained.length)
+    }));
     context.canUseCustom = game.user.isGM || !game.settings.get("better-dh2e", "lockCustomMode");
     if (!context.canUseCustom && this._advancementMode === "custom") this._advancementMode = "none";
     context.advancementMode = this._advancementMode;
