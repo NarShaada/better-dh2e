@@ -786,7 +786,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         CONFIG.BDH.disciplines[s.discipline] ?? s.discipline,
         `${focusLabel}${s.focusModifier ? ` ${s.focusModifier > 0 ? "+" : ""}${s.focusModifier}` : ""}${s.opposed ? " (opposed)" : ""}`,
         CONFIG.BDH.psychicActions[s.action] ?? s.action,
-        s.sustained ? "Sustained" : null,
+        s.sustained && s.sustained !== "no" ? `Sustained: ${CONFIG.BDH.sustainActions[s.sustained] ?? s.sustained}` : null,
       ].filter(Boolean);
       return {
         id: p.id, name: p.name, summary: bits.join(" · "), desc: firstLine(s.description),
