@@ -165,7 +165,7 @@ export async function resolveManifest(actor, power, opts) {
     ? "Daemonic — unaffected by its own phenomena." : "";
 
   // Reroll payload — stored on both flag shapes so the new card is itself rerollable
-  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, rulesetKey: rs.key, state, statePR, prBonus, circ, targetUuid, targetName, roll: roll.total, success, dosBonus };
+  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, rulesetKey: rs.key, state, statePR, prBonus, circ, targetUuid, targetName, roll: roll.total, success, dosBonus, sustain };
 
   // --- Attack-type branch (Bolt / Barrage / Storm / Blast) ---
   let attackFlags = null;

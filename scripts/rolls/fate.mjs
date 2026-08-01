@@ -34,7 +34,7 @@ export async function rerollFromFate(message) {
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName });
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
-    if (power) await resolveManifest(actor, power, { rulesetKey: rr.rulesetKey, state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName });
+    if (power) await resolveManifest(actor, power, { rulesetKey: rr.rulesetKey, state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, sustain: rr.sustain });
   } else if (rr.kind === "requisition") {
     // The whole choice is stored, so the rerolled card keeps its item and its Add button —
     // the "test" branch passes only label/base/modifier and would drop both.
@@ -74,6 +74,6 @@ export async function addDoSFromFate(message) {
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
-    if (power) await resolveManifest(actor, power, { rulesetKey: rr.rulesetKey, state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, ...boost });
+    if (power) await resolveManifest(actor, power, { rulesetKey: rr.rulesetKey, state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, sustain: rr.sustain, ...boost });
   }
 }
