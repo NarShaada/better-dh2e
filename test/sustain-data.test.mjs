@@ -129,7 +129,8 @@ describe("resolveSustained", () => {
   it("collapses three powers cast at PR 2 to exactly one survivor at full PR", () => {
     const { survivors, dropped } = resolveSustained([e("A", 2), e("B", 2), e("C", 2)]);
     expect(survivors.map((s) => s.name)).toEqual(["A"]);
-    expect(dropped.map((d) => d.name)).toEqual(["C", "B"]);   // newest first
+    expect(dropped.map((d) => d.name)).toEqual(["C", "B"]);   // in removal order (weakest first) — here every
+                                                              // entry ties, so the tie-break makes it newest-first
     expect(currentPR(survivors[0].castEffPR, survivors.length)).toBe(2);
   });
 

@@ -3,6 +3,7 @@ import { performTest } from "./roll-test.mjs";
 import { resolveAttack } from "./attack.mjs";
 import { resolveManifest } from "./manifest.mjs";
 import { resolveRequisition } from "./requisition.mjs";
+import { releaseSustained } from "./sustain.mjs";
 
 const NS = "better-dh2e";
 
@@ -34,6 +35,11 @@ export async function rerollFromFate(message) {
     if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName });
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
+    // A reroll re-plays the same moment: the successful cast being rerolled already entered the
+    // sustained block, so release it FIRST. Otherwise a reroll that fails would leave the entry
+    // behind, and the live `sustainCount` read inside resolveManifest would count the power being
+    // recast toward its own phenomena strain.
+    if (rr.success && rr.sustain) await releaseSustained(actor, rr.powerId);
     if (power) await resolveManifest(actor, power, { rulesetKey: rr.rulesetKey, state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, sustain: rr.sustain });
   } else if (rr.kind === "requisition") {
     // The whole choice is stored, so the rerolled card keeps its item and its Add button —

@@ -51,7 +51,9 @@ export function phenomenaSustainBonus(count) {
  *  pass — the lowest current PR, ties to the newest — and recompute, which drops the fewest
  *  possible. Terminates: every pass removes exactly one entry.
  *
- *  Returns fresh arrays; the input is not mutated. `dropped` is newest-dropped first. */
+ *  Returns fresh arrays; the input is not mutated. `dropped` is in removal order (weakest first) —
+ *  NOT newest first: with [A castEffPR 1, B 2, C 2] the strict minimum removes the OLDEST entry
+ *  first. Ties alone break to the newest; that is what makes the all-equal case look newest-first. */
 export function resolveSustained(entries) {
   const survivors = [...(entries ?? [])];
   const dropped = [];

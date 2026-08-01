@@ -21,7 +21,9 @@ export function readSustained(actor) {
  *  penalty. Then apply the PR-0 cascade and report anything it ended. */
 export async function addSustained(actor, entry) {
   if (!actor) return;
-  const entries = readSustained(actor);
+  // Copy: getFlag hands back the document's own array, so mutating it in place would dirty the
+  // in-memory actor before (or without) the setFlag that persists it.
+  const entries = [...readSustained(actor)];
   const at = entries.findIndex((x) => x.powerId === entry.powerId);
   if (at >= 0) entries[at] = entry; else entries.push(entry);
 
