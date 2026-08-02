@@ -435,6 +435,16 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     if (data?.type !== "Item") return;
     const item = await Item.implementation.fromDropData(data);
     if (!item) return;
+
+    // An armour mod dropped on armour is an INSTALL, not a grant. canGrant already refuses to grant
+    // it, so without this the drop would be silently rejected instead of doing the obvious thing.
+    if (this.document.type === "armour" && item.type === "armourMod") {
+      const mods = foundry.utils.deepClone(this.document.system.mods);
+      mods.push({ uuid: item.uuid, name: item.name });
+      await this.document.update({ "system.mods": mods });
+      return;
+    }
+
     if (!canGrant(this.document.type, item.type)) {
       ui.notifications.warn(`A ${this.document.type} can't grant a ${item.type}.`);
       return;

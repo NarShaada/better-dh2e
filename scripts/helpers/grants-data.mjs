@@ -14,10 +14,11 @@ export function isGrantHostActive(item) {
 }
 
 /** May a host of hostType grant an item of itemType?
- *  cybernetic → anything except cybernetic; armour → anything except armour and cybernetic; trait → anything except trait. */
+ *  cybernetic → anything except cybernetic; armour → anything except armour, cybernetic and
+ *  armourMod (an armour mod is INSTALLED into system.mods, never granted); trait → anything except trait. */
 export function canGrant(hostType, itemType) {
   if (hostType === "cybernetic") return itemType !== "cybernetic";
-  if (hostType === "armour") return itemType !== "armour" && itemType !== "cybernetic";
+  if (hostType === "armour") return itemType !== "armour" && itemType !== "cybernetic" && itemType !== "armourMod";
   if (hostType === "trait") return itemType !== "trait";
   return false;
 }

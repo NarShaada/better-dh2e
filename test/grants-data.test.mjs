@@ -102,6 +102,27 @@ describe("canGrant", () => {
   });
 });
 
+describe("canGrant — armour modifications", () => {
+  it("armour cannot grant an armourMod: it is installed into system.mods, never granted", () => {
+    expect(canGrant("armour", "armourMod")).toBe(false);
+  });
+
+  it("armour still cannot grant armour or cybernetics", () => {
+    expect(canGrant("armour", "armour")).toBe(false);
+    expect(canGrant("armour", "cybernetic")).toBe(false);
+  });
+
+  it("armour can still grant ordinary items", () => {
+    expect(canGrant("armour", "gear")).toBe(true);
+    expect(canGrant("armour", "weapon")).toBe(true);
+  });
+
+  it("other hosts are unaffected by the armourMod rule", () => {
+    expect(canGrant("cybernetic", "armourMod")).toBe(true);
+    expect(canGrant("trait", "armourMod")).toBe(true);
+  });
+});
+
 describe("grantDiff", () => {
   it("creates desired-not-present, removes present-not-desired, leaves matches", () => {
     const existing = [{ id: "a", uuid: "U1" }, { id: "b", uuid: "U2" }];
