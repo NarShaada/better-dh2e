@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSourceIndex, ACQUIRABLE_TYPES, ADDABLE_TYPES, isAddable } from "../scripts/helpers/requisition-sources.mjs";
+import { buildSourceIndex, ACQUIRABLE_TYPES, ADDABLE_TYPES, isAddable, isPartOnly } from "../scripts/helpers/requisition-sources.mjs";
 
 const e = (name, type, extra = {}) => ({ name, type, uuid: `uuid:${name}:${type}`, ...extra });
 
@@ -109,6 +109,39 @@ describe("ADDABLE_TYPES / isAddable", () => {
     expect(isAddable(undefined)).toBe(false);
     expect(isAddable(null)).toBe(false);
     expect(isAddable("")).toBe(false);
+  });
+});
+
+describe("isPartOnly", () => {
+  it("is true for exactly the acquirable types the sheet cannot render", () => {
+    expect(isPartOnly("weaponMod")).toBe(true);
+    expect(isPartOnly("ammunition")).toBe(true);
+    expect(isPartOnly("armourMod")).toBe(true);
+  });
+
+  it("is false for every addable type", () => {
+    for (const t of ADDABLE_TYPES) expect(isPartOnly(t)).toBe(false);
+  });
+
+  // The distinction that keeps the drop guard and canGrant from over-refusing: talents, traits and
+  // psychic powers are not addable (they are not acquired with Influence at all) but the sheet DOES
+  // render them, so they must stay droppable and grantable. `!isAddable(t)` would refuse them.
+  it("is false for renderable non-acquirable types, unlike !isAddable", () => {
+    for (const t of ["talent", "trait", "psychicPower"]) {
+      expect(isAddable(t)).toBe(false);
+      expect(isPartOnly(t)).toBe(false);
+    }
+  });
+
+  it("is false for unknown or absent types", () => {
+    expect(isPartOnly("nonsense")).toBe(false);
+    expect(isPartOnly(undefined)).toBe(false);
+    expect(isPartOnly(null)).toBe(false);
+    expect(isPartOnly("")).toBe(false);
+  });
+
+  it("partitions ACQUIRABLE_TYPES with isAddable — every acquirable type is one or the other", () => {
+    for (const t of ACQUIRABLE_TYPES) expect(isAddable(t)).toBe(!isPartOnly(t));
   });
 });
 

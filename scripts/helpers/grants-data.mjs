@@ -1,4 +1,5 @@
 // scripts/helpers/grants-data.mjs — PURE. Grant-host rules + reconcile diff.
+import { isPartOnly } from "./requisition-sources.mjs";
 
 /** "cybernetic" | "armour" | "trait" | null — which grant-host kind this item is. */
 export function grantHostType(item) {
@@ -14,11 +15,19 @@ export function isGrantHostActive(item) {
 }
 
 /** May a host of hostType grant an item of itemType?
- *  cybernetic → anything except cybernetic; armour → anything except armour, cybernetic and
- *  armourMod (an armour mod is INSTALLED into system.mods, never granted); trait → anything except trait. */
+ *
+ *  NO host may grant a part-only type (weaponMod, ammunition, armourMod). A part is INSTALLED into
+ *  a host item, never granted onto an actor: the actor sheet renders none of them and encumbrance
+ *  does not weigh them, so granting one produces the same invisible orphan the Requisition card's
+ *  Add button already refuses to create. Enforced through `isPartOnly` rather than by naming
+ *  armourMod, so a future part-only type is covered without touching this function.
+ *
+ *  On top of that, each host excludes its own kind: cybernetic → not cybernetic;
+ *  armour → not armour and not cybernetic; trait → not trait. */
 export function canGrant(hostType, itemType) {
+  if (isPartOnly(itemType)) return false;
   if (hostType === "cybernetic") return itemType !== "cybernetic";
-  if (hostType === "armour") return itemType !== "armour" && itemType !== "cybernetic" && itemType !== "armourMod";
+  if (hostType === "armour") return itemType !== "armour" && itemType !== "cybernetic";
   if (hostType === "trait") return itemType !== "trait";
   return false;
 }

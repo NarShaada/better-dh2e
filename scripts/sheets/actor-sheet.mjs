@@ -10,6 +10,7 @@ import { currentPR } from "../helpers/sustain-data.mjs";
 import { corruptionTrack, insanityTrack, nextTestAt } from "../helpers/affliction-data.mjs";
 import { rollAfflictionTest } from "../rolls/roll-test.mjs";
 import { rollRequisition } from "../rolls/requisition.mjs";
+import { isPartOnly } from "../helpers/requisition-sources.mjs";
 import { BDH } from "../config.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
@@ -138,9 +139,18 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   /** Drag-drop create must match the ＋-button path: stamp `purchased` on a dropped talent/psychic power
    *  to the current advancement mode (Custom = owned, Simple/Play = unpaid). The ActorSheetV2 default
-   *  would create it with the model default (unpaid) regardless of mode. Same-actor drops are reorders. */
+   *  would create it with the model default (unpaid) regardless of mode. Same-actor drops are reorders.
+   *
+   *  Part-only types are refused outright. A compendium ships armour mods and weapon mods as Items,
+   *  so dragging one onto a character is the obvious thing to try — but no tab renders it and the
+   *  encumbrance loop does not weigh it, leaving an invisible orphan. Same gate the Requisition
+   *  card's Add button uses. */
   async _onDropItem(event, item) {
     if (item.parent === this.actor) return super._onDropItem(event, item);
+    if (isPartOnly(item.type)) {
+      ui.notifications.warn(`${game.i18n.localize(`TYPES.Item.${item.type}`)} is a part — install it on an armour or weapon rather than carrying it on the sheet.`);
+      return;
+    }
     const itemData = item.toObject();
     const purchased = purchasedOnAcquire(itemData.type, this._advancementMode);
     if (purchased !== null) itemData.system = { ...itemData.system, purchased };

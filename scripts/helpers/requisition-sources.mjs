@@ -11,16 +11,33 @@ export const ACQUIRABLE_TYPES = [
 
 /** Acquirable types that have somewhere to live on the actor sheet.
  *
- *  weaponMod, ammunition and armourMod are pickable — their Availability drives the Requisition
- *  test — but the actor sheet renders none of them, and the encumbrance loop does not weigh them.
- *  Adding one would create an inert item the player cannot see, so the card offers no Add button.
- *  Installing a part references a SOURCE item by uuid, so an actor-owned copy achieves nothing. */
+ *  weaponMod, ammunition and armourMod are pickable but the actor sheet renders none of them, and
+ *  the encumbrance loop does not weigh them. Adding one would create an inert item the player
+ *  cannot see, so the card offers no Add button. Installing a part references a SOURCE item by
+ *  uuid, so an actor-owned copy achieves nothing.
+ *
+ *  Of the three, only armourMod carries an `availability` field to prefill the Requisition test —
+ *  WeaponModModel and AmmunitionModel define none. The other two are pickable purely so the roll
+ *  can be made against a named item; their Availability comes from whatever the GM sets in the
+ *  dialog. */
 export const ADDABLE_TYPES = ["weapon", "armour", "forceField", "gear", "cybernetic"];
 
 /** May a requisitioned item of this type be added to the sheet? Unknown types are refused, so a
  *  future item type defaults to no Add button rather than to an orphan. */
 export function isAddable(type) {
   return ADDABLE_TYPES.includes(type);
+}
+
+/** Is this a PART — a type that is installed into a host item rather than carried by an actor?
+ *  weaponMod / ammunition / armourMod: acquirable, but nothing on the actor sheet renders them and
+ *  no encumbrance loop weighs them, so an actor-owned copy is an invisible orphan.
+ *
+ *  Derived from the two lists above rather than named literally, so a future part-only type is
+ *  covered by adding it to ACQUIRABLE_TYPES alone. Deliberately narrower than `!isAddable(type)`:
+ *  talent, trait and psychicPower are not acquirable at all but DO render on the sheet, and must
+ *  stay droppable and grantable. */
+export function isPartOnly(type) {
+  return ACQUIRABLE_TYPES.includes(type) && !ADDABLE_TYPES.includes(type);
 }
 
 /**
