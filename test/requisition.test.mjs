@@ -102,7 +102,7 @@ describe("resolveRequisition — rolled", () => {
     primeDice([5]);
     await resolveRequisition(actor(), {
       characteristicKey: "influence", modifier: "+0",
-      availability: "average", craftsmanship: "normal", itemUuid: "Item.i1", itemLabel: "Medikit"
+      availability: "average", craftsmanship: "normal", itemUuid: "Item.i1", itemType: "gear", itemLabel: "Medikit"
     });
     expect(lastCard().success).toBe(true);
     expect(lastCard().canAdd).toBe(true);
@@ -155,7 +155,7 @@ describe("resolveRequisition — Ubiquitous", () => {
   it("does not roll and reports automatic success", async () => {
     await resolveRequisition(actor(), {
       characteristicKey: "influence", modifier: "+0",
-      availability: "ubiquitous", craftsmanship: "normal", itemUuid: "Item.i1", itemLabel: "Medikit"
+      availability: "ubiquitous", craftsmanship: "normal", itemUuid: "Item.i1", itemType: "gear", itemLabel: "Medikit"
     });
     expect(capturedRolls()).toEqual([]);
     expect(lastCard().automatic).toBe(true);
@@ -375,7 +375,7 @@ describe("Fate integration", () => {
     registerUuid("Actor.a1", a);
     primeDice([5]);
     const choice = { characteristicKey: "influence", modifier: "+0", availability: "average",
-                     craftsmanship: "good", itemUuid: "Item.i1", itemLabel: "Medikit" };
+                     craftsmanship: "good", itemUuid: "Item.i1", itemType: "gear", itemLabel: "Medikit" };
     await rerollFromFate({ flags: { [NS]: { reroll: { kind: "requisition", actorUuid: "Actor.a1", choice } } } });
     const card = lastCard();
     expect(card.canAdd).toBe(true);
@@ -387,7 +387,7 @@ describe("Fate integration", () => {
     registerUuid("Actor.a1", a);
     primeDice([5]);
     const choice = { characteristicKey: "influence", modifier: "+0", availability: "average",
-                     craftsmanship: "normal", itemUuid: "Item.i1", itemLabel: "Medikit" };
+                     craftsmanship: "normal", itemUuid: "Item.i1", itemType: "gear", itemLabel: "Medikit" };
     await rerollFromFate({ flags: { [NS]: { reroll: { kind: "requisition", actorUuid: "Actor.a1", choice } } } });
     // Before the fix, the function fell through every `if` after decrementing Fate: the point was
     // spent but nothing else happened. Here it must both spend the point AND post a fresh

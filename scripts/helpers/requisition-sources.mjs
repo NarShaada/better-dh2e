@@ -6,8 +6,22 @@
 /** Item types you can requisition. Talents, traits and psychic powers are Items in Foundry's
  *  sense but are not acquired with Influence, and including them would bury the useful entries. */
 export const ACQUIRABLE_TYPES = [
-  "weapon", "weaponMod", "ammunition", "armour", "forceField", "gear", "cybernetic"
+  "weapon", "weaponMod", "ammunition", "armour", "armourMod", "forceField", "gear", "cybernetic"
 ];
+
+/** Acquirable types that have somewhere to live on the actor sheet.
+ *
+ *  weaponMod, ammunition and armourMod are pickable — their Availability drives the Requisition
+ *  test — but the actor sheet renders none of them, and the encumbrance loop does not weigh them.
+ *  Adding one would create an inert item the player cannot see, so the card offers no Add button.
+ *  Installing a part references a SOURCE item by uuid, so an actor-owned copy achieves nothing. */
+export const ADDABLE_TYPES = ["weapon", "armour", "forceField", "gear", "cybernetic"];
+
+/** May a requisitioned item of this type be added to the sheet? Unknown types are refused, so a
+ *  future item type defaults to no Add button rather than to an orphan. */
+export function isAddable(type) {
+  return ADDABLE_TYPES.includes(type);
+}
 
 /**
  * @param {Array<{name:string, uuid:string, type:string, availability?:string, source?:string}>} entries

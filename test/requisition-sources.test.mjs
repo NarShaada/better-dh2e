@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { buildSourceIndex, ACQUIRABLE_TYPES } from "../scripts/helpers/requisition-sources.mjs";
+import { buildSourceIndex, ACQUIRABLE_TYPES, ADDABLE_TYPES, isAddable } from "../scripts/helpers/requisition-sources.mjs";
 
 const e = (name, type, extra = {}) => ({ name, type, uuid: `uuid:${name}:${type}`, ...extra });
 
 describe("ACQUIRABLE_TYPES", () => {
   it("covers the gear-like item types and excludes the rest", () => {
     expect(ACQUIRABLE_TYPES).toEqual(
-      ["weapon", "weaponMod", "ammunition", "armour", "forceField", "gear", "cybernetic"]
+      ["weapon", "weaponMod", "ammunition", "armour", "armourMod", "forceField", "gear", "cybernetic"]
     );
     for (const t of ["talent", "trait", "psychicPower"]) expect(ACQUIRABLE_TYPES).not.toContain(t);
   });
@@ -80,5 +80,40 @@ describe("buildSourceIndex", () => {
       e("Lasgun", "weapon")
     ]);
     expect(out.map((x) => x.label).sort()).toEqual(["Lasgun", "Lasgun (A)", "Lasgun (B)"]);
+  });
+});
+
+describe("ADDABLE_TYPES / isAddable", () => {
+  it("covers exactly the types the actor sheet renders", () => {
+    expect(ADDABLE_TYPES).toEqual(["weapon", "armour", "forceField", "gear", "cybernetic"]);
+  });
+
+  it("is a subset of what you can requisition", () => {
+    for (const t of ADDABLE_TYPES) expect(ACQUIRABLE_TYPES).toContain(t);
+  });
+
+  it("refuses the part types — the sheet has nowhere to show them", () => {
+    expect(isAddable("weaponMod")).toBe(false);
+    expect(isAddable("ammunition")).toBe(false);
+    expect(isAddable("armourMod")).toBe(false);
+  });
+
+  it("allows the types that have a home", () => {
+    expect(isAddable("weapon")).toBe(true);
+    expect(isAddable("armour")).toBe(true);
+    expect(isAddable("gear")).toBe(true);
+  });
+
+  it("defaults to false for unknown or absent types, so a new type never creates an orphan", () => {
+    expect(isAddable("psychicPower")).toBe(false);
+    expect(isAddable(undefined)).toBe(false);
+    expect(isAddable(null)).toBe(false);
+    expect(isAddable("")).toBe(false);
+  });
+});
+
+describe("ACQUIRABLE_TYPES — armourMod", () => {
+  it("includes armourMod so its Availability feeds the test", () => {
+    expect(ACQUIRABLE_TYPES).toContain("armourMod");
   });
 });
