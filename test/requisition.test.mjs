@@ -112,7 +112,7 @@ describe("resolveRequisition — rolled", () => {
     primeDice([99]);
     await resolveRequisition(actor(), {
       characteristicKey: "influence", modifier: "+0",
-      availability: "average", craftsmanship: "normal", itemUuid: "Item.i1", itemLabel: "Medikit"
+      availability: "average", craftsmanship: "normal", itemUuid: "Item.i1", itemType: "gear", itemLabel: "Medikit"
     });
     expect(lastCard().canAdd).toBe(false);
   });
@@ -121,7 +121,7 @@ describe("resolveRequisition — rolled", () => {
     primeDice([5]);
     await resolveRequisition(actor(), {
       characteristicKey: "influence", modifier: "+0",
-      availability: "average", craftsmanship: "normal", itemUuid: null, itemLabel: "Nonsense Gun"
+      availability: "average", craftsmanship: "normal", itemUuid: null, itemType: "gear", itemLabel: "Nonsense Gun"
     });
     expect(lastCard().success).toBe(true);
     expect(lastCard().canAdd).toBe(false);
@@ -179,6 +179,10 @@ describe("rollRequisition — turning the dialog into a choice", () => {
     await rollRequisition(actor());
     expect(lastFlags().itemUuid).toBe("Item.i1");
     expect(lastFlags().itemLabel).toBe("Medikit");
+    // Pins itemType onto the choice the dialog builds — the field that survives a Fate reroll.
+    // Without it the Add button would silently vanish for every legitimately requisitioned item.
+    expect(choiceOf().itemType).toBe("gear");
+    expect(lastCard().canAdd).toBe(true);
   });
 
   it("round-trips a disambiguated duplicate label to the right pack's uuid", async () => {
