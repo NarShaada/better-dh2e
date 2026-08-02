@@ -65,6 +65,17 @@
       <label>R Leg</label><input type="number" name="system.locations.rightLeg" value="{{system.locations.rightLeg}}"/>
       <label>L Leg</label><input type="number" name="system.locations.leftLeg" value="{{system.locations.leftLeg}}"/>
     </div>
+    <div class="bdh-list-section">
+      <div class="bdh-list-head">Modifications <span class="bdh-hint">— drag an Armour Modification here, or add one ({{armourModCount}} / 4)</span></div>
+      {{#each armourModList as |m|}}
+        <div class="bdh-list-row" data-part-uuid="{{m.uuid}}">
+          <span{{#if m.uuid}} class="bdh-part-link" data-action="editPart" title="Edit this modification"{{/if}}><b>{{m.name}}</b>{{#if m.usedWith}} — {{m.usedWith}}{{/if}}</span>
+          <a data-action="removeMod" data-index="{{m.index}}" title="Remove">✖</a>
+        </div>
+      {{/each}}
+      {{#unless armourModList.length}}<div class="bdh-empty">No modifications installed.</div>{{/unless}}
+      <div class="bdh-add-row"><button type="button" data-action="addArmourMod">＋ Add</button></div>
+    </div>
   {{/if}}
 
   {{#if showBonuses}}

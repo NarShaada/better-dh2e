@@ -153,6 +153,20 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     await this.document.update({ "system.mods": mods });
   }
 
+  /** Action: create a new Armour Modification item and install it on this armour.
+   *  Mirrors #onAddMod, but pushes name-only — armourMod has no numbers to cache. */
+  static async #onAddArmourMod(event, target) {
+    const folder = await weaponPartsFolder();
+    const created = await getDocumentClass("Item").create({
+      name: `New ${game.i18n.localize("TYPES.Item.armourMod")}`, type: "armourMod", folder: folder.id
+    });
+    if (!created) return;
+    const mods = foundry.utils.deepClone(this.document.system.mods);
+    mods.push({ uuid: created.uuid, name: created.name });
+    await this.document.update({ "system.mods": mods });
+    created.sheet.render(true);
+  }
+
   /** Action: create a new Ammunition item, stock one magazine of it, and open it for editing. */
   static async #onAddAmmo(event, target) {
     const folder = await weaponPartsFolder();
@@ -208,6 +222,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       removeQuality: DarkHeresyItemSheet.#onRemoveQuality,
       addMod: DarkHeresyItemSheet.#onAddMod,
       removeMod: DarkHeresyItemSheet.#onRemoveMod,
+      addArmourMod: DarkHeresyItemSheet.#onAddArmourMod,
       addAmmo: DarkHeresyItemSheet.#onAddAmmo,
       removeAmmo: DarkHeresyItemSheet.#onRemoveAmmo,
       editPart: DarkHeresyItemSheet.#onEditPart,
@@ -307,6 +322,15 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     if (context.isAmmunition) {
       // First option = "" (keep the weapon's own damage type), matching AmmunitionModel's damageType field.
       context.ammoDamageTypeChoices = { "": "— keep weapon's —", ...BDH.damageTypes };
+    }
+
+    if (context.isArmour) {
+      const mods = system.mods ?? [];
+      context.armourModCount = mods.length;
+      context.armourModList = await Promise.all(mods.map(async (m, i) => {
+        const src = m.uuid ? await fromUuid(m.uuid) : null;
+        return { index: i, uuid: m.uuid, name: m.name, usedWith: src?.system?.usedWith ?? "" };
+      }));
     }
 
     context.showBonuses = context.isCybernetic || context.isGear || context.isArmour || context.isTrait;

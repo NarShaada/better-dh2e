@@ -20,7 +20,15 @@ export class ArmourModel extends BaseItemModel {
       equipped:      new fields.BooleanField({ required: true, initial: false }),
       maxAgility:    new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
       bonuses:       bonusesField(),
-      grants:        grantsField()
+      grants:        grantsField(),
+      /** Installed armour modifications (Enemies Within p. 49). Names ONLY — armourMod carries no
+       *  numbers to cache, so unlike weapon mods there is nothing that can drift and no
+       *  refreshPartsFromSource equivalent is needed. A renamed source shows the old name until the
+       *  mod is removed and re-added; that is cosmetic and accepted. */
+      mods: new fields.ArrayField(new fields.SchemaField({
+        uuid: new fields.StringField({ required: true, initial: "" }),
+        name: new fields.StringField({ required: true, initial: "" })
+      }))
     };
   }
 }
