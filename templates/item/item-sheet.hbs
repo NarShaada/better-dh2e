@@ -112,6 +112,14 @@
     </div>
   {{/if}}
 
+  {{#if isArmourMod}}
+    <div class="bdh-fields">
+      <label>Used With</label><input type="text" name="system.usedWith" value="{{system.usedWith}}" placeholder="Any armour"/>
+      <label>Weight</label><input type="number" step="0.1" name="system.weight" value="{{system.weight}}" min="0"/>
+      <label>Availability</label><select name="system.availability">{{selectOptions availChoices selected=system.availability}}</select>
+    </div>
+  {{/if}}
+
   {{#if isAmmunition}}
     <div class="bdh-fields">
       <label>Attack Mod</label><input type="number" name="system.attackMod" value="{{system.attackMod}}"/>

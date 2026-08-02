@@ -242,6 +242,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     context.isWeapon = t === "weapon";
     context.isWeaponMod = t === "weaponMod";
     context.isAmmunition = t === "ammunition";
+    context.isArmourMod = t === "armourMod";
     context.isPsychicPower = t === "psychicPower";
     context.craftChoices = BDH.craftsmanship;
     context.availChoices = BDH.availability;
