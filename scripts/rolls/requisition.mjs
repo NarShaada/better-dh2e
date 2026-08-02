@@ -6,7 +6,7 @@
 import { BDH } from "../config.mjs";
 import { evaluateTest, parseModifier } from "./test-logic.mjs";
 import { makeRequisitionRuleset } from "../helpers/requisition-ruleset.mjs";
-import { buildSourceIndex } from "../helpers/requisition-sources.mjs";
+import { buildSourceIndex, isAddable } from "../helpers/requisition-sources.mjs";
 import { promptTest } from "./roll-test.mjs";
 import { escapeHtml } from "../helpers/html-escape.mjs";
 
@@ -105,6 +105,7 @@ export async function rollRequisition(actor) {
     availability: choice.fieldValues?.availability ?? "average",
     craftsmanship: choice.fieldValues?.craftsmanship ?? "normal",
     itemUuid: picked?.uuid ?? null,
+    itemType: picked?.type ?? null,
     itemLabel: typedLabel
   });
 }
@@ -135,7 +136,7 @@ export async function resolveRequisition(actor, choice) {
     modifierLabel: result ? `${result.modifier >= 0 ? "+" : ""}${result.modifier}` : "",
     parts: total.parts.map((p) => ({ label: p.label, value: Math.abs(p.value), sign: p.value < 0 ? "−" : "+" })),
     gmDiscretion: choice.availability === "unique",
-    canAdd: success && !!choice.itemUuid,
+    canAdd: success && !!choice.itemUuid && isAddable(choice.itemType),
     itemLabel: choice.itemLabel ?? ""
   });
 

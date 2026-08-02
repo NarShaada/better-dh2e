@@ -102,6 +102,45 @@ describe("canGrant", () => {
   });
 });
 
+describe("canGrant — part-only types", () => {
+  it("armour cannot grant an armourMod: it is installed into system.mods, never granted", () => {
+    expect(canGrant("armour", "armourMod")).toBe(false);
+  });
+
+  it("armour still cannot grant armour or cybernetics", () => {
+    expect(canGrant("armour", "armour")).toBe(false);
+    expect(canGrant("armour", "cybernetic")).toBe(false);
+  });
+
+  it("armour can still grant ordinary items", () => {
+    expect(canGrant("armour", "gear")).toBe(true);
+    expect(canGrant("armour", "weapon")).toBe(true);
+  });
+
+  // These four previously asserted `true`, encoding the bug: the rule was written as an
+  // armour-host exclusion, so a cybernetic or a trait could still grant a part onto the actor —
+  // the same invisible orphan by a blessed path. The rule is a property of the GRANTED type, not
+  // of the host, so every host refuses every part-only type.
+  it("no host may grant an armourMod, whatever the host is", () => {
+    expect(canGrant("cybernetic", "armourMod")).toBe(false);
+    expect(canGrant("trait", "armourMod")).toBe(false);
+  });
+
+  it("weaponMod and ammunition are equally unrenderable, and equally ungrantable", () => {
+    for (const host of ["cybernetic", "armour", "trait"]) {
+      expect(canGrant(host, "weaponMod")).toBe(false);
+      expect(canGrant(host, "ammunition")).toBe(false);
+    }
+  });
+
+  it("types the sheet DOES render stay grantable — the gate is narrower than !isAddable", () => {
+    expect(canGrant("cybernetic", "talent")).toBe(true);
+    expect(canGrant("armour", "talent")).toBe(true);
+    expect(canGrant("cybernetic", "trait")).toBe(true);
+    expect(canGrant("trait", "psychicPower")).toBe(true);
+  });
+});
+
 describe("grantDiff", () => {
   it("creates desired-not-present, removes present-not-desired, leaves matches", () => {
     const existing = [{ id: "a", uuid: "U1" }, { id: "b", uuid: "U2" }];

@@ -22,6 +22,7 @@ import { ForceFieldModel } from "./data/item/force-field-model.mjs";
 import { CyberneticModel } from "./data/item/cybernetic-model.mjs";
 import { PsychicPowerModel } from "./data/item/psychic-power-model.mjs";
 import { ArmourModel } from "./data/item/armour-model.mjs";
+import { ArmourModModel } from "./data/item/armour-mod-model.mjs";
 import { DarkHeresyActor } from "./documents/actor.mjs";
 import { DarkHeresyItem } from "./documents/item.mjs";
 import { DarkHeresyActorSheet } from "./sheets/actor-sheet.mjs";
@@ -84,6 +85,7 @@ Hooks.once("init", () => {
   CONFIG.Item.dataModels.cybernetic = CyberneticModel;
   CONFIG.Item.dataModels.psychicPower = PsychicPowerModel;
   CONFIG.Item.dataModels.armour = ArmourModel;
+  CONFIG.Item.dataModels.armourMod = ArmourModModel;
 
   // Sheets (ApplicationV2 registration)
   foundry.documents.collections.Actors.unregisterSheet("core", foundry.appv1.sheets.ActorSheet);
