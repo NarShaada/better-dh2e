@@ -154,6 +154,7 @@ BDH.qualities = {
   concussive: { label: "Concussive", takesValue: true, automation: "full" },
   corrosive:  { label: "Corrosive", takesValue: false, automation: "full", noteOn: "damage" },   // auto on single-target apply; note reminds on AoE paths
   crippling:  { label: "Crippling", takesValue: true, automation: "full" },
+  daemonbane: { label: "Daemonbane", takesValue: false, noteOn: "attack" },
   defensive:  { label: "Defensive", takesValue: false, automation: "full" },
   flame:         { label: "Flame", takesValue: false, automation: "full" },
   force:         { label: "Force", takesValue: false },
