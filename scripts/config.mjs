@@ -214,7 +214,12 @@ BDH.sizes = {
 };
 
 /** Psychic disciplines (key -> label). */
-BDH.disciplines = { biomancy: "Biomancy", divination: "Divination", pyromancy: "Pyromancy", telekinesis: "Telekinesis", telepathy: "Telepathy", minor: "Minor / Other" };
+BDH.disciplines = {
+  biomancy: "Biomancy", divination: "Divination", pyromancy: "Pyromancy",
+  telekinesis: "Telekinesis", telepathy: "Telepathy",
+  sanctic: "Sanctic Daemonology", malefic: "Malefic Daemonology",
+  minor: "Minor / Other"
+};
 /** Psychic power resolution type (key -> label). bolt/barrage/storm/blast are attacks (see isPsychicAttack). */
 BDH.psychicTypes = { effect: "Effect", bolt: "Psychic Bolt", barrage: "Psychic Barrage", storm: "Psychic Storm", blast: "Psychic Blast" };
 /** Action to manifest (key -> label). */
