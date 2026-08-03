@@ -218,6 +218,14 @@ Hooks.once("init", () => {
     type: Boolean,
     default: false,
   });
+  game.settings.register("better-dh2e", "maleficCorruption", {
+    name: "Malefic Daemonology grants Corruption",
+    hint: "Enemies Beyond p. 54: a successful Malefic Daemonology manifest gives the psyker Corruption points equal to the psy rating used. Turn off to track this by hand.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+  });
 
   // --- Black Crusade conversion (per-area rule selection; both data variants always stored) ---
   game.settings.register("better-dh2e", "advancementRules", {

@@ -86,3 +86,11 @@ export function resolveFocusTarget(system, focusTest) {
   }
   return { kind: "characteristic", key: "willpower", total: system?.characteristics?.willpower?.total ?? 0 };
 }
+
+/** Enemies Beyond p. 54: a successful Malefic Daemonology manifest grants Corruption equal to the
+ *  psy rating USED to manifest — i.e. the effective PR after push/fetter, not the base rating.
+ *  Returns the number of Corruption points to add; 0 means no change. */
+export function maleficCorruptionGain(discipline, success, effectivePR) {
+  if (discipline !== "malefic" || !success) return 0;
+  return Math.max(0, Number(effectivePR) || 0);
+}

@@ -1,7 +1,7 @@
 // scripts/rolls/manifest.mjs
 // Psychic manifestation cast flow: dialog → PR choice → focus roll → phenomena/perils → cast card.
 import { evaluateTest } from "./test-logic.mjs";
-import { manifestState, isDoubles, resolveFocusTarget, substitutePR } from "../helpers/psychic-manifest.mjs";
+import { manifestState, isDoubles, resolveFocusTarget, substitutePR, maleficCorruptionGain } from "../helpers/psychic-manifest.mjs";
 import { psychicRuleset, makePsychicRuleset } from "../helpers/psychic-ruleset.mjs";
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
@@ -268,6 +268,13 @@ export async function resolveManifest(actor, power, opts) {
     await addSustained(actor, {
       powerId: power.id, name: power.name, castEffPR: effPR, sustainAction: s.sustained
     });
+  }
+
+  // Enemies Beyond p. 54, after the effects resolve — so this follows the sustain block, which
+  // itself follows the cast card. Gated for GMs who track corruption by hand.
+  if (game.settings.get("better-dh2e", "maleficCorruption")) {
+    const gain = maleficCorruptionGain(s.discipline, success, effPR);
+    if (gain) await actor.update({ "system.corruption": (actor.system.corruption ?? 0) + gain });
   }
   return true;
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { isPsychicAttack, PSYCHIC_ATTACK_TYPES } from "../scripts/helpers/psychic-data.mjs";
 import { BDH } from "../scripts/config.mjs";
+import { maleficCorruptionGain } from "../scripts/helpers/psychic-manifest.mjs";
 
 describe("isPsychicAttack", () => {
   it("bolt/barrage/storm/blast are attacks; effect is not", () => {
@@ -61,5 +62,31 @@ describe("PsychicPowerModel.migrateData — blastRadius", () => {
 
   it("still migrates sustained, which shares this hook", () => {
     expect(PsychicPowerModel.migrateData({ sustained: true }).sustained).toBe("half");
+  });
+});
+
+describe("maleficCorruptionGain — Enemies Beyond p. 54", () => {
+  it("grants Corruption equal to the psy rating used, on a successful Malefic manifest", () => {
+    expect(maleficCorruptionGain("malefic", true, 4)).toBe(4);
+  });
+
+  it("grants nothing when the manifest failed", () => {
+    expect(maleficCorruptionGain("malefic", false, 4)).toBe(0);
+  });
+
+  it("grants nothing for any other discipline", () => {
+    expect(maleficCorruptionGain("sanctic", true, 4)).toBe(0);
+    expect(maleficCorruptionGain("biomancy", true, 4)).toBe(0);
+    expect(maleficCorruptionGain("minor", true, 4)).toBe(0);
+  });
+
+  it("uses the effective psy rating it is given, pushed or fettered", () => {
+    expect(maleficCorruptionGain("malefic", true, 7)).toBe(7);
+    expect(maleficCorruptionGain("malefic", true, 1)).toBe(1);
+  });
+
+  it("never returns a negative or non-numeric gain", () => {
+    expect(maleficCorruptionGain("malefic", true, 0)).toBe(0);
+    expect(maleficCorruptionGain("malefic", true, undefined)).toBe(0);
   });
 });
