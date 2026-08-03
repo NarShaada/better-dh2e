@@ -131,55 +131,59 @@ BDH.damageTypes = { energy: "Energy", explosive: "Explosive", rending: "Rending"
 /** Reload duration (key -> label). */
 BDH.reload = { free: "Free", half: "Half", full: "Full", twoFull: "2 Full", threeFull: "3 Full" };
 
-/** Weapon qualities (key -> {label, takesValue, automation}). `automation`: "full" = black gear (fully automated),
- *  "partial" = red gear (mostly automated, minor manual input e.g. consult a table), absent = no gear (display-only, just flagged). */
+/** Weapon qualities (key -> {label, takesValue, noteOn?, homebrew?}).
+ *  `takesValue`: the quality carries an (X). `noteOn`: post a reminder on the "attack" or "damage"
+ *  card instead of resolving it — used where the effect needs a judgement the system cannot make.
+ *  `homebrew`: non-vanilla, hidden and inert unless the Non-Vanilla Qualities setting is on; this is
+ *  what the sheet's gear icon distinguishes. Whether a quality is automated is not recorded here —
+ *  read the call sites in quality-modules.mjs and attack.mjs, which are the only source of truth. */
 BDH.qualities = {
-  tearing:    { label: "Tearing", takesValue: false, automation: "full" },
-  proven:     { label: "Proven", takesValue: true, automation: "full" },
-  primitive:  { label: "Primitive", takesValue: true, automation: "full" },
-  razorSharp: { label: "Razor Sharp", takesValue: false, automation: "full" },
-  powerField: { label: "Power Field", takesValue: false, automation: "partial" },
-  felling:    { label: "Felling", takesValue: true, automation: "full" },
-  accurate:   { label: "Accurate", takesValue: false, automation: "full" },
-  storm:      { label: "Storm", takesValue: false, automation: "full" },
-  twinLinked: { label: "Twin-Linked", takesValue: false, automation: "full" },
-  reliable:   { label: "Reliable", takesValue: false, automation: "full" },
-  unreliable: { label: "Unreliable", takesValue: false, automation: "full" },
-  unwieldy:   { label: "Unwieldy", takesValue: false, automation: "full" },
-  flexible:   { label: "Flexible", takesValue: false, automation: "full" },
-  balanced:   { label: "Balanced", takesValue: false, automation: "full" },
-  unbalanced: { label: "Unbalanced", takesValue: false, automation: "full" },
-  shocking:   { label: "Shocking", takesValue: false, automation: "full" },
-  blast:      { label: "Blast", takesValue: true, automation: "full", noteOn: "attack" },
-  concussive: { label: "Concussive", takesValue: true, automation: "full" },
-  corrosive:  { label: "Corrosive", takesValue: false, automation: "full", noteOn: "damage" },   // auto on single-target apply; note reminds on AoE paths
-  crippling:  { label: "Crippling", takesValue: true, automation: "full" },
+  tearing:    { label: "Tearing", takesValue: false },
+  proven:     { label: "Proven", takesValue: true },
+  primitive:  { label: "Primitive", takesValue: true },
+  razorSharp: { label: "Razor Sharp", takesValue: false },
+  powerField: { label: "Power Field", takesValue: false },
+  felling:    { label: "Felling", takesValue: true },
+  accurate:   { label: "Accurate", takesValue: false },
+  storm:      { label: "Storm", takesValue: false },
+  twinLinked: { label: "Twin-Linked", takesValue: false },
+  reliable:   { label: "Reliable", takesValue: false },
+  unreliable: { label: "Unreliable", takesValue: false },
+  unwieldy:   { label: "Unwieldy", takesValue: false },
+  flexible:   { label: "Flexible", takesValue: false },
+  balanced:   { label: "Balanced", takesValue: false },
+  unbalanced: { label: "Unbalanced", takesValue: false },
+  shocking:   { label: "Shocking", takesValue: false },
+  blast:      { label: "Blast", takesValue: true, noteOn: "attack" },
+  concussive: { label: "Concussive", takesValue: true },
+  corrosive:  { label: "Corrosive", takesValue: false, noteOn: "damage" },   // auto on single-target apply; note reminds on AoE paths
+  crippling:  { label: "Crippling", takesValue: true },
   daemonbane: { label: "Daemonbane", takesValue: false, noteOn: "attack" },
-  defensive:  { label: "Defensive", takesValue: false, automation: "full" },
-  flame:         { label: "Flame", takesValue: false, automation: "full" },
+  defensive:  { label: "Defensive", takesValue: false },
+  flame:         { label: "Flame", takesValue: false },
   force:         { label: "Force", takesValue: false },
-  graviton:      { label: "Graviton", takesValue: false, automation: "full" },
-  hallucinogenic:{ label: "Hallucinogenic", takesValue: true, automation: "partial" },
+  graviton:      { label: "Graviton", takesValue: false },
+  hallucinogenic:{ label: "Hallucinogenic", takesValue: true },
   haywire:    { label: "Haywire", takesValue: true, noteOn: "attack" },
-  inaccurate: { label: "Inaccurate", takesValue: false, automation: "full" },
+  inaccurate: { label: "Inaccurate", takesValue: false },
   indirect:   { label: "Indirect", takesValue: true, noteOn: "attack" },
-  lance:      { label: "Lance", takesValue: false, automation: "full" },
-  melta:      { label: "Melta", takesValue: false, automation: "full" },
-  overheats:  { label: "Overheats", takesValue: false, automation: "full" },
-  maximal:    { label: "Maximal", takesValue: false, automation: "full" },
+  lance:      { label: "Lance", takesValue: false },
+  melta:      { label: "Melta", takesValue: false },
+  overheats:  { label: "Overheats", takesValue: false },
+  maximal:    { label: "Maximal", takesValue: false },
   recharge:   { label: "Recharge", takesValue: false, noteOn: "attack" },
   sanctified: { label: "Sanctified", takesValue: false },
-  scatter:    { label: "Scatter", takesValue: false, automation: "full" },
+  scatter:    { label: "Scatter", takesValue: false },
   smoke:      { label: "Smoke", takesValue: true, noteOn: "attack" },
-  snare:      { label: "Snare", takesValue: true, automation: "full" },
-  tainted:    { label: "Tainted", takesValue: false, automation: "full" },
-  spray:      { label: "Spray", takesValue: false, automation: "full", noteOn: "attack" },
-  toxic:      { label: "Toxic", takesValue: true, automation: "full" },
-  vengeful:   { label: "Vengeful", takesValue: true, automation: "full" },
+  snare:      { label: "Snare", takesValue: true },
+  tainted:    { label: "Tainted", takesValue: false },
+  spray:      { label: "Spray", takesValue: false, noteOn: "attack" },
+  toxic:      { label: "Toxic", takesValue: true },
+  vengeful:   { label: "Vengeful", takesValue: true },
   // --- Non-vanilla qualities (homebrew + adapted from other lines; gated by the "Non-Vanilla Qualities"
   //     world setting; hidden + inert when off). `homebrew: true` is the internal gate flag. ---
-  radPhage:   { label: "Rad-Phage", takesValue: false, automation: "full", homebrew: true },
-  devastating:{ label: "Devastating", takesValue: true, automation: "full", homebrew: true },   // Black Crusade
+  radPhage:   { label: "Rad-Phage", takesValue: false, homebrew: true },
+  devastating:{ label: "Devastating", takesValue: true, homebrew: true },   // Black Crusade
 };
 
 /** Aim bonuses. */
