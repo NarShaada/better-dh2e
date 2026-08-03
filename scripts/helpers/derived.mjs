@@ -39,10 +39,10 @@ export function fatigueMax(toughnessBonus, willpowerBonus) {
   return toughnessBonus + willpowerBonus;
 }
 
-/** To-hit modifier when attacking a target of this size (Table 4-6): (size-4)*10. */
+/** To-hit modifier when attacking a target of this size: (size-4)*10. */
 export function sizeToHitModifier(size) { return ((size ?? 4) - 4) * 10; }
 
-/** Modifier to this creature's own Stealth rolls (Table 4-6): -(size-4)*10. */
+/** Modifier to this creature's own Stealth rolls: -(size-4)*10. */
 export function sizeStealthModifier(size) { return (4 - (size ?? 4)) * 10; }
 
 /** movement rates from agility bonus and creature size (default size 4) */
@@ -94,7 +94,7 @@ export function initiativeFormula(dice, bonusRef = "@initiativeBonus") {
 }
 
 /** Corruption bonus = tens digit of the corruption total, the same convention every other bonus
- *  in DH2e uses. Black Crusade spells it out as "the 10s column of their Corruption Point total". */
+ *  in DH2e uses. Black Crusade defines it the same way, so one implementation serves both. */
 export function corruptionBonus(corruption) {
   return Math.floor(Math.max(0, Number(corruption) || 0) / 10);
 }

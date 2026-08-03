@@ -271,13 +271,13 @@ Hooks.once("init", () => {
     { id: "toxic",   name: "Toxic",   img: "icons/svg/poison.svg" },
     { id: "onFire",   name: "On Fire",  img: "icons/svg/fire.svg" },
     { id: "helpless", name: "Helpless", img: "icons/svg/paralysis.svg" },
-    // mystery-man, not blind.svg — Unaware is "does not know the attack is coming", and the
+    // mystery-man, not blind.svg — Unaware is about not seeing the attack coming, and the
     // eye-with-a-slash belongs to the actual Blinded condition below.
     { id: "unaware",  name: "Unaware",  img: "icons/svg/mystery-man.svg" },
     { id: "pinned",   name: "Pinned",   img: "icons/svg/net.svg" },
     { id: "inCover",  name: "In Cover", img: "icons/svg/shield.svg" },
     { id: "weaponJammed", name: "Weapon Jammed", img: "icons/svg/clockwork.svg" },
-    // Chapter VII "Conditions and Special Damage" (printed pages 242-244). These are MARKERS
+    // The remaining conditions and special damage states (printed pages 242-244). These are MARKERS
     // only: the GM toggles them from the token HUD and applies the effects at the table. They are
     // deliberately absent from condition-data.mjs, which drives to-hit/evade maths — an entry
     // there would invite a modifier being hung on a pure marker later.

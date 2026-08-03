@@ -28,7 +28,7 @@ describe("computeHits", () => {
   });
 });
 describe("locationSequence (multi-hit table, side tracks first hit)", () => {
-  // Table 7-2, p. 223. The SECOND column repeats the FIRST on every row, so the second hit
+  // The multiple-hit location sequence, p. 223. Its second entry repeats the first, so the second hit
   // always lands in the same area as the first.
   it("Body-first: Body, Body, Arm, Head, Arm", () => {
     expect(locationSequence("body", 5)).toEqual(["body", "body", "rightArm", "head", "rightArm"]);

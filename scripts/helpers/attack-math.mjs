@@ -4,9 +4,9 @@ const HIT_BANDS = [
   { max: 10, key: "head" }, { max: 20, key: "rightArm" }, { max: 30, key: "leftArm" },
   { max: 70, key: "body" }, { max: 85, key: "rightLeg" }, { max: 100, key: "leftLeg" }
 ];
-// Table 7-2 (p. 223) keyed by the FIRST hit's category. These are the SECOND..EACH ADDITIONAL
-// columns; the first hit is the rolled location, not a table lookup. Generic limbs are resolved
-// to the first hit's side. Note the book's SECOND column always equals its FIRST.
+// The multiple-hit location sequence (p. 223), keyed by the FIRST hit's category. These entries
+// cover the second hit onwards; the first hit is the rolled location, not a lookup. Generic limbs
+// are resolved to the first hit's side. Note the second entry always repeats the first.
 const MULTI_SEQ = {
   head: ["head", "arm", "body", "arm", "body"],
   arm:  ["arm", "body", "head", "body", "arm"],
@@ -34,19 +34,20 @@ export function hitLocation(roll) {
 }
 
 /** Total hits: single = 1; multi = 1 + floor((DoS - 1) / dosPer), capped at rof.
- *  DH2e degrees start at 1 for any success (p. 24), so extra hits come from the degrees BEYOND
- *  the first. Full Auto / Lightning are "one hit for every degree of success" (dosPer 1, so
- *  hits = DoS); Semi-Auto / Swift are "an additional hit for every two ADDITIONAL degrees"
- *  (dosPer 2). Dividing raw DoS is the DH1 formula, where degrees started at 0. */
+ *  DH2e degrees start at 1 for any success (p. 24), so the extra hits come from the degrees BEYOND
+ *  the first. Full Auto and Lightning score one hit per degree, so dosPer 1 gives hits = DoS;
+ *  Semi-Auto and Swift score one extra per two ADDITIONAL degrees, hence dosPer 2.
+ *  Dividing raw DoS is the DH1 formula, where degrees started at 0 — it over-counted by one on
+ *  every burst for seven releases before this was corrected in v0.4.2. */
 export function computeHits(attackType, dos, rof) {
   if (attackType.hits?.mode !== "multi" || dos < 1) return 1;
   return Math.min(rof, 1 + Math.floor((dos - 1) / attackType.hits.dosPer));
 }
 
 /** Locations for `count` hits: the first is the rolled location; hit i (1-based) then reads
- *  Table 7-2's column i, i.e. MULTI_SEQ[i - 2] (limbs use the first hit's side). The 6th and
- *  further hits repeat the EACH ADDITIONAL column. Indexing MULTI_SEQ from the first hit instead
- *  looks right only because the book's SECOND column repeats its FIRST. */
+ *  MULTI_SEQ[i - 2] (limbs use the first hit's side). The 6th and further hits repeat the last
+ *  entry. Indexing MULTI_SEQ from the first hit instead looks right only because the second
+ *  entry repeats the first — which is why an off-by-one here survived until v0.4.2. */
 export function locationSequence(first, count) {
   const tmpl = MULTI_SEQ[categoryOf(first)];
   const side = sideOf(first);

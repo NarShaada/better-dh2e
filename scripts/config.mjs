@@ -89,7 +89,7 @@ BDH.availability = {
   extremelyRare: "Extremely Rare", nearUnique: "Near Unique", unique: "Unique"
 };
 
-/** Requisition test modifier per availability level — Table 5-1, printed page 141.
+/** Requisition test modifier per availability level (printed page 141).
  *  `null` means no test is required: Ubiquitous items are simply automatic. For Unique the table
  *  gives -60 and then defers to the GM, so -60 is the floor rather than the whole story. */
 BDH.availabilityModifier = {
@@ -97,7 +97,7 @@ BDH.availabilityModifier = {
   scarce: -10, rare: -20, veryRare: -30, extremelyRare: -40, nearUnique: -50, unique: -60
 };
 
-/** Craftsmanship modifier to Requisition AND Repair tests — Table 5-2, printed page 141.
+/** Craftsmanship modifier to Requisition AND Repair tests (printed page 141).
  *  Note the book's "Common" tier is this system's `normal`. Better gear is harder to obtain, so
  *  Good and Best are penalties here — the opposite sign to their combat bonuses. */
 BDH.craftsmanshipRequisition = { poor: 10, normal: 0, good: -20, best: -30 };
