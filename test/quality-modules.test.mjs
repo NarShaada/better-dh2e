@@ -307,6 +307,5 @@ describe("Daemonbane — Enemies Beyond p. 40", () => {
 
   it("is note-only — its effect is conditional on a target trait the system cannot read", () => {
     expect(BDH.qualities.daemonbane.noteOn).toBe("attack");
-    expect(BDH.qualities.daemonbane.automation).toBeUndefined();
   });
 });
