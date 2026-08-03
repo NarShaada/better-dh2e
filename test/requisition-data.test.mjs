@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { BDH } from "../scripts/config.mjs";
 
-describe("Availability modifiers — Table 5-1, printed page 141", () => {
+describe("Availability modifiers (printed page 141)", () => {
   it("covers every availability level with no strays", () => {
     expect(Object.keys(BDH.availabilityModifier).sort())
       .toEqual(Object.keys(BDH.availability).sort());
@@ -35,7 +35,7 @@ describe("Availability modifiers — Table 5-1, printed page 141", () => {
   });
 });
 
-describe("Craftsmanship Requisition modifiers — Table 5-2, printed page 141", () => {
+describe("Craftsmanship Requisition modifiers (printed page 141)", () => {
   it("matches the printed table, using this system's `normal` for the book's Common", () => {
     expect(BDH.craftsmanshipRequisition).toEqual({ poor: 10, normal: 0, good: -20, best: -30 });
   });

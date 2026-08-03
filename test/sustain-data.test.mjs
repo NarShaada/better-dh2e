@@ -76,7 +76,7 @@ describe("currentPR", () => {
     expect(currentPR(4, 0)).toBe(4);
   });
 
-  it("applies no penalty to a single sustained power — the p. 195 body text, not Table 6-1", () => {
+  it("applies no penalty to a single sustained power — the p. 195 body text, not the phenomena-table summary", () => {
     expect(currentPR(4, 1)).toBe(4);
   });
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { carryLimits, CARRY_TABLE } from "../scripts/helpers/encumbrance-data.mjs";
 
-describe("carryLimits (Table 7-26)", () => {
+describe("carryLimits (printed page 248)", () => {
   it("reads the table by SB+TB", () => {
     expect(carryLimits(0)).toEqual({ carry: 0.9, lift: 2.25, push: 4.5 });
     expect(carryLimits(8)).toEqual({ carry: 56, lift: 112, push: 224 });
