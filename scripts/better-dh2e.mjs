@@ -220,7 +220,7 @@ Hooks.once("init", () => {
   });
   game.settings.register("better-dh2e", "maleficCorruption", {
     name: "Malefic Daemonology grants Corruption",
-    hint: "Enemies Beyond p. 54: a successful Malefic Daemonology manifest gives the psyker Corruption points equal to the psy rating used. Turn off to track this by hand.",
+    hint: "A successful Malefic Daemonology manifest gives the psyker Corruption points equal to the psy rating used. Turn off to track this by hand.",
     scope: "world",
     config: true,
     type: Boolean,
