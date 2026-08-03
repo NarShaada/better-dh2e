@@ -66,11 +66,36 @@ describe("phenomenaModifier", () => {
 });
 
 describe("substitutePR", () => {
-  it("replaces the PR token (incl. multiplication)", () => {
+  it("substitutes PR, accepting a bare number for backwards compatibility", () => {
     expect(substitutePR("1d10+PR", 3)).toBe("1d10+3");
     expect(substitutePR("1d10+2+2*PR", 3)).toBe("1d10+2+2*3");
     expect(substitutePR("PR", 5)).toBe("5");
     expect(substitutePR("1d10", 3)).toBe("1d10");
+  });
+
+  it("substitutes PR from a context object", () => {
+    expect(substitutePR("1d10+PR", { pr: 4 })).toBe("1d10+4");
+  });
+
+  it("substitutes WPB — Cleansing Flame, Enemies Beyond p. 54", () => {
+    expect(substitutePR("1d10+PR+WPB", { pr: 4, wpb: 3 })).toBe("1d10+4+3");
+  });
+
+  it("substitutes CB in damage and penetration — Dark Flame, Enemies Beyond p. 57", () => {
+    expect(substitutePR("1d10+PR+CB", { pr: 4, cb: 2 })).toBe("1d10+4+2");
+    expect(substitutePR("CB", { pr: 4, cb: 2 })).toBe("2");
+  });
+
+  it("treats absent bonuses as zero rather than undefined", () => {
+    expect(substitutePR("1d10+WPB+CB", { pr: 1 })).toBe("1d10+0+0");
+  });
+
+  it("leaves a formula with no tokens untouched", () => {
+    expect(substitutePR("2d10+5", { pr: 3, wpb: 3, cb: 3 })).toBe("2d10+5");
+  });
+
+  it("does not let PR match inside WPB", () => {
+    expect(substitutePR("WPB", { pr: 9, wpb: 2 })).toBe("2");
   });
 });
 

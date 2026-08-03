@@ -63,9 +63,17 @@ export function bcPhenomenaModifier(psykerClass, state, pushPoints) {
   return (psykerClass === "unbound" || psykerClass === "daemonic") ? 10 : 0;
 }
 
-/** Substitute the effective PR into a formula token (handles +PR, *PR, bare PR). */
-export function substitutePR(formula, effectivePR) {
-  return String(formula ?? "").replace(/\bPR\b/gi, String(effectivePR));
+/** Substitute a power's bonus tokens into a formula. `ctxOrPR` is either a bare number (legacy —
+ *  read as the effective PR) or `{pr, wpb, cb}`. Absent bonuses substitute 0, never undefined.
+ *  Longest token first: PR/WPB/CB do not actually overlap under \b, but ordering makes the rule
+ *  hold if another token is ever added. Handles +PR, *PR and a bare token. */
+export function substitutePR(formula, ctxOrPR) {
+  const c = (typeof ctxOrPR === "number") ? { pr: ctxOrPR } : (ctxOrPR ?? {});
+  const { pr = 0, wpb = 0, cb = 0 } = c;
+  return String(formula ?? "")
+    .replace(/\bWPB\b/gi, String(wpb))
+    .replace(/\bCB\b/gi,  String(cb))
+    .replace(/\bPR\b/gi,  String(pr));
 }
 
 /** Resolve a focusTest key to {kind, key, total} against an actor system; falls back to willpower. */

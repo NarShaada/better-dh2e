@@ -6,7 +6,7 @@ import { psychicRuleset, makePsychicRuleset } from "../helpers/psychic-ruleset.m
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
 import { effectivePenetration } from "../helpers/quality-modules.mjs";
-import { unnaturalDoSBonus } from "../helpers/derived.mjs";
+import { unnaturalDoSBonus, corruptionBonus } from "../helpers/derived.mjs";
 import { battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { safeRoll } from "./dice.mjs";
 import { phenomenaSustainBonus } from "../helpers/sustain-data.mjs";
@@ -183,10 +183,17 @@ export async function resolveManifest(actor, power, opts) {
     const qualities = [...(s.qualities ?? [])];
     if (s.type === "blast" && (s.blastRadius ?? 0) > 0) qualities.push({ key: "blast", value: s.blastRadius });
 
-    const penRoll = await safeRoll(substitutePR(String(s.penetration || "0"), effPR) || "0", "power penetration");
+    // Enemies Beyond powers scale off Willpower and Corruption bonuses as well as PR.
+    const subCtx = {
+      pr:  effPR,
+      wpb: actor.system.characteristics?.willpower?.bonus ?? 0,
+      cb:  corruptionBonus(actor.system.corruption)
+    };
+
+    const penRoll = await safeRoll(substitutePR(String(s.penetration || "0"), subCtx) || "0", "power penetration");
     const penBase = Number(penRoll?.total) || 0;   // malformed penetration → 0 rather than abort the cast
     const penetration = effectivePenetration(penBase, { qualities, dos, success, closeRange: false });
-    const damage = substitutePR(s.damage || "", effPR);
+    const damage = substitutePR(s.damage || "", subCtx);
 
     const firstLoc = hitLocation(roll.total);
     const locs = success ? locationSequence(firstLoc, nHits) : [];
