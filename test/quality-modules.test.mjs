@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { BDH } from "../scripts/config.mjs";
 import { effectiveJamFloor } from "../scripts/helpers/craftsmanship-data.mjs";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, hasUnbalanced, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, hasSpray, cripplingValue, filterQualityChoices, taintedBonus } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, hasUnbalanced, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, cripplingValue, filterQualityChoices, taintedBonus } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -263,13 +263,7 @@ describe("filterQualityChoices", () => {
   });
 });
 
-describe("Spray and Crippling helpers", () => {
-  it("hasSpray detects the quality", () => {
-    expect(hasSpray([{ key: "spray", value: null }])).toBe(true);
-    expect(hasSpray([{ key: "flame", value: null }])).toBe(false);
-    expect(hasSpray([])).toBe(false);
-  });
-
+describe("Crippling and Spray-jam helpers", () => {
   it("cripplingValue reads the X", () => {
     expect(cripplingValue([{ key: "crippling", value: 2 }])).toBe(2);
     expect(cripplingValue([{ key: "tearing", value: null }])).toBe(0);

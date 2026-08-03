@@ -1,4 +1,4 @@
-// scripts/helpers/encumbrance-data.mjs — PURE. DH2e Table 7-26 (Carrying, Lifting, & Pushing).
+// scripts/helpers/encumbrance-data.mjs — PURE. DH2e carrying, lifting and pushing limits.
 
 /** Indexed by (Strength Bonus + Toughness Bonus), 0..20. Weights in kg. */
 export const CARRY_TABLE = [

@@ -4,7 +4,7 @@ import { BDH } from "../../config.mjs";
 
 const fields = foundry.data.fields;
 
-/** An armour upgrade (Enemies Within Table 2-6, p. 49). Deliberately DESCRIPTION-ONLY.
+/** An armour upgrade (Enemies Within, p. 49). Deliberately DESCRIPTION-ONLY.
  *
  *  weaponMod carries attackMod/damageMod/penMod because those modify the parent WEAPON's stats.
  *  No armour upgrade modifies the parent ARMOUR's stats as a flat value — the closest, Ceramite

@@ -98,7 +98,7 @@ describe("movement", () => {
     expect(movement(3, 6)).toEqual({ half: 5, full: 10, charge: 15, run: 30 });
   });
   it("never goes below a half move of 1 (RAW: AgB used for movement floors at 1)", () => {
-    expect(movement(0, 1).half).toBe(1); // 0 + (1-4) = -3 -> clamped to 1 (was 0 before Table 4-6 fix)
+    expect(movement(0, 1).half).toBe(1); // 0 + (1-4) = -3 -> clamped to 1 (was 0 before the size-modifier fix)
   });
 });
 

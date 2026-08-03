@@ -1130,8 +1130,8 @@ async function rollSuppressingFire(actor, weapon, mode) {
       + `</div></div>`,
   });
   if (res.success && caught.length) {
-    // p. 224: one hit, "with every extra two degrees of success scoring an extra hit" — the
-    // extras come from the degrees beyond the first, matching computeHits' dosPer-2 shape.
+    // p. 224: one hit, plus an extra per two further degrees of success — the extras come from
+    // the degrees beyond the first, matching computeHits' dosPer-2 shape.
     const nHits = Math.min(1 + Math.floor((effDeg - 1) / 2), rof);
     const locs = locationSequence(hitLocation(bsRoll.total), nHits);   // burst locations
     const byTarget = {};

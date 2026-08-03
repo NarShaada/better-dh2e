@@ -1,10 +1,10 @@
 // scripts/helpers/sustain-data.mjs — sustained-psychic-power rules (p. 195). PURE: no Foundry.
 //
-// The book prints this rule twice and the printings disagree at exactly one sustained power.
-// Table 6-1's "Sustaining Powers" column reads "+10 to all rolls on Table 6-2, decrease psy rating
-// by 1 per power" with no qualifier; the p. 195 body text applies both effects only when sustaining
-// TWO OR MORE. They agree at 2+ and differ at 1, which is the common case. The body text wins:
-// a single sustained power costs no PR and adds no phenomena bonus.
+// The book states this rule twice and the two statements disagree at exactly one sustained power.
+// The summary in the phenomena table applies the +10 and the -1 psy rating per power with no
+// qualifier; the p. 195 body text applies both only when sustaining TWO OR MORE. They agree at 2+
+// and differ at 1, which is the common case. The body text wins: a single sustained power costs
+// no PR and adds no phenomena bonus.
 //
 // Dark Heresy 2e and Black Crusade print this rule identically, so there is no ruleset branch here.
 
@@ -38,7 +38,7 @@ export function currentPR(castEffPR, count) {
   return count < 2 ? castEffPR : castEffPR - count;
 }
 
-/** +10 per power sustained beyond the first, for the Table 6-2 roll only. */
+/** +10 per power sustained beyond the first, for the phenomena roll only. */
 export function phenomenaSustainBonus(count) {
   return 10 * Math.max(0, count - 1);
 }

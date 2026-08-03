@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   LOCATION_KEYS,
-  newTemplate, validateTemplate, summarizeTemplate, highestCoverAp, locationBadge,
+  newTemplate, validateTemplate, summarizeTemplate, locationBadge,
   coverPrefill, coverContextLabel,
 } from "../scripts/helpers/cover-templates.mjs";
 
@@ -51,14 +51,6 @@ describe("summarizeTemplate", () => {
       .toBe("AP4 · Right Leg, Left Leg");
     expect(summarizeTemplate({ ap: 6, locations: LOCATION_KEYS })).toBe("AP6 · all");
     expect(summarizeTemplate({ ap: 2, locations: [] })).toBe("AP2 · —");
-  });
-});
-
-describe("highestCoverAp", () => {
-  it("returns the max AP among cover payloads, 0 when none", () => {
-    expect(highestCoverAp([{ ap: 2 }, { ap: 6 }, { ap: 4 }])).toBe(6);
-    expect(highestCoverAp([])).toBe(0);
-    expect(highestCoverAp(null)).toBe(0);
   });
 });
 
