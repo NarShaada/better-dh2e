@@ -13,7 +13,8 @@ import {
   movementBaseValue,
   initiativeBase,
   initiativeDice,
-  initiativeFormula
+  initiativeFormula,
+  corruptionBonus
 } from "../scripts/helpers/derived.mjs";
 
 describe("unnaturalDoSBonus", () => {
@@ -256,5 +257,22 @@ describe("initiativeFormula", () => {
 
   it("honours a custom bonus reference", () => {
     expect(initiativeFormula("1d10", "@foo")).toBe("1d10 + @foo");
+  });
+});
+
+describe("corruptionBonus", () => {
+  it("is the tens digit, matching every other bonus in the system", () => {
+    expect(corruptionBonus(0)).toBe(0);
+    expect(corruptionBonus(9)).toBe(0);
+    expect(corruptionBonus(10)).toBe(1);
+    expect(corruptionBonus(45)).toBe(4);
+    expect(corruptionBonus(99)).toBe(9);
+    expect(corruptionBonus(100)).toBe(10);
+  });
+
+  it("treats missing or negative corruption as zero", () => {
+    expect(corruptionBonus(undefined)).toBe(0);
+    expect(corruptionBonus(null)).toBe(0);
+    expect(corruptionBonus(-5)).toBe(0);
   });
 });

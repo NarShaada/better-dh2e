@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100 } from "../helpers/attack-math.mjs";
 import { computeArmour, corrodeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage, cripplingValue } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage, cripplingValue, taintedBonus } from "../helpers/quality-modules.mjs";
 import { effectiveWeapon } from "../helpers/weapon-effects.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor, effectiveStrengthBonus } from "../helpers/item-bonuses.mjs";
@@ -20,7 +20,7 @@ import { vehicleHitLocation, VEHICLE_LOCATION_LABELS, applyIntegrity } from "../
 import { coverPieceAdjacentTo } from "../canvas/cover.mjs";
 import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal } from "../helpers/derived.mjs";
+import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal, corruptionBonus } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless, applyCrippled } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
@@ -327,7 +327,11 @@ async function applySpray(message, html) {
   const eff = effectiveWeapon(weapon.system);
   const checked = [...html.querySelectorAll(".bdh-spray-hit:checked")].map((c) => c.dataset.uuid);
   const qualities = eff.qualities;
-  const roll = await safeRoll(weaponDamageFormula(qualities, eff.damage), "weapon damage");
+  // Tainted adds the wielder's Corruption bonus to the weapon's damage on every path, spray included
+  // (Enemies Beyond p. 40) — unlike Strength/craftsmanship/Force, which really are melee-only.
+  const taintedDmg = taintedBonus(qualities, corruptionBonus(attacker?.system?.corruption));
+  const sprayBase = taintedDmg ? `${eff.damage} + ${taintedDmg}` : eff.damage;
+  const roll = await safeRoll(weaponDamageFormula(qualities, sprayBase), "weapon damage");
   if (!roll) return;
   // Penetration like the ranged path (no DoS for spray):
   const penBase = Number((await safeRoll(String(eff.penetration || "0"), "penetration"))?.total) || 0;
@@ -349,7 +353,7 @@ async function applySpray(message, html) {
   // A horde caught in the spray takes many separate hits, each its own roll (like a burst); non-hordes take the one shared roll.
   const sprayRolls = [];
   const rollSprayHit = async () => {
-    const r = await safeRoll(weaponDamageFormula(qualities, eff.damage), "weapon damage");
+    const r = await safeRoll(weaponDamageFormula(qualities, sprayBase), "weapon damage");
     if (!r) return null;
     let delta = 0;
     for (const d of r.dice) for (const res of d.results) if (res.active) delta += transform(res.result) - res.result;
@@ -496,6 +500,10 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     const qualities = f.qualities ?? blastEff.qualities;
     // Ranged blast: strBonus is always 0, craftDmg is 0 (melee-only).
     let weaponBase = baseFormula;
+    // Tainted is NOT melee-only — it adds the wielder's Corruption bonus to any hit this weapon
+    // deals, so the blast pool has to get it too (Enemies Beyond p. 40).
+    const blastTainted = taintedBonus(qualities, corruptionBonus(actor?.system?.corruption));
+    if (blastTainted) weaponBase = `${weaponBase} + ${blastTainted}`;
     if (f.maximal) weaponBase = `${weaponBase} + 1d10`;
     if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
     if (f.helpless) weaponBase = doubleDamageDice(weaponBase);
@@ -608,6 +616,9 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   // Force: a psyker adds their Psy Rating to the weapon's damage (penetration was added at attack time).
   const forcePR = (!psychic && weapon && hasForce(eff.qualities) && (actor.system.psyRating ?? 0) > 0) ? actor.system.psyRating : 0;
   if (forcePR) weaponBase = `${weaponBase} + ${forcePR}`;
+  // Tainted: the wielder's Corruption bonus is added to damage (Enemies Beyond p. 40).
+  const taintedDmg = weapon ? taintedBonus(eff.qualities, corruptionBonus(actor.system.corruption)) : 0;
+  if (taintedDmg) weaponBase = `${weaponBase} + ${taintedDmg}`;
   if (actor.type === "horde" && weapon.system.hordeEquipped) {
     const hd = hordeDamageBonusDice(actor.system.magnitude);   // +1d10 per 10 Magnitude, cap +2d10
     if (hd) weaponBase = `${weaponBase} + ${hd}d10`;
@@ -1200,9 +1211,12 @@ async function applySuppressDamage(message, uuid) {
     if (pick == null) return;
     locKeys = locKeys.slice(0, Number(pick) || n);
   }
+  // Tainted applies to suppressing hits like any other hit this weapon lands (Enemies Beyond p. 40).
+  const taintedDmg = taintedBonus(qualities, corruptionBonus(attacker?.system?.corruption));
+  const suppressBase = taintedDmg ? `${eff.damage} + ${taintedDmg}` : eff.damage;
   const lines = [];
   for (const loc of locKeys) {
-    const roll = await safeRoll(weaponDamageFormula(qualities, eff.damage), "weapon damage");
+    const roll = await safeRoll(weaponDamageFormula(qualities, suppressBase), "weapon damage");
     if (!roll) continue;
     let delta = 0; for (const d of roll.dice) for (const r of d.results) if (r.active) delta += transformDamageDie(r.result, { primitiveX, provenX }) - r.result;
     const dealt = await applyHitToToken(target, { damageTotal: roll.total + delta, penetration, damageType: eff.damageType, qualities, location: loc });

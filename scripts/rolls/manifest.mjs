@@ -1,12 +1,12 @@
 // scripts/rolls/manifest.mjs
 // Psychic manifestation cast flow: dialog → PR choice → focus roll → phenomena/perils → cast card.
 import { evaluateTest } from "./test-logic.mjs";
-import { manifestState, isDoubles, resolveFocusTarget, substitutePR } from "../helpers/psychic-manifest.mjs";
+import { manifestState, isDoubles, resolveFocusTarget, substitutePR, maleficCorruptionGain } from "../helpers/psychic-manifest.mjs";
 import { psychicRuleset, makePsychicRuleset } from "../helpers/psychic-ruleset.mjs";
 import { isPsychicAttack } from "../helpers/psychic-data.mjs";
 import { computeHits, locationSequence, hitLocation } from "../helpers/attack-math.mjs";
 import { effectivePenetration } from "../helpers/quality-modules.mjs";
-import { unnaturalDoSBonus } from "../helpers/derived.mjs";
+import { unnaturalDoSBonus, corruptionBonus } from "../helpers/derived.mjs";
 import { battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { safeRoll } from "./dice.mjs";
 import { phenomenaSustainBonus } from "../helpers/sustain-data.mjs";
@@ -165,7 +165,9 @@ export async function resolveManifest(actor, power, opts) {
     ? "Daemonic — unaffected by its own phenomena." : "";
 
   // Reroll payload — stored on both flag shapes so the new card is itself rerollable
-  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, rulesetKey: rs.key, state, statePR, prBonus, circ, targetUuid, targetName, roll: roll.total, success, dosBonus, sustain };
+  // effPR is redundant with statePR+prBonus for resolution (statePR wins in the reader above), but it
+  // is what a Fate reroll needs to UNDO this cast's Malefic Corruption grant without re-deriving it.
+  const reroll = { kind: "cast", actorUuid: actor.uuid, powerId: power.id, rulesetKey: rs.key, state, statePR, prBonus, effPR, circ, targetUuid, targetName, roll: roll.total, success, dosBonus, sustain };
 
   // --- Attack-type branch (Bolt / Barrage / Storm / Blast) ---
   let attackFlags = null;
@@ -181,12 +183,24 @@ export async function resolveManifest(actor, power, opts) {
     const nHits = success ? computeHits(at, dos, rofCap) : 0;
 
     const qualities = [...(s.qualities ?? [])];
-    if (s.type === "blast" && (s.blastRadius ?? 0) > 0) qualities.push({ key: "blast", value: s.blastRadius });
 
-    const penRoll = await safeRoll(substitutePR(String(s.penetration || "0"), effPR) || "0", "power penetration");
+    // Enemies Beyond powers scale off Willpower and Corruption bonuses as well as PR.
+    const subCtx = {
+      pr:  effPR,
+      wpb: actor.system.characteristics?.willpower?.bonus ?? 0,
+      cb:  corruptionBonus(actor.system.corruption)
+    };
+
+    if (s.type === "blast") {
+      const radiusRoll = await safeRoll(substitutePR(String(s.blastRadius || "0"), subCtx) || "0", "blast radius");
+      const radius = Number(radiusRoll?.total) || 0;
+      if (radius > 0) qualities.push({ key: "blast", value: radius });
+    }
+
+    const penRoll = await safeRoll(substitutePR(String(s.penetration || "0"), subCtx) || "0", "power penetration");
     const penBase = Number(penRoll?.total) || 0;   // malformed penetration → 0 rather than abort the cast
     const penetration = effectivePenetration(penBase, { qualities, dos, success, closeRange: false });
-    const damage = substitutePR(s.damage || "", effPR);
+    const damage = substitutePR(s.damage || "", subCtx);
 
     const firstLoc = hitLocation(roll.total);
     const locs = success ? locationSequence(firstLoc, nHits) : [];
@@ -256,6 +270,25 @@ export async function resolveManifest(actor, power, opts) {
     await addSustained(actor, {
       powerId: power.id, name: power.name, castEffPR: effPR, sustainAction: s.sustained
     });
+  }
+
+  // Enemies Beyond p. 54, after the effects resolve — so this follows the sustain block, which
+  // itself follows the cast card. Gated for GMs who track corruption by hand.
+  //
+  // HAZARD — every persistent side effect placed in a resolve* function (ammunition consumption in
+  // resolveAttack, sustained powers above, and now Corruption) has to answer to BOTH Fate paths in
+  // fate.mjs, because both RE-ENTER the resolver to replay the same moment:
+  //   - "+1 DoS" re-resolves with fixedRoll set. The cast already happened and its side effects
+  //     already landed, so a re-grant here would double them. Gate on `fixedRoll == null`, exactly
+  //     as the phenomena block above does.
+  //   - "reroll" re-resolves with a FRESH roll, so the grant must happen again — but the original
+  //     one has to be reversed first, or a second success stacks and a reroll into failure leaves
+  //     corruption raised behind a "Failure" card. That reversal lives in fate.mjs, beside the
+  //     matching releaseSustained() call.
+  // Anything added below inherits the same obligation.
+  if (fixedRoll == null && game.settings.get("better-dh2e", "maleficCorruption")) {
+    const gain = maleficCorruptionGain(s.discipline, success, effPR);
+    if (gain) await actor.update({ "system.corruption": (actor.system.corruption ?? 0) + gain });
   }
   return true;
 }

@@ -418,8 +418,10 @@ export function makeChoice(overrides = {}) {
  *  `remove()` also detaches the element from this root, so a caller that gates on a button's absence
  *  (bindRequisitionButtons) can be asserted with querySelector without pulling in jsdom. */
 export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] } = {}) {
-  const els = buttons.map((bdh) => ({
-    dataset: { bdh },
+  // A button is either a bare `data-bdh` name or `{ bdh, uuid }` — the per-target suppressing-fire
+  // buttons carry the token uuid the handler reads off `btn.dataset.uuid`.
+  const els = buttons.map((b) => ({
+    dataset: typeof b === "string" ? { bdh: b } : { ...b },
     // Modelled because handlers use it as a re-entrancy guard: the browser dispatches no click
     // event on a disabled control, so a stub that fired one anyway would hide double-fire bugs.
     disabled: false,

@@ -154,6 +154,7 @@ BDH.qualities = {
   concussive: { label: "Concussive", takesValue: true, automation: "full" },
   corrosive:  { label: "Corrosive", takesValue: false, automation: "full", noteOn: "damage" },   // auto on single-target apply; note reminds on AoE paths
   crippling:  { label: "Crippling", takesValue: true, automation: "full" },
+  daemonbane: { label: "Daemonbane", takesValue: false, noteOn: "attack" },
   defensive:  { label: "Defensive", takesValue: false, automation: "full" },
   flame:         { label: "Flame", takesValue: false, automation: "full" },
   force:         { label: "Force", takesValue: false },
@@ -171,6 +172,7 @@ BDH.qualities = {
   scatter:    { label: "Scatter", takesValue: false, automation: "full" },
   smoke:      { label: "Smoke", takesValue: true, noteOn: "attack" },
   snare:      { label: "Snare", takesValue: true, automation: "full" },
+  tainted:    { label: "Tainted", takesValue: false, automation: "full" },
   spray:      { label: "Spray", takesValue: false, automation: "full", noteOn: "attack" },
   toxic:      { label: "Toxic", takesValue: true, automation: "full" },
   vengeful:   { label: "Vengeful", takesValue: true, automation: "full" },
@@ -214,7 +216,12 @@ BDH.sizes = {
 };
 
 /** Psychic disciplines (key -> label). */
-BDH.disciplines = { biomancy: "Biomancy", divination: "Divination", pyromancy: "Pyromancy", telekinesis: "Telekinesis", telepathy: "Telepathy", minor: "Minor / Other" };
+BDH.disciplines = {
+  biomancy: "Biomancy", divination: "Divination", pyromancy: "Pyromancy",
+  telekinesis: "Telekinesis", telepathy: "Telepathy",
+  sanctic: "Sanctic Daemonology", malefic: "Malefic Daemonology",
+  minor: "Minor / Other"
+};
 /** Psychic power resolution type (key -> label). bolt/barrage/storm/blast are attacks (see isPsychicAttack). */
 BDH.psychicTypes = { effect: "Effect", bolt: "Psychic Bolt", barrage: "Psychic Barrage", storm: "Psychic Storm", blast: "Psychic Blast" };
 /** Action to manifest (key -> label). */

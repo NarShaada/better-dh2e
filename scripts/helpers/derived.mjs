@@ -92,3 +92,9 @@ export function initiativeFormula(dice, bonusRef = "@initiativeBonus") {
   const term = initiativeDice(dice);
   return term ? `${term} + ${bonusRef}` : bonusRef;
 }
+
+/** Corruption bonus = tens digit of the corruption total, the same convention every other bonus
+ *  in DH2e uses. Black Crusade spells it out as "the 10s column of their Corruption Point total". */
+export function corruptionBonus(corruption) {
+  return Math.floor(Math.max(0, Number(corruption) || 0) / 10);
+}

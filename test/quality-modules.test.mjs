@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { BDH } from "../scripts/config.mjs";
 import { effectiveJamFloor } from "../scripts/helpers/craftsmanship-data.mjs";
-import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, hasUnbalanced, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, hasSpray, cripplingValue, filterQualityChoices } from "../scripts/helpers/quality-modules.mjs";
+import { tearingFormula, qualityToHitMod, accurateBonusDice, weaponDamageFormula, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasFlame, hasFlexible, hasGraviton, hallucinogenicValue, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, hasUnbalanced, scatterToHit, scatterDamage, snareValue, hasStorm, toxicValue, vengefulValue, hasUnwieldy, hasRadPhage, hasSpray, cripplingValue, filterQualityChoices, taintedBonus } from "../scripts/helpers/quality-modules.mjs";
 
 const Q = (...keys) => keys.map((key) => ({ key, value: "" }));
 const W = (qualities, craftsmanship = "normal") => ({ qualities, craftsmanship });   // a melee weapon for parryModifier
@@ -282,5 +283,36 @@ describe("Spray and Crippling helpers", () => {
     // Good craftsmanship promotes to Reliable; Poor cancels it back off.
     expect(effectiveJamFloor([{ key: "spray" }], "good") >= 100).toBe(true);
     expect(effectiveJamFloor([{ key: "spray" }, { key: "reliable" }], "poor") >= 100).toBe(false);
+  });
+});
+
+describe("taintedBonus — Enemies Beyond p. 40", () => {
+  const tainted = [{ key: "tainted", value: null }];
+
+  it("adds the wielder's corruption bonus to damage", () => {
+    expect(taintedBonus(tainted, 4)).toBe(4);
+  });
+
+  it("adds nothing when the weapon lacks the quality", () => {
+    expect(taintedBonus([{ key: "tearing", value: null }], 4)).toBe(0);
+    expect(taintedBonus([], 4)).toBe(0);
+  });
+
+  it("adds nothing at zero corruption", () => {
+    expect(taintedBonus(tainted, 0)).toBe(0);
+  });
+});
+
+describe("Daemonbane — Enemies Beyond p. 40", () => {
+  it("is registered, ungated, and takes no value", () => {
+    expect(BDH.qualities.daemonbane).toBeDefined();
+    expect(BDH.qualities.daemonbane.label).toBe("Daemonbane");
+    expect(BDH.qualities.daemonbane.takesValue).toBe(false);
+    expect(BDH.qualities.daemonbane.homebrew).toBeUndefined();
+  });
+
+  it("is note-only — its effect is conditional on a target trait the system cannot read", () => {
+    expect(BDH.qualities.daemonbane.noteOn).toBe("attack");
+    expect(BDH.qualities.daemonbane.automation).toBeUndefined();
   });
 });
