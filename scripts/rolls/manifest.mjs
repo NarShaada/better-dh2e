@@ -181,7 +181,6 @@ export async function resolveManifest(actor, power, opts) {
     const nHits = success ? computeHits(at, dos, rofCap) : 0;
 
     const qualities = [...(s.qualities ?? [])];
-    if (s.type === "blast" && (s.blastRadius ?? 0) > 0) qualities.push({ key: "blast", value: s.blastRadius });
 
     // Enemies Beyond powers scale off Willpower and Corruption bonuses as well as PR.
     const subCtx = {
@@ -189,6 +188,12 @@ export async function resolveManifest(actor, power, opts) {
       wpb: actor.system.characteristics?.willpower?.bonus ?? 0,
       cb:  corruptionBonus(actor.system.corruption)
     };
+
+    if (s.type === "blast") {
+      const radiusRoll = await safeRoll(substitutePR(String(s.blastRadius || "0"), subCtx) || "0", "blast radius");
+      const radius = Number(radiusRoll?.total) || 0;
+      if (radius > 0) qualities.push({ key: "blast", value: radius });
+    }
 
     const penRoll = await safeRoll(substitutePR(String(s.penetration || "0"), subCtx) || "0", "power penetration");
     const penBase = Number(penRoll?.total) || 0;   // malformed penetration → 0 rather than abort the cast

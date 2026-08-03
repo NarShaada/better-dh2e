@@ -22,7 +22,7 @@ export class PsychicPowerModel extends BaseItemModel {
       damage:        new fields.StringField({ required: true, initial: "" }),
       damageType:    new fields.StringField({ required: true, choices: Object.keys(BDH.damageTypes), initial: "energy" }),
       penetration:   new fields.StringField({ required: true, initial: "0" }),
-      blastRadius:   new fields.NumberField({ required: true, integer: true, initial: 0, min: 0 }),
+      blastRadius:   new fields.StringField({ required: true, initial: "0" }),
       qualities: new fields.ArrayField(new fields.SchemaField({
         key:   new fields.StringField({ required: true }),
         value: new fields.NumberField({ required: false, integer: true, nullable: true, initial: null })
@@ -40,6 +40,9 @@ export class PsychicPowerModel extends BaseItemModel {
    *  the inherited craftsmanship normalization still runs. */
   static migrateData(source) {
     if (source && "sustained" in source) source.sustained = normalizeSustain(source.sustained);
+    // blastRadius became a string so Holocaust can hold "PR" (Enemies Beyond p. 56). Numeric
+    // values from before that change coerce; the shipped corpus only ever held 0 and 2.
+    if (source && typeof source.blastRadius === "number") source.blastRadius = String(source.blastRadius);
     return super.migrateData(source);
   }
 }

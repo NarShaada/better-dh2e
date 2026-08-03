@@ -170,7 +170,7 @@
         <label>Damage</label><input type="text" name="system.damage" value="{{system.damage}}"/>
         <label>Damage Type</label><select name="system.damageType">{{selectOptions damageTypes selected=system.damageType}}</select>
         <label>Penetration</label><input type="text" name="system.penetration" value="{{system.penetration}}"/>
-        {{#if psyIsBlast}}<label>Blast Radius (m)</label><input type="number" name="system.blastRadius" value="{{system.blastRadius}}" min="0"/>{{/if}}
+        {{#if psyIsBlast}}<label>Blast Radius (m)</label><input type="text" name="system.blastRadius" value="{{system.blastRadius}}"/>{{/if}}
       {{/if}}
     </div>
     <div class="bdh-list-section">
