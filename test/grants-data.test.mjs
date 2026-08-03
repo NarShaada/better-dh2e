@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { grantHostType, isGrantHostActive, canGrant, grantDiff, grantPlan, purgeSourcePlan } from "../scripts/helpers/grants-data.mjs";
+import { grantHostType, isGrantHostActive, canGrant, grantPlan, purgeSourcePlan } from "../scripts/helpers/grants-data.mjs";
 
 describe("trait as a grant host", () => {
   it("grantHostType recognises traits", () => {
@@ -138,20 +138,5 @@ describe("canGrant — part-only types", () => {
     expect(canGrant("armour", "talent")).toBe(true);
     expect(canGrant("cybernetic", "trait")).toBe(true);
     expect(canGrant("trait", "psychicPower")).toBe(true);
-  });
-});
-
-describe("grantDiff", () => {
-  it("creates desired-not-present, removes present-not-desired, leaves matches", () => {
-    const existing = [{ id: "a", uuid: "U1" }, { id: "b", uuid: "U2" }];
-    const r = grantDiff(["U2", "U3"], existing);
-    expect(r.toCreateUuids).toEqual(["U3"]);
-    expect(r.toRemoveIds).toEqual(["a"]);
-  });
-  it("empty desired removes everything", () => {
-    expect(grantDiff([], [{ id: "a", uuid: "U1" }])).toEqual({ toCreateUuids: [], toRemoveIds: ["a"] });
-  });
-  it("handles nullish input", () => {
-    expect(grantDiff(undefined, undefined)).toEqual({ toCreateUuids: [], toRemoveIds: [] });
   });
 });

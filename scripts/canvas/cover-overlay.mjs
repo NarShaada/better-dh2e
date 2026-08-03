@@ -85,10 +85,6 @@ export function toggleCoverVisibility() {
   setCoverVisibility(!_visible);
   ui.notifications.info(`Cover pieces ${_visible ? "shown" : "hidden"}.`);
 }
-export function coverVisible() {
-  return _visible;
-}
-
 /** Hook the overlay to canvas readiness and cover-Region changes. Call once at ready. */
 export function initCoverOverlay() {
   Hooks.on("canvasReady", () => { _layer = null; redrawCoverOverlay(); });

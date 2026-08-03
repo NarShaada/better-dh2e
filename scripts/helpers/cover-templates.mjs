@@ -48,11 +48,6 @@ export function summarizeTemplate(t) {
   return `AP${t.ap} · ${locs}`;
 }
 
-/** Highest AP among a list of cover payloads (overlapping pieces are alternatives, not additive). */
-export function highestCoverAp(covers) {
-  return (covers ?? []).reduce((m, c) => Math.max(m, Number(c?.ap) || 0), 0);
-}
-
 /** Pre-fill value for the cover-AP prompt: the piece's AP when a hit struck a location it protects,
  *  else 0. There is no side test — adjacency has already established the piece is on the shot's side.
  *  A null piece (manual In Cover) pre-fills 0 for the GM to type. */

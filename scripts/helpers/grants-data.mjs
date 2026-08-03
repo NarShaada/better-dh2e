@@ -32,16 +32,6 @@ export function canGrant(hostType, itemType) {
   return false;
 }
 
-/** Diff desired grant-source uuids against existing granted items [{id, uuid}].
- *  Returns uuids to create (desired, not present) and item ids to remove (present, no longer desired). */
-export function grantDiff(desiredUuids, existing) {
-  const desired = new Set(desiredUuids ?? []);
-  const have = new Set((existing ?? []).map((e) => e.uuid));
-  const toCreateUuids = [...desired].filter((u) => !have.has(u));
-  const toRemoveIds = (existing ?? []).filter((e) => !desired.has(e.uuid)).map((e) => e.id);
-  return { toCreateUuids, toRemoveIds };
-}
-
 /** Plan the cleanup when a grant SOURCE (`uuid`) is deleted, for one actor's items.
  *  `items`: [{ id, grantedUuid, isHost, grants }] where `grantedUuid` is set only on granted copies,
  *  `isHost` is true for a grant-host item that is not itself a granted copy, and `grants` is its grant list.
