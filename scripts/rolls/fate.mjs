@@ -4,6 +4,7 @@ import { resolveAttack } from "./attack.mjs";
 import { resolveManifest } from "./manifest.mjs";
 import { resolveRequisition } from "./requisition.mjs";
 import { releaseSustained } from "./sustain.mjs";
+import { maleficCorruptionGain } from "../helpers/psychic-manifest.mjs";
 
 const NS = "better-dh2e";
 
@@ -40,6 +41,18 @@ export async function rerollFromFate(message) {
     // behind, and the live `sustainCount` read inside resolveManifest would count the power being
     // recast toward its own phenomena strain.
     if (rr.success && rr.sustain) await releaseSustained(actor, rr.powerId);
+    // Same shape for Malefic Corruption (Enemies Beyond p. 54): a successful cast already granted
+    // its points, and the re-resolution grants again — or grants nothing, if the reroll fails. Take
+    // the original grant back FIRST so the new outcome replaces it instead of stacking (and so a
+    // reroll into failure doesn't leave corruption raised behind a "Failure" card).
+    // Gated on the setting: if the GM turned Malefic Corruption off since the cast, the system never
+    // granted these points and must not subtract them.
+    if (rr.success && power && game.settings.get(NS, "maleficCorruption")) {
+      // Reuse the rule helper rather than restating it here — the cast's effective PR is on the
+      // payload (statePR is the fallback for legacy cards that carried only a rung).
+      const undo = maleficCorruptionGain(power.system?.discipline, true, rr.effPR ?? rr.statePR);
+      if (undo) await actor.update({ "system.corruption": Math.max(0, (actor.system.corruption ?? 0) - undo) });
+    }
     if (power) await resolveManifest(actor, power, { rulesetKey: rr.rulesetKey, state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, sustain: rr.sustain });
   } else if (rr.kind === "requisition") {
     // The whole choice is stored, so the rerolled card keeps its item and its Add button —
