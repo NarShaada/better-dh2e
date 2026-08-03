@@ -4,7 +4,9 @@ const HIT_BANDS = [
   { max: 10, key: "head" }, { max: 20, key: "rightArm" }, { max: 30, key: "leftArm" },
   { max: 70, key: "body" }, { max: 85, key: "rightLeg" }, { max: 100, key: "leftLeg" }
 ];
-// Multiple-hits sequence by first-hit category (generic limbs resolved to the first hit's side).
+// Table 7-2 (p. 223) keyed by the FIRST hit's category. These are the SECOND..EACH ADDITIONAL
+// columns; the first hit is the rolled location, not a table lookup. Generic limbs are resolved
+// to the first hit's side. Note the book's SECOND column always equals its FIRST.
 const MULTI_SEQ = {
   head: ["head", "arm", "body", "arm", "body"],
   arm:  ["arm", "body", "head", "body", "arm"],
@@ -31,18 +33,25 @@ export function hitLocation(roll) {
   return HIT_BANDS.find((b) => reverseD100(roll) <= b.max).key;
 }
 
-/** Total hits: single = 1; multi = 1 + floor(DoS / dosPer), capped at rof. */
+/** Total hits: single = 1; multi = 1 + floor((DoS - 1) / dosPer), capped at rof.
+ *  DH2e degrees start at 1 for any success (p. 24), so extra hits come from the degrees BEYOND
+ *  the first. Full Auto / Lightning are "one hit for every degree of success" (dosPer 1, so
+ *  hits = DoS); Semi-Auto / Swift are "an additional hit for every two ADDITIONAL degrees"
+ *  (dosPer 2). Dividing raw DoS is the DH1 formula, where degrees started at 0. */
 export function computeHits(attackType, dos, rof) {
   if (attackType.hits?.mode !== "multi" || dos < 1) return 1;
-  return Math.min(rof, 1 + Math.floor(dos / attackType.hits.dosPer));
+  return Math.min(rof, 1 + Math.floor((dos - 1) / attackType.hits.dosPer));
 }
 
-/** Locations for `count` hits: first as rolled; subsequent follow the category sequence
- *  (limbs use the first hit's side); the 6th and further hits repeat the 5th. */
+/** Locations for `count` hits: the first is the rolled location; hit i (1-based) then reads
+ *  Table 7-2's column i, i.e. MULTI_SEQ[i - 2] (limbs use the first hit's side). The 6th and
+ *  further hits repeat the EACH ADDITIONAL column. Indexing MULTI_SEQ from the first hit instead
+ *  looks right only because the book's SECOND column repeats its FIRST. */
 export function locationSequence(first, count) {
   const tmpl = MULTI_SEQ[categoryOf(first)];
   const side = sideOf(first);
-  return Array.from({ length: count }, (_, i) => resolveLoc(tmpl[Math.min(i, tmpl.length - 1)], side));
+  return Array.from({ length: count }, (_, i) =>
+    i === 0 ? first : resolveLoc(tmpl[Math.min(i - 1, tmpl.length - 1)], side));
 }
 
 /** Effective damage after armour+pen and Toughness Bonus (floored at 0). */
