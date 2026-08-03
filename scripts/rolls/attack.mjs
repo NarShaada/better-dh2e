@@ -5,7 +5,7 @@ import { performTest, promptTest } from "./roll-test.mjs";
 import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100 } from "../helpers/attack-math.mjs";
 import { computeArmour, corrodeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
-import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage, cripplingValue } from "../helpers/quality-modules.mjs";
+import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage, cripplingValue, taintedBonus } from "../helpers/quality-modules.mjs";
 import { effectiveWeapon } from "../helpers/weapon-effects.mjs";
 import { homebrewQualitiesEnabled } from "../helpers/homebrew.mjs";
 import { gatherActiveBonusEntries, rollBonusesFor, effectiveStrengthBonus } from "../helpers/item-bonuses.mjs";
@@ -20,7 +20,7 @@ import { vehicleHitLocation, VEHICLE_LOCATION_LABELS, applyIntegrity } from "../
 import { coverPieceAdjacentTo } from "../canvas/cover.mjs";
 import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
-import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal } from "../helpers/derived.mjs";
+import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal, corruptionBonus } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless, applyCrippled } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
@@ -608,6 +608,9 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   // Force: a psyker adds their Psy Rating to the weapon's damage (penetration was added at attack time).
   const forcePR = (!psychic && weapon && hasForce(eff.qualities) && (actor.system.psyRating ?? 0) > 0) ? actor.system.psyRating : 0;
   if (forcePR) weaponBase = `${weaponBase} + ${forcePR}`;
+  // Tainted: the wielder's Corruption bonus is added to damage (Enemies Beyond p. 40).
+  const taintedDmg = weapon ? taintedBonus(eff.qualities, corruptionBonus(actor.system.corruption)) : 0;
+  if (taintedDmg) weaponBase = `${weaponBase} + ${taintedDmg}`;
   if (actor.type === "horde" && weapon.system.hordeEquipped) {
     const hd = hordeDamageBonusDice(actor.system.magnitude);   // +1d10 per 10 Magnitude, cap +2d10
     if (hd) weaponBase = `${weaponBase} + ${hd}d10`;

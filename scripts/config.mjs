@@ -171,6 +171,7 @@ BDH.qualities = {
   scatter:    { label: "Scatter", takesValue: false, automation: "full" },
   smoke:      { label: "Smoke", takesValue: true, noteOn: "attack" },
   snare:      { label: "Snare", takesValue: true, automation: "full" },
+  tainted:    { label: "Tainted", takesValue: false, automation: "full" },
   spray:      { label: "Spray", takesValue: false, automation: "full", noteOn: "attack" },
   toxic:      { label: "Toxic", takesValue: true, automation: "full" },
   vengeful:   { label: "Vengeful", takesValue: true, automation: "full" },

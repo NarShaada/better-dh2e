@@ -134,3 +134,11 @@ export function effectivePenetration(basePen, { qualities, dos, success, closeRa
   if (closeRange && has(qualities, "melta")) pen *= 2;
   return pen;
 }
+
+/** Tainted (Enemies Beyond p. 40): the weapon adds the wielder's Corruption bonus to damage.
+ *  The book also allows the wielder's Daemonic (X) value if higher — that needs to read a trait
+ *  Item off the actor, which a content-free system cannot assume exists, so it stays in prose.
+ *  Identical to Black Crusade's Tainted for any wielder without the Daemonic trait. */
+export function taintedBonus(qualities, corruptionBonusValue) {
+  return has(qualities, "tainted") ? (Number(corruptionBonusValue) || 0) : 0;
+}
