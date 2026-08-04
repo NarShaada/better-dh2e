@@ -487,7 +487,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     const pool = (region ? tokensInRegion(region) : [])
       .filter((t) => caught.has(t.actor.uuid));    // RAW: re-check who is STILL inside before rolling
     if (!pool.length) {
-      ui.notifications.info("No targets remain in the blast.");
+      // No toast: the empty template is already on screen, and it disappears here as the tell.
       await deleteRegionByUuid(f.regionUuid);   // everyone moved out → no damage, clean up
       return;
     }

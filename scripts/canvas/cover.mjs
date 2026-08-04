@@ -164,7 +164,7 @@ export function beginCoverPainting(template) {
     ui.notifications.warn("Better DH2e: open a scene before painting cover.");
     return;
   }
-  endCoverPainting({ silent: true });   // avoid a contradictory "stopped" toast on re-entry
+  endCoverPainting();                   // tear down a previous session before starting this one
   ui.notifications.info(`Painting "${template.name}" — left-drag to paint, right-drag to erase, Esc to stop.`);
 
   // event.stopPropagation() is deliberately absent from onDown/onMove — see the DENIED_ACTIONS comment
@@ -235,7 +235,7 @@ export function beginCoverPainting(template) {
 }
 
 /** Stop painting and restore normal canvas interaction. Safe to call when not painting. */
-export function endCoverPainting({ silent = false } = {}) {
+export function endCoverPainting() {
   if (!_painting) return;
   const p = _painting;
   _painting = null;                                 // clear first so a re-entrant call is a no-op
@@ -248,7 +248,6 @@ export function endCoverPainting({ silent = false } = {}) {
   if (p.mgr && p.mgrPermissions !== undefined) p.mgr.permissions = p.mgrPermissions;
   if (p.tokensLayer && p.tokensInteractiveChildren !== undefined) p.tokensLayer.interactiveChildren = p.tokensInteractiveChildren;
   if (p.regionsLayer && p.regionsInteractiveChildren !== undefined) p.regionsLayer.interactiveChildren = p.regionsInteractiveChildren;
-  if (!silent) ui.notifications.info("Cover painting stopped.");
 }
 
 /**

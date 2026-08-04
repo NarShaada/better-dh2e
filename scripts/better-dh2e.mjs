@@ -425,7 +425,6 @@ async function confirmClearCover() {
     rejectClose: false,
   });
   if (!ok) return;
-  const n = await clearAllCover(canvas.scene);
-  ui.notifications.info(`Removed ${n} cover piece${n === 1 ? "" : "s"}.`);
+  await clearAllCover(canvas.scene);   // no toast: the pieces vanishing from the canvas is the confirmation
 }
 
