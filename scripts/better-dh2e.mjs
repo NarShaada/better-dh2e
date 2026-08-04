@@ -139,7 +139,7 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "uiChrome", {
     name: "Extend theme to Foundry interface",
-    hint: "Applies the chosen theme to the sidebar, chat log, windows, controls and hotbar. No effect on Parchment, which leaves Foundry untouched.",
+    hint: "Applies the chosen theme to Foundry. No effect on Parchment",
     scope: "client",
     config: true,
     type: Boolean,
@@ -149,7 +149,7 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "diceTray", {
     name: "Show the dice tray",
-    hint: "Adds a compact d100/d10/d5 tray under the chat box for quick rolls the system does not automate. Click a die to roll one; hold a die for multiple.",
+    hint: "Click a die to roll one; hold a die for multiple.",
     scope: "client",
     config: true,
     type: Boolean,
@@ -159,7 +159,7 @@ Hooks.once("init", () => {
 
   game.settings.register("better-dh2e", "tokenPrefixes", {
     name: "NPC token prefixes",
-    hint: "When enabled, each newly placed unlinked NPC token gets a random prefix)",
+    hint: "Unlinked NPC tokens get random prefixes",
     scope: "world",
     config: true,
     type: Boolean,
@@ -167,7 +167,7 @@ Hooks.once("init", () => {
   });
 
   game.settings.register("better-dh2e", "coverMechanics", {
-    name: "Cover mechanics (battlemap)",
+    name: "Cover mechanics",
     hint: "Adds cover templates and cover automation for battlemaps",
     scope: "world",
     config: true,
@@ -191,8 +191,8 @@ Hooks.once("init", () => {
   });
 
   game.settings.register("better-dh2e", "reverseWounds", {
-    name: "Reverse wounds display (HP style)",
-    hint: "Display wounds as remaining health (full = 9/9) instead of wounds suffered (0/9). Cosmetic only — no rules change.",
+    name: "Reverse wounds display",
+    hint: "Display wounds as remaining health (full = 9/9) instead of wounds suffered (0/9).",
     scope: "world",
     config: true,
     type: Boolean,
@@ -204,7 +204,7 @@ Hooks.once("init", () => {
   // Storage key stays "homebrewQualities" so existing worlds keep their choice; only the label changed.
   game.settings.register("better-dh2e", "homebrewQualities", {
     name: "Non-Vanilla Qualities",
-    hint: "Enable non-vanilla weapon qualities (homebrew + qualities adapted from other 40k lines, e.g. Devastating).",
+    hint: "Qualities from a range of other rpg lines and homebrew",
     scope: "world",
     config: true,
     type: Boolean,
@@ -220,7 +220,7 @@ Hooks.once("init", () => {
   });
   game.settings.register("better-dh2e", "maleficCorruption", {
     name: "Malefic Daemonology grants Corruption",
-    hint: "A successful Malefic Daemonology manifest gives the psyker Corruption points equal to the psy rating used. Turn off to track this by hand.",
+    hint: "When enabled, Malefic Daemonology grants Corruption automatically",
     scope: "world",
     config: true,
     type: Boolean,
@@ -425,7 +425,6 @@ async function confirmClearCover() {
     rejectClose: false,
   });
   if (!ok) return;
-  const n = await clearAllCover(canvas.scene);
-  ui.notifications.info(`Removed ${n} cover piece${n === 1 ? "" : "s"}.`);
+  await clearAllCover(canvas.scene);   // no toast: the pieces vanishing from the canvas is the confirmation
 }
 

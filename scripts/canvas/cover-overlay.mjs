@@ -6,6 +6,13 @@ import { locationBadge } from "../helpers/cover-templates.mjs";
 let _layer = null;
 let _visible = true;
 
+// Hidden mode drops the overlay entirely, but core still draws the Region's diagonal hatch — which is
+// wanted, it keeps the piece findable. Knock it well back so it reads as scenery rather than as a
+// marked-up obstacle. This is the *placeable container's* alpha, which multiplies over the hatch mesh's
+// own 0.5 (Region#_draw), so the hatch lands at ~0.17 effective. Nothing is written to the document, so
+// this stays per-client like the rest of the toggle.
+const HIDDEN_REGION_ALPHA = 1 / 3;
+
 function ensureLayer() {
   if (_layer && !_layer.destroyed) return _layer;
   _layer = new PIXI.Container();
@@ -76,14 +83,21 @@ export function redrawCoverOverlay() {
   }
 }
 
+/** Dim (or restore) one cover Region placeable to match the current visibility state. */
+function applyRegionAlpha(region) {
+  if (!isCoverRegion(region.document)) return;
+  region.alpha = _visible ? 1 : HIDDEN_REGION_ALPHA;
+}
+
 /** Per-client: show/hide the cover overlay (does not change any document). */
 export function setCoverVisibility(v) {
   _visible = !!v;
   if (_layer) _layer.visible = _visible;
+  for (const region of canvas?.regions?.placeables ?? []) applyRegionAlpha(region);
 }
+// No toast: the canvas itself is the feedback, so announcing the new state is pure noise.
 export function toggleCoverVisibility() {
   setCoverVisibility(!_visible);
-  ui.notifications.info(`Cover pieces ${_visible ? "shown" : "hidden"}.`);
 }
 /** Hook the overlay to canvas readiness and cover-Region changes. Call once at ready. */
 export function initCoverOverlay() {
@@ -92,5 +106,9 @@ export function initCoverOverlay() {
   Hooks.on("createRegion", onRegion);
   Hooks.on("updateRegion", onRegion);
   Hooks.on("deleteRegion", onRegion);
+  // A placeable is born at alpha 1 and PlaceableObject#draw never resets it, so re-apply the hidden dim
+  // once per draw — this is the one point that catches every path (scene load, a freshly painted piece,
+  // any core-triggered redraw) and it fires after _draw, when the hatch mesh exists.
+  Hooks.on("drawRegion", applyRegionAlpha);
   if (canvas?.ready) redrawCoverOverlay();
 }
