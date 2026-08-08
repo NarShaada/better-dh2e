@@ -8,6 +8,7 @@ import { canGrant, grantHostType } from "../helpers/grants-data.mjs";
 import { grantsFolder } from "../cybernetics/grants.mjs";
 import { weaponPartsFolder } from "../weapons/parts.mjs";
 import { bcAdvancement } from "../helpers/advancement-ruleset.mjs";
+import { createPartSource } from "../helpers/part-source.mjs";
 
 const STAT_MOD_LABELS = {
   moveAll: "Movement (all bands)", moveHalf: "Movement: Half", moveFull: "Movement: Full",
@@ -135,10 +136,11 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
 
   /** Action: create a new Weapon Mod item, link it, and open it for editing. */
   static async #onAddMod(event, target) {
-    const folder = await weaponPartsFolder();
-    const created = await getDocumentClass("Item").create({
-      name: `New ${game.i18n.localize("TYPES.Item.weaponMod")}`, type: "weaponMod", folder: folder.id
-    });
+    const created = await createPartSource(
+      this.document,
+      { name: `New ${game.i18n.localize("TYPES.Item.weaponMod")}`, type: "weaponMod" },
+      { folder: weaponPartsFolder, createWorld: (d) => getDocumentClass("Item").create(d) }
+    );
     if (!created) return;
     const mods = foundry.utils.deepClone(this.document.system.mods);
     mods.push({ uuid: created.uuid, name: created.name, attackMod: 0, damageMod: "", penMod: 0, special: "" });
@@ -156,10 +158,11 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
   /** Action: create a new Armour Modification item and install it on this armour.
    *  Mirrors #onAddMod, but pushes name-only — armourMod has no numbers to cache. */
   static async #onAddArmourMod(event, target) {
-    const folder = await weaponPartsFolder();
-    const created = await getDocumentClass("Item").create({
-      name: `New ${game.i18n.localize("TYPES.Item.armourMod")}`, type: "armourMod", folder: folder.id
-    });
+    const created = await createPartSource(
+      this.document,
+      { name: `New ${game.i18n.localize("TYPES.Item.armourMod")}`, type: "armourMod" },
+      { folder: weaponPartsFolder, createWorld: (d) => getDocumentClass("Item").create(d) }
+    );
     if (!created) return;
     const mods = foundry.utils.deepClone(this.document.system.mods);
     mods.push({ uuid: created.uuid, name: created.name });
@@ -169,10 +172,11 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
 
   /** Action: create a new Ammunition item, stock one magazine of it, and open it for editing. */
   static async #onAddAmmo(event, target) {
-    const folder = await weaponPartsFolder();
-    const created = await getDocumentClass("Item").create({
-      name: `New ${game.i18n.localize("TYPES.Item.ammunition")}`, type: "ammunition", folder: folder.id
-    });
+    const created = await createPartSource(
+      this.document,
+      { name: `New ${game.i18n.localize("TYPES.Item.ammunition")}`, type: "ammunition" },
+      { folder: weaponPartsFolder, createWorld: (d) => getDocumentClass("Item").create(d) }
+    );
     if (!created) return;
     const ammo = foundry.utils.deepClone(this.document.system.ammo);
     ammo.push({ uuid: created.uuid, name: created.name, count: 1, attackMod: 0, damageMod: "",
@@ -467,8 +471,11 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       rejectClose: false
     });
     if (!type) return;
-    const folder = await grantsFolder();
-    const created = await getDocumentClass("Item").create({ name: `New ${game.i18n.localize(`TYPES.Item.${type}`)}`, type, folder: folder.id });
+    const created = await createPartSource(
+      this.document,
+      { name: `New ${game.i18n.localize(`TYPES.Item.${type}`)}`, type },
+      { folder: grantsFolder, createWorld: (d) => getDocumentClass("Item").create(d) }
+    );
     if (!created) return;
     const grants = foundry.utils.deepClone(this.document.system.grants);
     grants.push({ uuid: created.uuid, name: created.name, type: created.type });
