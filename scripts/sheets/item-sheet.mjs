@@ -471,11 +471,20 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       rejectClose: false
     });
     if (!type) return;
-    const created = await createPartSource(
-      this.document,
-      { name: `New ${game.i18n.localize(`TYPES.Item.${type}`)}`, type },
-      { folder: grantsFolder, createWorld: (d) => getDocumentClass("Item").create(d) }
-    );
+    // Always a world Item, never parented to the host actor like createPartSource does for
+    // #onAddMod/#onAddArmourMod/#onAddAmmo. Every grantable type (talent, trait, gear, weapon,
+    // armour, forceField, psychicPower — see canGrant, grants-data.mjs) is one _prepareContext
+    // already renders on the actor sheet by i.type (e.g. traits, actor-sheet.mjs ~688), unlike
+    // part-only types which are invisible there. Worse, gatherActiveBonusEntries
+    // (item-bonuses.mjs) treats an owned trait as always active, so an actor-hosted grant source
+    // would apply its bonuses immediately even with the host cybernetic uninstalled, defeating
+    // the grant gate. The sync hooks (cybernetics/grants.mjs ~126-141) also only fire for
+    // `item.parent instanceof Actor` being false — an actor-hosted source would neither
+    // propagate edits nor get purged on delete. Known gap: a player can't ＋ Create under
+    // Granted Items (permission error) until this gets its own design — safer than letting them
+    // grant themselves bonuses from an uninstalled implant.
+    const folder = await grantsFolder();
+    const created = await getDocumentClass("Item").create({ name: `New ${game.i18n.localize(`TYPES.Item.${type}`)}`, type, folder: folder.id });
     if (!created) return;
     const grants = foundry.utils.deepClone(this.document.system.grants);
     grants.push({ uuid: created.uuid, name: created.name, type: created.type });
