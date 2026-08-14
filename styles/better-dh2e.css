@@ -188,6 +188,9 @@
 .better-dh2e .bdh-add { margin-left:auto; background:var(--bdh-parch); color:var(--bdh-maroon); border:none; border-radius:3px; font-weight:bold; cursor:pointer; padding:0 8px; }
 .better-dh2e .bdh-item-row { display:flex; align-items:center; gap:8px; padding:3px 10px; border-bottom:1px dotted #cbb88c; font-size:12px; }
 .better-dh2e .bdh-item-row:last-child { border-bottom:none; }
+/* Stashed: off the character's person. Opacity rather than a colour token so one rule
+   covers the classic sheet and all three themes, and so the row's icons and tags dim too. */
+.better-dh2e .bdh-item-row.bdh-stashed { opacity:.55; }
 .better-dh2e .bdh-fav { color:#b3a070; cursor:pointer; }
 .better-dh2e .bdh-fav.on { color:var(--bdh-maroon); }
 .better-dh2e .bdh-name { font-weight:bold; color:var(--bdh-maroon); cursor:pointer; }
