@@ -157,6 +157,9 @@ body.bdh-themed .better-dh2e .bdh-gear-bar { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-gear-bar b { color:var(--t-ink2); font-family:var(--t-mono); }
 body.bdh-themed .better-dh2e .bdh-gear-bar .bdh-over,
 body.bdh-themed .better-dh2e .bdh-gear-bar .bdh-over b { color:var(--t-red-hi); }
+/* Lift/Push are informational, not a warning — pin them off the inherited .bdh-over red even
+   though .bdh-enc-aux now sits inside .bdh-over in the markup. */
+body.bdh-themed .better-dh2e .bdh-gear-bar .bdh-enc-aux { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-notes { background:var(--t-field); color:var(--t-ink); border:1px solid var(--t-line2); border-radius:0; font-family:var(--t-data); }
 
 /* ---------- Buttons ---------- */

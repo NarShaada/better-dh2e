@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { nextCarryState, carriedWeight, applyCarryInvariant } from "../scripts/helpers/carry-state.mjs";
 
 describe("nextCarryState", () => {
@@ -96,5 +98,30 @@ describe("applyCarryInvariant", () => {
     const sys = { stashed: true, equipped: true };
     expect(applyCarryInvariant(sys)).toBe(sys);
     expect(sys.equipped).toBe(false);
+  });
+});
+
+describe("BaseItemModel wires applyCarryInvariant into prepareDerivedData", () => {
+  // BaseItemModel destructures foundry.data.fields at module scope and the test stub covers
+  // neither foundry.data nor foundry.abstract, so it cannot be imported (or behaviourally
+  // exercised) by vitest. This is a static guard, not a behavioural test: it only proves the
+  // wiring line is present in source, not that it runs correctly. Delete that one line in
+  // scripts/data/item/base-item-model.mjs and every above test in this file still passes while
+  // every `system.equipped` read site in the codebase silently becomes wrong for stashed items —
+  // the entire parallel-boolean carry-state design rests on that single call. Replace this with
+  // a real behavioural test if the project ever gains a Foundry data-model stub.
+  const src = readFileSync(
+    fileURLToPath(new URL("../scripts/data/item/base-item-model.mjs", import.meta.url)),
+    "utf8"
+  );
+
+  it("imports applyCarryInvariant from the carry-state helper", () => {
+    expect(src).toMatch(/import\s*\{[^}]*\bapplyCarryInvariant\b[^}]*\}\s*from\s*["']\.\.\/\.\.\/helpers\/carry-state\.mjs["']/);
+  });
+
+  it("calls applyCarryInvariant inside prepareDerivedData", () => {
+    const match = src.match(/prepareDerivedData\s*\([^)]*\)\s*\{([\s\S]*?)\n  \}/);
+    expect(match, "prepareDerivedData method not found in source").toBeTruthy();
+    expect(match[1]).toMatch(/\bapplyCarryInvariant\s*\(/);
   });
 });

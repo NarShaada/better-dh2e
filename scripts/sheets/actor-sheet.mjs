@@ -253,7 +253,10 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (item.type === "weapon" && this.actor.type === "horde") {
       const cur = item.system.hordeEquipped ? "hordeEquipped" : (item.system.equipped ? "equipped" : "none");
       const nextState = cur === "none" ? "equipped" : cur === "equipped" ? "hordeEquipped" : "none";
-      await item.update({ "system.equipped": nextState !== "none", "system.hordeEquipped": nextState === "hordeEquipped" });
+      // A horde weapon has no stashed state; clear any inbound `stashed` (e.g. dragged in from an
+      // acolyte's stashed gear) so applyCarryInvariant stops forcing `equipped` back to false and
+      // deadlocking this toggle at "none".
+      await item.update({ "system.equipped": nextState !== "none", "system.hordeEquipped": nextState === "hordeEquipped", "system.stashed": false });
       return;
     }
     const equippable = item.type !== "gear";

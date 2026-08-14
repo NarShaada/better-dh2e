@@ -11,18 +11,17 @@ export async function grantsFolder() {
   return f;
 }
 
-/** Build a granted item's full data from its source. `equipped` and `stashed` (for
- *  armour/weapon/forceField) are decided by the caller and survive a refresh from source. */
+/** Build a granted item's full data from its source. `equipped` (armour/weapon/forceField only)
+ *  and `stashed` (any type with the field, including gear) are decided by the caller and
+ *  survive a refresh from source. */
 function grantedData(src, hostId, uuid, equipped, stashed = false) {
   const data = src.toObject();
   delete data._id;
   data.flags = { ...(data.flags ?? {}), [NS]: { ...(data.flags?.[NS] ?? {}), grantedBy: hostId, grantedUuid: uuid } };
   data.system = { ...data.system };
   if (data.type === "talent" || data.type === "psychicPower") data.system.purchased = true;
-  if (data.type === "armour" || data.type === "weapon" || data.type === "forceField") {
-    data.system.equipped = equipped;
-    data.system.stashed = stashed;
-  }
+  if (data.type === "armour" || data.type === "weapon" || data.type === "forceField") data.system.equipped = equipped;
+  if ("stashed" in data.system) data.system.stashed = stashed;
   return data;
 }
 
