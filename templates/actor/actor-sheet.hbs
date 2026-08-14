@@ -318,14 +318,14 @@
     </div>
   </section>
   <section class="tab {{tabs.gear.cssClass}}" data-group="primary" data-tab="gear">
-    <div class="bdh-gear-bar"><span>Weight carried: <b class="{{#if overEncumbered}}bdh-over{{/if}}">{{carriedWeight}}</b> / {{carryLimit}} kg <span class="bdh-enc-aux">Lift {{liftLimit}} · Push {{pushLimit}}</span></span><button type="button" class="bdh-req" data-action="rollRequisition">{{localize "BDH.Requisition.Button"}}</button></div>
+    <div class="bdh-gear-bar"><span class="{{#if overEncumbered}}bdh-over{{/if}}">Weight carried: <b>{{carriedWeight}}</b> / {{carryLimit}} kg <span class="bdh-enc-aux">Lift {{liftLimit}} · Push {{pushLimit}}</span></span><button type="button" class="bdh-req" data-action="rollRequisition">{{localize "BDH.Requisition.Button"}}</button></div>
 
     <div class="bdh-section">
       <div class="bdh-section-head">⚔ Weapons <button type="button" class="bdh-add" data-action="createItem" data-type="weapon">＋</button></div>
       {{#each weapons as |w|}}
-        <div class="bdh-item-row" data-item-id="{{w.id}}">
-          {{#if @root.isHorde}}<a class="bdh-eq {{#if w.hordeEquipped}}on horde{{else}}{{#if w.equipped}}on{{/if}}{{/if}}" data-action="toggleEquipped" title="{{#if w.hordeEquipped}}Horde-Equipped{{else}}{{#if w.equipped}}Equipped{{else}}Not Equipped{{/if}}{{/if}}">{{#if w.hordeEquipped}}✦{{else}}{{#if w.equipped}}✓{{else}}○{{/if}}{{/if}}</a>{{else}}<a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if w.equipped}}✓{{else}}○{{/if}}</a>{{/if}}
-          <span class="bdh-name" data-action="editItem">{{w.name}}</span>
+        <div class="bdh-item-row {{#if w.stashed}}bdh-stashed{{/if}}" data-item-id="{{w.id}}">
+          {{#if @root.isHorde}}<a class="bdh-eq {{#if w.hordeEquipped}}on horde{{else}}{{#if w.equipped}}on{{/if}}{{/if}}" data-action="toggleEquipped" title="{{#if w.hordeEquipped}}Horde-Equipped{{else}}{{#if w.equipped}}Equipped{{else}}Not Equipped{{/if}}{{/if}}">{{#if w.hordeEquipped}}✦{{else}}{{#if w.equipped}}✓{{else}}○{{/if}}{{/if}}</a>{{else}}<a class="bdh-eq {{#if w.equipped}}on{{/if}}" data-action="toggleEquipped" title="{{#if w.stashed}}Stashed{{else}}{{#if w.equipped}}Equipped{{else}}Not Equipped{{/if}}{{/if}}">{{#if w.stashed}}▣{{else}}{{#if w.equipped}}✓{{else}}○{{/if}}{{/if}}</a>{{/if}}
+          <span class="bdh-name" data-action="editItem">{{w.name}}{{#if w.stashed}} <span class="bdh-tag">stashed</span>{{/if}}</span>
           <span class="bdh-desc-line">{{w.summary}}</span>
           {{#if w.usesAmmo}}<span class="bdh-clip">Clip {{w.clip}}</span>{{#if w.loadedAmmo}}<span class="bdh-loaded" title="Loaded">{{w.loadedAmmo}}</span>{{/if}}{{/if}}
           {{#unless w.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{#if w.granted}}<span class="bdh-tag bdh-granted" title="{{w.grantedBy}}">⚙</span>{{/if}}
@@ -338,9 +338,9 @@
       <div class="bdh-section-head">🛡 Protection</div>
       <div class="bdh-subhead">Armour <span class="bdh-hint2">one non-additive worn at a time</span> <button type="button" class="bdh-add" data-action="createItem" data-type="armour">＋</button></div>
       {{#each armour as |a|}}
-        <div class="bdh-item-row" data-item-id="{{a.id}}">
-          <a class="bdh-eq {{#if a.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if a.equipped}}✓{{else}}○{{/if}}</a>
-          <span class="bdh-name" data-action="editItem">{{a.name}}{{#if a.additive}} <span class="bdh-tag">additive</span>{{/if}}</span>
+        <div class="bdh-item-row {{#if a.stashed}}bdh-stashed{{/if}}" data-item-id="{{a.id}}">
+          <a class="bdh-eq {{#if a.equipped}}on{{/if}}" data-action="toggleEquipped" title="{{#if a.stashed}}Stashed{{else}}{{#if a.equipped}}Equipped{{else}}Not Equipped{{/if}}{{/if}}">{{#if a.stashed}}▣{{else}}{{#if a.equipped}}✓{{else}}○{{/if}}{{/if}}</a>
+          <span class="bdh-name" data-action="editItem">{{a.name}}{{#if a.additive}} <span class="bdh-tag">additive</span>{{/if}}{{#if a.stashed}} <span class="bdh-tag">stashed</span>{{/if}}</span>
           <span class="bdh-desc-line">{{a.ap}}</span>
           {{#unless a.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{#if a.granted}}<span class="bdh-tag bdh-granted" title="{{a.grantedBy}}">⚙</span>{{/if}}
         </div>
@@ -348,9 +348,9 @@
       {{#unless armour.length}}<div class="bdh-empty">No armour.</div>{{/unless}}
       <div class="bdh-subhead">Force Fields <button type="button" class="bdh-add" data-action="createItem" data-type="forceField">＋</button></div>
       {{#each forceFields as |f|}}
-        <div class="bdh-item-row" data-item-id="{{f.id}}">
-          <a class="bdh-eq {{#if f.equipped}}on{{/if}}" data-action="toggleEquipped" title="Equipped">{{#if f.equipped}}✓{{else}}○{{/if}}</a>
-          <span class="bdh-name" data-action="editItem">{{f.name}}</span>
+        <div class="bdh-item-row {{#if f.stashed}}bdh-stashed{{/if}}" data-item-id="{{f.id}}">
+          <a class="bdh-eq {{#if f.equipped}}on{{/if}}" data-action="toggleEquipped" title="{{#if f.stashed}}Stashed{{else}}{{#if f.equipped}}Equipped{{else}}Not Equipped{{/if}}{{/if}}">{{#if f.stashed}}▣{{else}}{{#if f.equipped}}✓{{else}}○{{/if}}{{/if}}</a>
+          <span class="bdh-name" data-action="editItem">{{f.name}}{{#if f.stashed}} <span class="bdh-tag">stashed</span>{{/if}}</span>
           <span class="bdh-desc-line">PR {{f.pr}} · Overload {{f.overload}}</span>
           {{#unless f.granted}}<a class="bdh-del" data-action="deleteItem" title="Delete">✖</a>{{/unless}}{{#if f.granted}}<span class="bdh-tag bdh-granted" title="{{f.grantedBy}}">⚙</span>{{/if}}
         </div>
@@ -361,8 +361,9 @@
     <div class="bdh-section">
       <div class="bdh-section-head">🎒 Gear <button type="button" class="bdh-add" data-action="createItem" data-type="gear">＋</button></div>
       {{#each gear as |g|}}
-        <div class="bdh-item-row" data-item-id="{{g.id}}">
-          <span class="bdh-name" data-action="editItem">{{g.name}}</span>
+        <div class="bdh-item-row {{#if g.stashed}}bdh-stashed{{/if}}" data-item-id="{{g.id}}">
+          <a class="bdh-eq" data-action="toggleEquipped" title="{{#if g.stashed}}Stashed{{else}}Carried{{/if}}">{{#if g.stashed}}▣{{else}}○{{/if}}</a>
+          <span class="bdh-name" data-action="editItem">{{g.name}}{{#if g.stashed}} <span class="bdh-tag">stashed</span>{{/if}}</span>
           <span class="bdh-desc-line">{{g.desc}}</span>
           <span class="bdh-craft">{{g.craft}}</span>
           <span class="bdh-qty-wrap">×<input type="number" class="bdh-qty" value="{{g.quantity}}" min="0"/></span>

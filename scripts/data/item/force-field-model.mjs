@@ -13,7 +13,8 @@ export class ForceFieldModel extends BaseItemModel {
       craftsmanship:    new fields.StringField({ required: true, choices: Object.keys(BDH.craftsmanship), initial: "normal" }),
       availability:     new fields.StringField({ required: true, choices: Object.keys(BDH.availability), initial: "rare" }),
       weight:           new fields.NumberField({ required: true, initial: 0, min: 0 }),
-      equipped:         new fields.BooleanField({ required: true, initial: false })
+      equipped:         new fields.BooleanField({ required: true, initial: false }),
+      stashed:          new fields.BooleanField({ required: true, initial: false })
     };
   }
 }

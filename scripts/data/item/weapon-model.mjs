@@ -70,6 +70,7 @@ export class WeaponModel extends BaseItemModel {
         }))
       }, { required: false, nullable: true, initial: null }),
       equipped: new fields.BooleanField({ required: true, initial: false }),
+      stashed: new fields.BooleanField({ required: true, initial: false }),
       hordeEquipped: new fields.BooleanField({ required: true, initial: false })
     };
   }

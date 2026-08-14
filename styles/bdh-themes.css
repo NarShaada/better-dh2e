@@ -14,13 +14,16 @@
 @font-face { font-family:"IBM Plex Mono"; src:url("../fonts/IBMPlexMono-500.woff2") format("woff2"); font-weight:500; font-display:swap; }
 @font-face { font-family:"IBM Plex Mono"; src:url("../fonts/IBMPlexMono-700.woff2") format("woff2"); font-weight:700; font-display:swap; }
 
-/* ---------- Palettes ---------- */
+/* ---------- Palettes ----------
+   --t-red is an accent (borders, chips, fills); --t-red-hi is the same warning
+   pulled up until it reads as body text on --t-bg (>=4.5:1), which the accent
+   red does not manage on the two dark palettes. */
 body.bdh-theme-dataslate {
   --t-bg:#14171c; --t-panel:#1a1e25; --t-panel2:#20252e; --t-panel3:#272d38;
   --t-line:#2e3540; --t-line2:#3d4654;
   --t-ink:#d8d4c6; --t-ink2:#f0ecdd; --t-muted:#8e8a7a; --t-faint:#5d5a4e;
   --t-gold:#c9a227; --t-gold2:#a3851f; --t-glow:rgba(201,162,39,.35);
-  --t-red:#c04a3a; --t-red2:#8e2b22; --t-green:#5fae82; --t-green2:#2e5c43;
+  --t-red:#c04a3a; --t-red2:#8e2b22; --t-red-hi:#e4665a; --t-green:#5fae82; --t-green2:#2e5c43;
   --t-warp:#a87fd1; --t-field:#11141a; --t-on-accent:#15120a;
 }
 body.bdh-theme-dossier {
@@ -28,7 +31,7 @@ body.bdh-theme-dossier {
   --t-line:#c8b68d; --t-line2:#a98f5d;
   --t-ink:#2c251b; --t-ink2:#1c170f; --t-muted:#7c6a45; --t-faint:#a59575;
   --t-gold:#8a6d1f; --t-gold2:#a3851f; --t-glow:rgba(138,109,31,.3);
-  --t-red:#962f25; --t-red2:#74221a; --t-green:#3f6b4f; --t-green2:#2e5c43;
+  --t-red:#962f25; --t-red2:#74221a; --t-red-hi:#962f25; --t-green:#3f6b4f; --t-green2:#2e5c43;
   --t-warp:#6d3d8e; --t-field:#fbf6e8; --t-on-accent:#fbf6e8;
 }
 
@@ -43,7 +46,7 @@ body.bdh-theme-heretic {
   --t-line:#37241f; --t-line2:#523229;
   --t-ink:#d5c6b2; --t-ink2:#f3e7d3; --t-muted:#96806b; --t-faint:#65523f;
   --t-gold:#c8622e; --t-gold2:#8d4520; --t-glow:rgba(200,98,46,.40);
-  --t-red:#c1272d; --t-red2:#6e1114; --t-green:#7f9e5e; --t-green2:#3d4f2c;
+  --t-red:#c1272d; --t-red2:#6e1114; --t-red-hi:#f2555f; --t-green:#7f9e5e; --t-green2:#3d4f2c;
   --t-warp:#b054d6; --t-field:#110b0a; --t-on-accent:#150d08;
 }
 
@@ -152,7 +155,11 @@ body.bdh-themed .better-dh2e .bdh-loaded { font-family:var(--t-cond); color:var(
 body.bdh-themed .better-dh2e .bdh-eq.on { color:var(--t-green); }
 body.bdh-themed .better-dh2e .bdh-gear-bar { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-gear-bar b { color:var(--t-ink2); font-family:var(--t-mono); }
-body.bdh-themed .better-dh2e .bdh-over { color:var(--t-red); }
+body.bdh-themed .better-dh2e .bdh-gear-bar .bdh-over,
+body.bdh-themed .better-dh2e .bdh-gear-bar .bdh-over b { color:var(--t-red-hi); }
+/* Lift/Push are informational, not a warning — pin them off the inherited .bdh-over red even
+   though .bdh-enc-aux now sits inside .bdh-over in the markup. */
+body.bdh-themed .better-dh2e .bdh-gear-bar .bdh-enc-aux { color:var(--t-muted); }
 body.bdh-themed .better-dh2e .bdh-notes { background:var(--t-field); color:var(--t-ink); border:1px solid var(--t-line2); border-radius:0; font-family:var(--t-data); }
 
 /* ---------- Buttons ---------- */

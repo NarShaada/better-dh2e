@@ -17,7 +17,8 @@ import { computeArmour, HIT_LOCATIONS } from "../helpers/combat-data.mjs";
 import { RANK_ORDER, purchasedOnAcquire } from "../helpers/advancement-costs.mjs";
 import { advancementRuleset, bcHeader } from "../helpers/advancement-ruleset.mjs";
 import { carryLimits } from "../helpers/encumbrance-data.mjs";
-import { totalMagazines, magazineWeight, effectiveWeapon } from "../helpers/weapon-effects.mjs";
+import { nextCarryState, carriedWeight } from "../helpers/carry-state.mjs";
+import { totalMagazines, effectiveWeapon } from "../helpers/weapon-effects.mjs";
 import { initiativeBase, initiativeDice, movementBaseValue } from "../helpers/derived.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -242,7 +243,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     await this.actor.update({ [`system.skills.${key}.specialties`]: list });
   }
 
-  /** Action: toggle an item's equipped flag. Armour: only one non-additive piece equipped at a time. */
+  /** Action: cycle an item's carry state. Equippable: unequipped → equipped → stashed.
+   *  Gear: not stashed → stashed. Armour: only one non-additive piece equipped at a time.
+   *  Hordes keep their own three-state weapon cycle below and never reach the stashed state. */
   static async #onToggleEquipped(event, target) {
     const id = target.closest("[data-item-id]")?.dataset.itemId;
     const item = this.actor.items.get(id);
@@ -250,11 +253,15 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     if (item.type === "weapon" && this.actor.type === "horde") {
       const cur = item.system.hordeEquipped ? "hordeEquipped" : (item.system.equipped ? "equipped" : "none");
       const nextState = cur === "none" ? "equipped" : cur === "equipped" ? "hordeEquipped" : "none";
-      await item.update({ "system.equipped": nextState !== "none", "system.hordeEquipped": nextState === "hordeEquipped" });
+      // A horde weapon has no stashed state; clear any inbound `stashed` (e.g. dragged in from an
+      // acolyte's stashed gear) so applyCarryInvariant stops forcing `equipped` back to false and
+      // deadlocking this toggle at "none".
+      await item.update({ "system.equipped": nextState !== "none", "system.hordeEquipped": nextState === "hordeEquipped", "system.stashed": false });
       return;
     }
-    const next = !item.system.equipped;
-    if (item.type === "armour" && next && !item.system.additive) {
+    const equippable = item.type !== "gear";
+    const next = nextCarryState(item.system, { equippable });
+    if (item.type === "armour" && next.equipped && !item.system.additive) {
       const others = this.actor.items.filter(
         (i) => i.type === "armour" && i.id !== id && i.system.equipped && !i.system.additive
       );
@@ -262,7 +269,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         await this.actor.updateEmbeddedDocuments("Item", others.map((o) => ({ _id: o.id, "system.equipped": false })));
       }
     }
-    await item.update({ "system.equipped": next });
+    const update = { "system.stashed": next.stashed };
+    if (equippable) update["system.equipped"] = next.equipped;
+    await item.update(update);
   }
 
   /** Action: full attack roll (dialog → resolution → attack card) for an equipped weapon. */
@@ -702,33 +711,27 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       if (flags.usesRange) parts.push(`Rng ${s.range}m`);
       if (flags.usesAmmo) parts.push(`RoF ${s.rateOfFire.single}/${s.rateOfFire.short}/${s.rateOfFire.long}`);
       return {
-        id: w.id, name: w.name, equipped: s.equipped, hordeEquipped: s.hordeEquipped, summary: parts.join(" · "),
+        id: w.id, name: w.name, equipped: s.equipped, stashed: s.stashed, hordeEquipped: s.hordeEquipped, summary: parts.join(" · "),
         usesAmmo: flags.usesAmmo, clip: `${s.clip.value}/${s.clip.max}`,
         mags: totalMagazines(s), loadedAmmo: s.loadedAmmo?.name ?? "",
         granted: !!w.getFlag("better-dh2e", "grantedBy"), grantedBy: grantedBy(w)
       };
     });
     context.armour = items.filter((i) => i.type === "armour").map((a) => ({
-      id: a.id, name: a.name, equipped: a.system.equipped, additive: a.system.additive,
+      id: a.id, name: a.name, equipped: a.system.equipped, stashed: a.system.stashed, additive: a.system.additive,
       ap: Object.entries(a.system.locations).filter(([, v]) => v > 0).map(([k, v]) => `${LOC[k]} ${v}`).join(", ") || "—",
       granted: !!a.getFlag("better-dh2e", "grantedBy"), grantedBy: grantedBy(a)
     }));
     context.forceFields = items.filter((i) => i.type === "forceField").map((f) => ({
-      id: f.id, name: f.name, equipped: f.system.equipped, pr: f.system.protectionRating, overload: f.system.overload,
+      id: f.id, name: f.name, equipped: f.system.equipped, stashed: f.system.stashed, pr: f.system.protectionRating, overload: f.system.overload,
       granted: !!f.getFlag("better-dh2e", "grantedBy"), grantedBy: grantedBy(f)
     }));
     context.gear = items.filter((i) => i.type === "gear").map((g) => ({
-      id: g.id, name: g.name, desc: firstLine(g.system.description),
+      id: g.id, name: g.name, desc: firstLine(g.system.description), stashed: g.system.stashed,
       craft: BDH.craftsmanship[g.system.craftsmanship] ?? g.system.craftsmanship, quantity: g.system.quantity,
       granted: !!g.getFlag("better-dh2e", "grantedBy"), grantedBy: grantedBy(g)
     }));
-    context.carriedWeight = items.reduce((sum, i) => {
-      const w = i.system.weight ?? 0;
-      if (i.type === "gear") return sum + w * (i.system.quantity ?? 1);
-      if (i.type === "weapon") return sum + w + magazineWeight(i.system);
-      if (i.type === "armour" || i.type === "forceField") return sum + w;
-      return sum;
-    }, 0);
+    context.carriedWeight = carriedWeight(items);
     const encSum = (this.document.system.characteristics.strength.bonus ?? 0) + (this.document.system.characteristics.toughness.bonus ?? 0) + (this.document.system.carryMod ?? 0);
     const limits = carryLimits(encSum);
     context.carryLimit = limits.carry;

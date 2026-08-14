@@ -11,15 +11,17 @@ export async function grantsFolder() {
   return f;
 }
 
-/** Build a granted item's full data from its source. `equipped` (for armour/weapon/forceField) is decided
- *  by the caller — non-additive armour must respect the single-worn rule rather than blindly equipping. */
-function grantedData(src, hostId, uuid, equipped) {
+/** Build a granted item's full data from its source. `equipped` (armour/weapon/forceField only)
+ *  and `stashed` (any type with the field, including gear) are decided by the caller and
+ *  survive a refresh from source. */
+function grantedData(src, hostId, uuid, equipped, stashed = false) {
   const data = src.toObject();
   delete data._id;
   data.flags = { ...(data.flags ?? {}), [NS]: { ...(data.flags?.[NS] ?? {}), grantedBy: hostId, grantedUuid: uuid } };
   data.system = { ...data.system };
   if (data.type === "talent" || data.type === "psychicPower") data.system.purchased = true;
   if (data.type === "armour" || data.type === "weapon" || data.type === "forceField") data.system.equipped = equipped;
+  if ("stashed" in data.system) data.system.stashed = stashed;
   return data;
 }
 
@@ -47,7 +49,7 @@ export async function reconcileGrants(host) {
     if (!src) { console.warn(`better-dh2e | grant source missing: ${uuid}`); continue; }
     const cur = byUuid.get(uuid);
     if (toUpdateUuidToId[uuid] !== undefined) {
-      const data = grantedData(src, host.id, uuid, cur.system.equipped);   // refresh from source; keep current equip
+      const data = grantedData(src, host.id, uuid, cur.system.equipped, cur.system.stashed);   // refresh from source; keep current equip/stash
       updates.push({ _id: cur.id, name: data.name, img: data.img, system: data.system });
     } else {
       let equipped = true;
