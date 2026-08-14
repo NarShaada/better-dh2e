@@ -1,6 +1,7 @@
 /* Better DH2e — parchment theme (Plan 2: chrome, tabs, Stats tab). */
 .better-dh2e { --bdh-parch:#e7d8b8; --bdh-panel:#efe6cd; --bdh-ink:#2b2017;
   --bdh-maroon:#5a2a2a; --bdh-brown:#6b4a2b; --bdh-gold:#b8902f; --bdh-muted:#7a5c30;
+  --bdh-over:#a01818;
   color:var(--bdh-ink); font-family:Georgia, serif; }
 .better-dh2e .window-content, .better-dh2e form { background:var(--bdh-parch); }
 
@@ -342,7 +343,10 @@
 .better-dh2e .bdh-apt-add { display:flex; gap:6px; align-items:center; }
 
 /* Encumbrance (Gear tab) */
-.better-dh2e .bdh-over { color:#a01818; }
+/* Over-encumbered readout. Must out-specify `.bdh-gear-bar b` above, or the
+   warning silently never renders — it is the whole point of the class. */
+.better-dh2e .bdh-gear-bar .bdh-over,
+.better-dh2e .bdh-gear-bar .bdh-over b { color:var(--bdh-over); font-weight:bold; }
 .better-dh2e .bdh-enc-aux { color:var(--bdh-brown); font-size:11px; margin-left:8px; }
 
 /* Psychic cast card */
