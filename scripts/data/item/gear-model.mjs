@@ -12,6 +12,7 @@ export class GearModel extends BaseItemModel {
       availability:  new fields.StringField({ required: true, choices: Object.keys(BDH.availability), initial: "common" }),
       weight:   new fields.NumberField({ required: true, initial: 0, min: 0 }),
       quantity: new fields.NumberField({ required: true, integer: true, initial: 1, min: 0 }),
+      stashed:  new fields.BooleanField({ required: true, initial: false }),
       bonuses:  bonusesField()
     };
   }

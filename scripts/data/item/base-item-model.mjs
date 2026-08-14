@@ -1,5 +1,6 @@
 // scripts/data/item/base-item-model.mjs
 import { normalizeCraftsmanship } from "../../helpers/craftsmanship-data.mjs";
+import { applyCarryInvariant } from "../../helpers/carry-state.mjs";
 
 const fields = foundry.data.fields;
 
@@ -18,6 +19,14 @@ export class BaseItemModel extends foundry.abstract.TypeDataModel {
   static migrateData(source) {
     if (source && "craftsmanship" in source) source.craftsmanship = normalizeCraftsmanship(source.craftsmanship);
     return super.migrateData(source);
+  }
+
+  /** A stashed item is off the character's person, so it must not read as equipped. Applying it
+   *  here means nothing downstream — attack rolls, armour AP, grants, item bonuses — needs to
+   *  know the stashed state exists. Harmless for item types that have neither field. */
+  prepareDerivedData() {
+    super.prepareDerivedData();
+    applyCarryInvariant(this);
   }
 }
 
