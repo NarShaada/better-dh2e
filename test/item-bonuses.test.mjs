@@ -51,6 +51,16 @@ describe("gatherActiveBonusEntries", () => {
     expect(gatherActiveBonusEntries(undefined)).toEqual([]);
     expect(gatherActiveBonusEntries([item("gear", {})])).toEqual([]);
   });
+  it("excludes stashed gear and stashed armour", () => {
+    const items = [
+      item("gear",   { stashed: true,  bonuses: [bonus({ key: "intimidate", amount: 10 })] }, "Stashed skull"),
+      item("gear",   { stashed: false, bonuses: [bonus({ key: "charm", amount: 10 })] }, "Carried charm"),
+      item("armour", { equipped: true, stashed: true, bonuses: [bonus({ key: "awareness", amount: 10 })] }),
+    ];
+    // The armour row is inconsistent on purpose: prepareDerivedData would have cleared `equipped`,
+    // but this helper is pure and its callers' data does not always pass through the model.
+    expect(gatherActiveBonusEntries(items).map((e) => e.key)).toEqual(["charm"]);
+  });
 });
 
 describe("persistentCharacteristicBonuses", () => {

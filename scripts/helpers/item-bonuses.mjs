@@ -3,15 +3,16 @@
 // for characteristics). Checked = opt-in at roll. No imports: each entry carries its own `kind`.
 
 /** Flatten bonus entries from an actor's ACTIVE bonus-bearing items.
- *  Active = installed cybernetics, equipped armour, or any gear (owned ⇒ present).
+ *  Active = installed cybernetics, equipped armour, or any carried gear (owned ⇒ present).
+ *  Stashed items are off the character's person and contribute nothing.
  *  Gear is situational-only: its entries are coerced to situational. */
 export function gatherActiveBonusEntries(items) {
   const out = [];
   for (const it of items ?? []) {
     const type = it?.type;
     const sys = it?.system ?? {};
-    const active = (type === "cybernetic" && sys.installed) || (type === "armour" && sys.equipped)
-      || (type === "gear") || (type === "trait");   // traits are inherent → always active while owned
+    const active = (type === "cybernetic" && sys.installed) || (type === "armour" && sys.equipped && !sys.stashed)
+      || (type === "gear" && !sys.stashed) || (type === "trait");   // traits are inherent → always active while owned
     if (!active) continue;
     for (const b of sys.bonuses ?? []) {
       const base = { kind: b.kind, key: b.key, amount: Number(b.amount) || 0, sourceType: type, sourceName: it.name ?? "Item" };
