@@ -897,8 +897,10 @@ async function applyDamage(message) {
     const prefill = coverPrefill(piece, (f.hits ?? []).map((h) => h.location));
     const ctxLine = piece ? `<p class="notes">${coverContextLabel(piece, approach)}</p>` : "";
     // Only offered when there is a piece on the map to degrade — a manual In Cover status, and
-    // blast/spray (which never resolve an approach side), have nothing to wear down.
-    const degradeRow = pieceRegion
+    // blast/spray (which never resolve an approach side), have nothing to wear down. Also GM-only:
+    // Region writes need GM rights, but Apply Damage itself is owner-gated, not GM-gated, so a
+    // player who owns the target can legitimately reach this prompt — just not the write below.
+    const degradeRow = pieceRegion && game.user.isGM
       ? `<div class="form-group"><label>Cover Degradation</label><input type="checkbox" name="degrade" checked/></div>`
       : "";
     const choice = await DialogV2.prompt({
@@ -937,7 +939,7 @@ async function applyDamage(message) {
     const loss = hordeMagnitudeLossTotal(effs, devX);
     const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
     if (loss) await target.update({ "system.magnitude": mag });
-    if (degradePlan?.degraded) await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
+    if (game.user.isGM && degradePlan?.degraded) await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
     const hLines = effs.map((eff, i) => `Body: ${f.hits[i].total} → ${eff} dmg`);
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: target }),
@@ -999,7 +1001,7 @@ async function applyDamage(message) {
     await applyCrippled(target, cripX);
   }
   const crit = critTotal > 0 ? `<div class="bdh-card-line fail">Critical damage: ${critTotal}</div>` : "";
-  if (degradePlan?.degraded) await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
+  if (game.user.isGM && degradePlan?.degraded) await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverLine}${coverDestroyedLine}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${woundsShown(wounds, sys.wounds.max, reverseWoundsEnabled())} / ${sys.wounds.max}</div></div>`
