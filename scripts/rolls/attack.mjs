@@ -13,7 +13,7 @@ import { effectiveJamFloor, meleeCraftToHit, meleeCraftDamageBonus } from "../he
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { resolveFocusTarget } from "../helpers/psychic-manifest.mjs";
 import { forceFieldResult } from "../helpers/force-field-data.mjs";
-import { coverApFromInput } from "../helpers/cover.mjs";
+import { coverApFromInput, coverDegradationPlan } from "../helpers/cover.mjs";
 import { facingFromDelta, armourSideFromAttack } from "../helpers/facing.mjs";
 import { woundsShown, reverseWoundsEnabled } from "../helpers/wounds-display.mjs";
 import { vehicleHitLocation, VEHICLE_LOCATION_LABELS, applyIntegrity } from "../helpers/vehicle-data.mjs";
@@ -892,33 +892,56 @@ async function applyDamage(message) {
   const pieceRegion = targetToken ? coverPieceAdjacentTo(targetToken.document, approach) : null;
   const piece = pieceRegion ? coverFlag(pieceRegion) : null;
   const manualCover = target.statuses?.has?.("inCover") ?? false;
+  let degradePlan = null;
   if (piece || manualCover) {
     const prefill = coverPrefill(piece, (f.hits ?? []).map((h) => h.location));
     const ctxLine = piece ? `<p class="notes">${coverContextLabel(piece, approach)}</p>` : "";
+    // Only offered when there is a piece on the map to degrade — a manual In Cover status, and
+    // blast/spray (which never resolve an approach side), have nothing to wear down.
+    const degradeRow = pieceRegion
+      ? `<div class="form-group"><label>Cover Degradation</label><input type="checkbox" name="degrade" checked/></div>`
+      : "";
     const choice = await DialogV2.prompt({
       window: { title: "Apply Damage — Cover" },
-      content: `<div class="form-group"><label>Cover (AP)</label><input type="text" name="cover" value="${prefill}" autofocus/></div>${ctxLine}`,
+      content: `<div class="form-group"><label>Cover (AP)</label><input type="text" name="cover" value="${prefill}" autofocus/></div>${degradeRow}${ctxLine}`,
       ok: { label: "Apply", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
       rejectClose: false,
     });
     if (!choice) return;   // cancelled → abort the whole apply, change nothing
     coverAp = coverApFromInput(choice.cover);
+    if (pieceRegion && choice.degrade) {
+      degradePlan = coverDegradationPlan({
+        pieceAp: Number(piece?.ap) || 0,
+        confirmedAp: coverAp,
+        hits: (f.hits ?? []).map((h) => Number(h.total) || 0),
+      });
+    }
   }
+  // Per-hit cover AP: the degrading sequence when the box is ticked, otherwise the flat confirmed
+  // number for every hit — which is exactly the previous behaviour.
+  const appliedAp = (i) => (degradePlan ? (degradePlan.applied[i] ?? 0) : coverAp);
+  const appliedList = (f.hits ?? []).map((_, i) => appliedAp(i));
+  const uniqueApplied = [...new Set(appliedList)];
+  const coverLine = appliedList.some((a) => a > 0)
+    ? `<div class="bdh-card-line">In cover: ${uniqueApplied.length === 1 ? `+${uniqueApplied[0]}` : appliedList.map((a) => `+${a}`).join(" / ")} AP</div>`
+    : "";
+  const coverDestroyedLine = degradePlan?.destroyed ? `<div class="bdh-card-line">Cover destroyed.</div>` : "";
   if (target.type === "horde") {
     const effs = [];
-    for (const h of f.hits) {
+    for (const [i, h] of f.hits.entries()) {
       effs.push(await applyHitToToken(target, {
-        damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: "body", coverAp, unsoaked: h.unsoaked || 0,
+        damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: "body", coverAp: appliedAp(i), unsoaked: h.unsoaked || 0,
       }));
     }
     const devX = homebrewQualitiesEnabled() ? devastatingValue(qualities) : 0;
     const loss = hordeMagnitudeLossTotal(effs, devX);
     const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
     if (loss) await target.update({ "system.magnitude": mag });
+    if (degradePlan?.degraded) await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
     const hLines = effs.map((eff, i) => `Body: ${f.hits[i].total} → ${eff} dmg`);
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: target }),
-      content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${hLines.join("<br>")}</div><div class="bdh-card-line">Magnitude: ${mag} (−${loss}${devX ? `, incl. Devastating ${devX}/hit` : ""})</div></div>`,
+      content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverLine}${coverDestroyedLine}<div class="bdh-card-line">${hLines.join("<br>")}</div><div class="bdh-card-line">Magnitude: ${mag} (−${loss}${devX ? `, incl. Devastating ${devX}/hit` : ""})</div></div>`,
     });
     return;
   }
@@ -926,9 +949,9 @@ async function applyDamage(message) {
   let maxApplied = 0;   // largest single hit's effective damage (Concussive Prone trigger)
   const lines = [];
   const corrosive = hasCorrosive(qualities);
-  for (const h of f.hits) {
+  for (const [i, h] of f.hits.entries()) {
     const eff = await applyHitToToken(target, {
-      damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: h.location, coverAp, unsoaked: h.unsoaked || 0,
+      damageTotal: h.total, penetration: f.penetration, damageType: f.damageType, qualities, location: h.location, coverAp: appliedAp(i), unsoaked: h.unsoaked || 0,
     });
     const nowCrit = target.system.wounds.critical ?? 0;
     const hitCrit = nowCrit - prevCrit;
@@ -976,9 +999,10 @@ async function applyDamage(message) {
     await applyCrippled(target, cripX);
   }
   const crit = critTotal > 0 ? `<div class="bdh-card-line fail">Critical damage: ${critTotal}</div>` : "";
+  if (degradePlan?.degraded) await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
-    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverAp ? `<div class="bdh-card-line">In cover: +${coverAp} AP</div>` : ""}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${woundsShown(wounds, sys.wounds.max, reverseWoundsEnabled())} / ${sys.wounds.max}</div></div>`
+    content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverLine}${coverDestroyedLine}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${woundsShown(wounds, sys.wounds.max, reverseWoundsEnabled())} / ${sys.wounds.max}</div></div>`
   });
 }
 
