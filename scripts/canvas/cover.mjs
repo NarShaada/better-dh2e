@@ -123,10 +123,12 @@ export function coverPieceAdjacentTo(tokenDoc, side) {
  * Persist a degraded AP onto a cover piece, or destroy the piece when it reaches 0.
  * One call per damage application, not one per hit — same result, one overlay redraw.
  * Silently no-ops on a piece that has already left the scene (a GM deleting it mid-application).
+ * A non-finite `newAp` (NaN, ±Infinity) is treated as destroy rather than persisted — `newAp <= 0` is
+ * `false` for NaN, so without this check junk would land in the flag instead of removing the piece.
  */
 export async function applyCoverDegradation(region, newAp) {
   if (!region?.parent?.regions?.get(region.id)) return;
-  if (newAp <= 0) { await region.delete(); return; }
+  if (!Number.isFinite(newAp) || newAp <= 0) { await region.delete(); return; }
   await region.update({ [`flags.${NS}.cover.ap`]: newAp });
 }
 
@@ -146,12 +148,16 @@ export function beginCoverPainting(template) {
   beginCellMode({
     notice: `Painting "${template.name}" — left-drag to paint, right-drag to erase, Esc to stop.`,
     onCell: (cell, button) => applyBrushAtCell(canvas.scene, cell, button === 2, template),
+    owner: "cover-paint",
   });
 }
 
 /** Stop painting. Kept as a named export because the templates app calls it directly. */
 export function endCoverPainting() {
-  endCellMode();
+  // Tagged: this only ever tears down painting's own mode. An untagged call here would end whatever
+  // cell mode happens to be running — e.g. the templates manager's close handler silently killing
+  // Cover Degradation after the GM switched tools without explicitly stopping painting first.
+  endCellMode("cover-paint");
 }
 
 /**
@@ -160,6 +166,14 @@ export function endCoverPainting() {
  * repair or erase. Escape exits.
  */
 export function beginCoverDegrading() {
+  // Dedupes by Region id, not by cell: a piece resized to span multiple cells (coverRegionsAtCell matches
+  // by cell-centre containment) would otherwise fire one onCell per cell it occupies, and visit() in
+  // cell-mode.mjs only dedupes by cell and doesn't await onCell — so a single drag across a 2-cell piece
+  // could fire two concurrent degrade writes on the same Region. This Set is captured fresh in this
+  // closure each time the tool starts, so it lives for the whole mode session, not per-stroke: degrading
+  // the same piece a second time in one session requires re-selecting the tool. That's deliberately
+  // conservative — a safer default for a destructive action than allowing a same-session repeat.
+  const touchedThisSession = new Set();
   beginCellMode({
     notice: "Cover Degradation — click or drag to take 1 off each cover piece you touch, destroying it at 0. Esc to stop.",
     onCell: async (cell, button) => {
@@ -169,10 +183,13 @@ export function beginCoverDegrading() {
       // Same tie-break as the adjacency lookup: the toughest piece in the cell is the one being shot.
       const region = regions.reduce((best, r) =>
         ((Number(coverFlag(r).ap) || 0) > (Number(coverFlag(best).ap) || 0) ? r : best));
+      if (touchedThisSession.has(region.id)) return;
+      touchedThisSession.add(region.id);
       const ap = Number(coverFlag(region).ap) || 0;
       if (ap <= 0) return;                       // an AP-0 piece has nothing left to lose
       await applyCoverDegradation(region, ap - 1);
     },
+    owner: "cover-degrade",
   });
 }
 

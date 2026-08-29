@@ -398,7 +398,8 @@ Hooks.on("moveToken", async (doc, movement, operation, user) => {
 });
 
 // Cover scene controls — attached to the Token controls group (proven to render across v13/v14).
-// GM: open the template manager, clear all cover. Everyone: toggle cover overlay visibility (per-client).
+// GM: open the template manager, clear all cover, manually degrade cover pieces. Everyone: toggle cover
+// overlay visibility (per-client).
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!coverMechanicsEnabled()) return;
   const group = controls.tokens ?? Object.values(controls)[0];

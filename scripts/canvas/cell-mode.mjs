@@ -12,7 +12,7 @@
 // Foundry's own long-press handling; that gap is a known, separate, deferred concern.
 const DENIED_ACTIONS = ["clickLeft", "clickLeft2", "clickRight", "clickRight2", "dragLeftStart", "dragRightStart"];
 
-// { onCell, onDown, onMove, onUp, onKey, onContext, visited, button,
+// { owner, onCell, onDown, onMove, onUp, onKey, onContext, visited, button,
 //   mgr, mgrPermissions, tokensLayer, tokensInteractiveChildren, regionsLayer, regionsInteractiveChildren }
 let _mode = null;
 
@@ -41,9 +41,11 @@ function visit(point) {
 
 /**
  * Begin a cell mode. Left and right buttons both drag; Escape exits.
- * @param {{notice: string, onCell: (cell: {x: number, y: number}, button: number) => any}} o
+ * @param {{notice: string, onCell: (cell: {x: number, y: number}, button: number) => any, owner?: string}} o
+ *   `owner` tags this session so a later `endCellMode(owner)` from a *different* tool can't tear it down —
+ *   see endCellMode for why that matters.
  */
-export function beginCellMode({ notice, onCell }) {
+export function beginCellMode({ notice, onCell, owner }) {
   if (!canvas?.ready) {
     ui.notifications.warn("Better DH2e: open a scene before using this tool.");
     return;
@@ -71,7 +73,8 @@ export function beginCellMode({ notice, onCell }) {
 
   // Snapshot and gate the canvas's own interaction permissions so Foundry can't also pan/click/drag
   // underneath our listeners. Only touch it if a manager actually exists; only restore what we captured,
-  // and restore onto the same manager instance we modified.
+  // and restore onto the same manager instance we modified — not whatever canvas.mouseInteractionManager
+  // happens to resolve to at exit time.
   const mgr = canvas?.mouseInteractionManager;
   const mgrPermissions = mgr ? mgr.permissions : undefined;
   if (mgr) {
@@ -81,13 +84,15 @@ export function beginCellMode({ notice, onCell }) {
   }
 
   // The permissions gate above only covers canvas.mouseInteractionManager (the board manager on
-  // canvas.stage). Every placeable owns its OWN MouseInteractionManager, untouched by that gate — and
-  // these tools live on the Tokens control group, so the Token layer is active and its tokens are
-  // interactive. A left-drag across a token would take control of it before our stage handler sees the
-  // stroke; a right-click on a token opens the Token HUD and calls stopPropagation, so that cell would
-  // silently do nothing. Disable each layer's interactivity instead — exactly what core's own
-  // InteractionLayer#deactivate does — and restore it on every exit path. Cover pieces are Regions, so
-  // canvas.regions gets the same treatment in case the GM is on that layer.
+  // canvas.stage). Every placeable owns its OWN MouseInteractionManager (PlaceableObject#activateListeners
+  // — where each placeable's own MouseInteractionManager is created), untouched by that gate — and these
+  // tools live on the Tokens control group, so the Token layer is active and its tokens are interactive.
+  // A left-drag across a token would take control of it (drag / ruler) before our stage handler sees the
+  // stroke; a right-click on a token opens the Token HUD and calls stopPropagation
+  // (PlaceableObject#_propagateRightClick returns false), so that cell would silently do nothing. Disable
+  // each layer's interactivity instead — exactly what core's own InteractionLayer#deactivate does — and
+  // restore it on every exit path. Cover pieces are Regions, so canvas.regions gets the same treatment in
+  // case the GM is on that layer.
   const tokensLayer = canvas?.tokens;
   const regionsLayer = canvas?.regions;
   const tokensInteractiveChildren = tokensLayer ? tokensLayer.interactiveChildren : undefined;
@@ -96,7 +101,7 @@ export function beginCellMode({ notice, onCell }) {
   if (regionsLayer) regionsLayer.interactiveChildren = false;
 
   _mode = {
-    onCell, onDown, onMove, onUp, onKey, onContext, visited: new Set(), button: null,
+    owner, onCell, onDown, onMove, onUp, onKey, onContext, visited: new Set(), button: null,
     mgr, mgrPermissions, tokensLayer, tokensInteractiveChildren, regionsLayer, regionsInteractiveChildren,
   };
   canvas.stage.eventMode = "static";
@@ -108,9 +113,18 @@ export function beginCellMode({ notice, onCell }) {
   canvas.app.view.addEventListener("contextmenu", onContext);
 }
 
-/** Stop the current cell mode and restore normal canvas interaction. Safe to call when inactive. */
-export function endCellMode() {
+/**
+ * Stop the current cell mode and restore normal canvas interaction. Safe to call when inactive.
+ * @param {string} [owner] When given, this is a no-op unless it matches the active mode's `owner` — so
+ *   one tool's teardown can never end a *different* tool's mode (e.g. closing the cover-template manager
+ *   after switching to the degradation tool must not silently kill degradation). Called with no argument
+ *   it ends whatever mode is running regardless of owner — that is what beginCellMode's own
+ *   previous-session teardown and the canvasReady/canvasTearDown guards below need, since they must be
+ *   able to end any tool's mode, not just one tagged owner's.
+ */
+export function endCellMode(owner) {
   if (!_mode) return;
+  if (owner !== undefined && _mode.owner !== owner) return;
   const m = _mode;
   _mode = null;                                     // clear first so a re-entrant call is a no-op
   canvas.stage.off("pointerdown", m.onDown);

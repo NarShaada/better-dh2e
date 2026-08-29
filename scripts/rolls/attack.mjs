@@ -913,7 +913,11 @@ async function applyDamage(message) {
     coverAp = coverApFromInput(choice.cover);
     if (pieceRegion && choice.degrade) {
       degradePlan = coverDegradationPlan({
-        pieceAp: Number(piece?.ap) || 0,
+        // Re-read the live flag rather than reusing `piece` (snapshotted before the dialog was even
+        // opened) — the piece is a live document, so its AP can change while the prompt is up (the
+        // manual degrade tool, or another GM). Computing the plan from a stale higher AP could let a
+        // concurrent decrease look like an increase to the write below, repairing the piece.
+        pieceAp: Number(coverFlag(pieceRegion)?.ap) || 0,
         confirmedAp: coverAp,
         hits: (f.hits ?? []).map((h) => Number(h.total) || 0),
       });
@@ -939,7 +943,18 @@ async function applyDamage(message) {
     const loss = hordeMagnitudeLossTotal(effs, devX);
     const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
     if (loss) await target.update({ "system.magnitude": mag });
-    if (game.user.isGM && degradePlan?.degraded) await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
+    // Degradation is a secondary effect layered on top of the wounds/magnitude write above, which has
+    // already landed. Its own write (existence check + update/delete) isn't atomic, so a concurrent
+    // deletion or a scene refusing the write can reject here — that must not throw past this point and
+    // abort the ChatMessage.create below, or the damage lands with no card and nothing in the log.
+    if (game.user.isGM && degradePlan?.degraded) {
+      try {
+        await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
+      } catch (err) {
+        console.error("better-dh2e | cover degradation write failed", err);
+        ui.notifications.warn("Cover degradation could not be saved — the damage was still applied.");
+      }
+    }
     const hLines = effs.map((eff, i) => `Body: ${f.hits[i].total} → ${eff} dmg`);
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: target }),
@@ -1001,7 +1016,14 @@ async function applyDamage(message) {
     await applyCrippled(target, cripX);
   }
   const crit = critTotal > 0 ? `<div class="bdh-card-line fail">Critical damage: ${critTotal}</div>` : "";
-  if (game.user.isGM && degradePlan?.degraded) await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
+  if (game.user.isGM && degradePlan?.degraded) {
+    try {
+      await applyCoverDegradation(pieceRegion, degradePlan.finalAp);
+    } catch (err) {
+      console.error("better-dh2e | cover degradation write failed", err);
+      ui.notifications.warn("Cover degradation could not be saved — the damage was still applied.");
+    }
+  }
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><div class="bdh-card-head">${target.name} — Damage Applied</div>${coverLine}${coverDestroyedLine}<div class="bdh-card-line">${lines.join("<br>")}</div>${crit}<div class="bdh-card-line">Wounds: ${woundsShown(wounds, sys.wounds.max, reverseWoundsEnabled())} / ${sys.wounds.max}</div></div>`
