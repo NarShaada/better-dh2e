@@ -155,13 +155,13 @@ export function endCoverPainting() {
 }
 
 /**
- * Begin manual cover degradation: click a cover piece to knock 1 off its AP, destroying it at 0.
- * Left button only — right-click is deliberately unbound, so a misclick cannot repair or erase.
- * Escape exits.
+ * Begin manual cover degradation: click or drag across cover pieces to knock 1 off each one's AP,
+ * destroying any at 0. Left button only — right-click is deliberately unbound, so a misclick cannot
+ * repair or erase. Escape exits.
  */
 export function beginCoverDegrading() {
   beginCellMode({
-    notice: "Cover Degradation — click a cover piece to take 1 off its AP. Esc to stop.",
+    notice: "Cover Degradation — click or drag to take 1 off each cover piece you touch, destroying it at 0. Esc to stop.",
     onCell: async (cell, button) => {
       if (button !== 0) return;
       const regions = coverRegionsAtCell(canvas.scene, cell).filter((r) => coverFlag(r));
