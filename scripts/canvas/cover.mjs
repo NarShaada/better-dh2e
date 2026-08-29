@@ -155,6 +155,28 @@ export function endCoverPainting() {
 }
 
 /**
+ * Begin manual cover degradation: click a cover piece to knock 1 off its AP, destroying it at 0.
+ * Left button only — right-click is deliberately unbound, so a misclick cannot repair or erase.
+ * Escape exits.
+ */
+export function beginCoverDegrading() {
+  beginCellMode({
+    notice: "Cover Degradation — click a cover piece to take 1 off its AP. Esc to stop.",
+    onCell: async (cell, button) => {
+      if (button !== 0) return;
+      const regions = coverRegionsAtCell(canvas.scene, cell).filter((r) => coverFlag(r));
+      if (!regions.length) return;
+      // Same tie-break as the adjacency lookup: the toughest piece in the cell is the one being shot.
+      const region = regions.reduce((best, r) =>
+        ((Number(coverFlag(r).ap) || 0) > (Number(coverFlag(best).ap) || 0) ? r : best));
+      const ap = Number(coverFlag(region).ap) || 0;
+      if (ap <= 0) return;                       // an AP-0 piece has nothing left to lose
+      await applyCoverDegradation(region, ap - 1);
+    },
+  });
+}
+
+/**
  * Clear any phase-2 cover (pieces + the token residue they left behind) from the current scene and say
  * so once. Idempotent — a scene with nothing legacy on it is a silent no-op.
  */

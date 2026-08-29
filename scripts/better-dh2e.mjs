@@ -33,7 +33,7 @@ import { makeDHCombat } from "./documents/combat.mjs";
 import { makeDHCombatant } from "./documents/combatant.mjs";
 import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
 import { initVehicleFacing } from "./canvas/vehicle-facing.mjs";
-import { clearAllCover, coverMechanicsEnabled, registerLegacyCoverMigration, runLegacyCoverMigration } from "./canvas/cover.mjs";
+import { beginCoverDegrading, clearAllCover, coverMechanicsEnabled, registerLegacyCoverMigration, runLegacyCoverMigration } from "./canvas/cover.mjs";
 import { registerCellModeGuards } from "./canvas/cell-mode.mjs";
 import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
@@ -411,6 +411,10 @@ Hooks.on("getSceneControlButtons", (controls) => {
     group.tools.bdhCoverClear = {
       name: "bdhCoverClear", title: "Clear All Cover", icon: "fa-solid fa-broom", button: true,
       onClick: () => confirmClearCover(),
+    };
+    group.tools.bdhCoverDegrade = {
+      name: "bdhCoverDegrade", title: "Cover Degradation", icon: "fa-solid fa-burst", button: true,
+      onClick: () => beginCoverDegrading(),
     };
   }
   group.tools.bdhCoverVisibility = {
