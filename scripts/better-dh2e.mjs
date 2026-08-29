@@ -33,7 +33,8 @@ import { makeDHCombat } from "./documents/combat.mjs";
 import { makeDHCombatant } from "./documents/combatant.mjs";
 import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
 import { initVehicleFacing } from "./canvas/vehicle-facing.mjs";
-import { clearAllCover, coverMechanicsEnabled, registerCoverPaintingGuards, registerLegacyCoverMigration, runLegacyCoverMigration } from "./canvas/cover.mjs";
+import { beginCoverDegrading, clearAllCover, coverMechanicsEnabled, registerLegacyCoverMigration, runLegacyCoverMigration } from "./canvas/cover.mjs";
+import { registerCellModeGuards } from "./canvas/cell-mode.mjs";
 import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 import { registerGrantHooks } from "./cybernetics/grants.mjs";
@@ -319,7 +320,7 @@ function applyUiTheme() {
 Hooks.once("ready", () => {
   applyUiTheme();
   initCoverOverlay();
-  registerCoverPaintingGuards();
+  registerCellModeGuards();
   registerLegacyCoverMigration();
   initVehicleFacing();
   registerGrantHooks();
@@ -397,7 +398,8 @@ Hooks.on("moveToken", async (doc, movement, operation, user) => {
 });
 
 // Cover scene controls — attached to the Token controls group (proven to render across v13/v14).
-// GM: open the template manager, clear all cover. Everyone: toggle cover overlay visibility (per-client).
+// GM: open the template manager, clear all cover, manually degrade cover pieces. Everyone: toggle cover
+// overlay visibility (per-client).
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!coverMechanicsEnabled()) return;
   const group = controls.tokens ?? Object.values(controls)[0];
@@ -410,6 +412,10 @@ Hooks.on("getSceneControlButtons", (controls) => {
     group.tools.bdhCoverClear = {
       name: "bdhCoverClear", title: "Clear All Cover", icon: "fa-solid fa-broom", button: true,
       onClick: () => confirmClearCover(),
+    };
+    group.tools.bdhCoverDegrade = {
+      name: "bdhCoverDegrade", title: "Cover Degradation", icon: "fa-solid fa-burst", button: true,
+      onClick: () => beginCoverDegrading(),
     };
   }
   group.tools.bdhCoverVisibility = {

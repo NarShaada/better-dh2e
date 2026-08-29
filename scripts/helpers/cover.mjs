@@ -36,3 +36,39 @@ export function adjacentCellsOnSide(footprint, side) {
 export function isLegacyCoverFlag(cover) {
   return !!cover && Object.hasOwn(cover, "sides");
 }
+
+/**
+ * The per-hit cover sequence for one damage application.
+ *
+ * Two numbers, deliberately not conflated: the PIECE's AP is the real cover value and the only
+ * thing that degrades or destroys, while the GM's CONFIRMED number is a per-attack modifier
+ * (talents and the like). The confirmed number is held as an offset from the piece's AP so that an
+ * override tracks the piece as it wears down instead of going stale.
+ *
+ * A hit degrades the piece when cover actually helped against it (`applied > 0`) and the round beat
+ * the piece's current AP (strictly greater — pre-mitigation damage, before Toughness and armour).
+ * Degradation lands AFTER the hit resolves, so the first hit always meets the undamaged piece.
+ *
+ * @param {{pieceAp: number, confirmedAp: number, hits?: Array<number>}} o
+ *   `hits` is pre-mitigation damage totals in resolution order.
+ * @returns {{applied: number[], finalAp: number, destroyed: boolean, degraded: number}}
+ *   `applied[i]` is the cover AP hit i soaks. `destroyed` means this application took it to 0.
+ */
+export function coverDegradationPlan({ pieceAp, confirmedAp, hits } = {}) {
+  const start = Math.max(0, Math.floor(Number(pieceAp) || 0));
+  const confirmed = Math.max(0, Math.floor(Number(confirmedAp) || 0));
+  const offset = confirmed - start;
+  let ap = start;
+  let degraded = 0;
+  const applied = [];
+  for (const raw of hits ?? []) {
+    const a = Math.max(0, ap + offset);
+    applied.push(a);
+    // `ap > 0` is what keeps an AP-0 piece from going negative when the offset is positive.
+    if (a > 0 && ap > 0 && (Number(raw) || 0) > ap) {
+      ap -= 1;
+      degraded += 1;
+    }
+  }
+  return { applied, finalAp: ap, destroyed: degraded > 0 && ap === 0, degraded };
+}

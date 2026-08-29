@@ -1,5 +1,6 @@
 // scripts/canvas/cover.mjs — cover-piece Regions: create, adjacency lookup, AP lookup, clear, placement.
 import { adjacentCellsOnSide, isLegacyCoverFlag } from "../helpers/cover.mjs";
+import { beginCellMode, endCellMode } from "./cell-mode.mjs";
 
 const NS = "better-dh2e";
 
@@ -100,164 +101,94 @@ function coverRegionsAtCell(scene, cell) {
 }
 
 /**
- * The highest-AP cover piece sitting in a cell adjacent to this token on `side`, or null.
+ * The highest-AP cover Region sitting in a cell adjacent to this token on `side`, or null.
  * `side` is the shot's approach side from facingFromDelta — the direction the attack came FROM,
  * which is the direction the shielding obstacle must lie in.
+ * Returns the RegionDocument, not its payload, so callers can degrade it; use coverFlag() for the
+ * payload.
  */
 export function coverPieceAdjacentTo(tokenDoc, side) {
   if (!coverMechanicsEnabled() || !tokenDoc?.parent || !side) return null;
   const origin = canvas.grid.getOffset({ x: tokenDoc.x, y: tokenDoc.y });
   const footprint = { x: origin.j, y: origin.i, width: tokenDoc.width, height: tokenDoc.height };
-  const covers = adjacentCellsOnSide(footprint, side)
+  const regions = adjacentCellsOnSide(footprint, side)
     .flatMap((cell) => coverRegionsAtCell(tokenDoc.parent, cell))
-    .map(coverFlag)
-    .filter(Boolean);
-  if (!covers.length) return null;
-  return covers.reduce((best, c) => ((Number(c.ap) || 0) > (Number(best.ap) || 0) ? c : best));
+    .filter((r) => coverFlag(r));
+  if (!regions.length) return null;
+  return regions.reduce((best, r) =>
+    ((Number(coverFlag(r).ap) || 0) > (Number(coverFlag(best).ap) || 0) ? r : best));
 }
 
-// { template, onDown, onMove, onUp, onKey, onContext, painted, erasing,
-//   mgr, mgrPermissions, tokensLayer, tokensInteractiveChildren, regionsLayer, regionsInteractiveChildren }
-let _painting = null;
-
-// canvas.stage is a *sibling* listener target to Foundry's own MouseInteractionManager (both are bound
-// directly to canvas.stage, and Foundry's is registered first) — event.stopPropagation() only stops
-// propagation between PIXI display-tree targets, not between sibling listeners on the same target, so it
-// cannot suppress Foundry's own pan/click/drag handling. The actual suppression is the permissions gate
-// below: MouseInteractionManager#can() reads this.permissions[action] and honours a plain boolean.
-// NOTE: this only covers what can() actually gates. #handleLongPress calls its callback directly and
-// unconditionally, without going through can("longPress", ...) — a "longPress" entry here would be inert,
-// so it is deliberately omitted. A left-button-down held still mid-stroke can therefore still reach
-// Foundry's own long-press handling; that gap is a known, separate, deferred concern, not something this
-// list can close.
-const DENIED_ACTIONS = ["clickLeft", "clickLeft2", "clickRight", "clickRight2", "dragLeftStart", "dragRightStart"];
-
-/** Cell key so a single drag never paints the same cell twice. */
-function cellKey(cell) {
-  return `${cell.x},${cell.y}`;
-}
-
-/** Grid cell under a scene-coordinate point. */
-function cellAtPoint(point) {
-  const o = canvas.grid.getOffset(point);
-  return { x: o.j, y: o.i };
+/**
+ * Persist a degraded AP onto a cover piece, or destroy the piece when it reaches 0.
+ * One call per damage application, not one per hit — same result, one overlay redraw.
+ * Silently no-ops on a piece that has already left the scene (a GM deleting it mid-application).
+ * A non-finite `newAp` (NaN, ±Infinity) is treated as destroy rather than persisted — `newAp <= 0` is
+ * `false` for NaN, so without this check junk would land in the flag instead of removing the piece.
+ */
+export async function applyCoverDegradation(region, newAp) {
+  if (!region?.parent?.regions?.get(region.id)) return;
+  if (!Number.isFinite(newAp) || newAp <= 0) { await region.delete(); return; }
+  await region.update({ [`flags.${NS}.cover.ap`]: newAp });
 }
 
 /** Paint one cell (skipping cells already covered) or erase every piece in it. */
-async function applyBrushAt(point, erasing) {
-  const scene = canvas.scene;
-  const cell = cellAtPoint(point);
-  const key = cellKey(cell);
-  if (_painting.painted.has(key)) return;      // one visit per cell per stroke
-  _painting.painted.add(key);
+async function applyBrushAtCell(scene, cell, erasing, template) {
   const existing = coverRegionsAtCell(scene, cell);
   if (erasing) {
     if (existing.length) await scene.deleteEmbeddedDocuments("Region", existing.map((r) => r.id));
   } else if (!existing.length) {
-    await createCoverPiece(scene, point, _painting.template);
+    const px = canvas.grid.getTopLeftPoint({ i: cell.y, j: cell.x });
+    await createCoverPiece(scene, px, template);
   }
 }
 
-/** Begin painting. Left paints, right erases, both drag; Escape exits. */
+/** Begin painting cover pieces. Left paints, right erases, both drag; Escape exits. */
 export function beginCoverPainting(template) {
-  if (!canvas?.ready) {
-    ui.notifications.warn("Better DH2e: open a scene before painting cover.");
-    return;
-  }
-  endCoverPainting();                   // tear down a previous session before starting this one
-  ui.notifications.info(`Painting "${template.name}" — left-drag to paint, right-drag to erase, Esc to stop.`);
-
-  // event.stopPropagation() is deliberately absent from onDown/onMove — see the DENIED_ACTIONS comment
-  // below for why it would be a no-op here. Suppression is the permissions gate + interactiveChildren
-  // toggles further down, not this call.
-  const onDown = (event) => {
-    if (!_painting) return;
-    const btn = event.button ?? event.originalEvent?.button ?? 0;
-    if (btn !== 0 && btn !== 2) return;
-    _painting.erasing = btn === 2;
-    _painting.painted.clear();
-    applyBrushAt(event.getLocalPosition(canvas.stage), _painting.erasing).catch((err) => {
-      console.error("better-dh2e | cover paint stroke failed", err);
-      ui.notifications.error("Cover painting: a stroke failed to save — see console.");
-    });
-  };
-  const onMove = (event) => {
-    if (!_painting || _painting.erasing === null) return;   // not painting, or no button held
-    applyBrushAt(event.getLocalPosition(canvas.stage), _painting.erasing).catch((err) => {
-      console.error("better-dh2e | cover paint stroke failed", err);
-      ui.notifications.error("Cover painting: a stroke failed to save — see console.");
-    });
-  };
-  const onUp = () => { if (_painting) { _painting.erasing = null; _painting.painted.clear(); } };
-  const onKey = (e) => { if (e.key === "Escape") endCoverPainting(); };
-  const onContext = (e) => e.preventDefault();     // no browser/Foundry context menu while painting
-
-  // Snapshot and gate the canvas's own interaction permissions so Foundry can't also pan/click/drag
-  // underneath our listeners. Only touch it if a manager actually exists; only restore what we captured,
-  // and restore onto the same manager instance we modified — not whatever canvas.mouseInteractionManager
-  // happens to resolve to at exit time.
-  const mgr = canvas?.mouseInteractionManager;
-  const mgrPermissions = mgr ? mgr.permissions : undefined;
-  if (mgr) {
-    const denied = { ...mgr.permissions };
-    for (const action of DENIED_ACTIONS) denied[action] = false;
-    mgr.permissions = denied;
-  }
-
-  // The permissions gate above only covers canvas.mouseInteractionManager (the board manager on
-  // canvas.stage). Every placeable owns its OWN MouseInteractionManager
-  // (PlaceableObject#activateListeners), untouched by that gate — and the cover tools live on the Tokens
-  // control group, so the Token layer is active and its tokens are interactive. A left-drag across a
-  // token would take control of it (drag / ruler) before our stage handler sees the stroke; a right-click
-  // on a token opens the Token HUD and calls stopPropagation (PlaceableObject#_propagateRightClick
-  // returns false), so that cell would silently fail to erase. Disable each layer's interactivity
-  // instead — exactly what core's own InteractionLayer#deactivate does — and restore it on every exit
-  // path. Cover pieces are Regions, so canvas.regions gets the same treatment in case the GM is on that
-  // layer. Snapshot each layer's own value, and guard for the layer being absent.
-  const tokensLayer = canvas?.tokens;
-  const regionsLayer = canvas?.regions;
-  const tokensInteractiveChildren = tokensLayer ? tokensLayer.interactiveChildren : undefined;
-  const regionsInteractiveChildren = regionsLayer ? regionsLayer.interactiveChildren : undefined;
-  if (tokensLayer) tokensLayer.interactiveChildren = false;
-  if (regionsLayer) regionsLayer.interactiveChildren = false;
-
-  _painting = {
-    template, onDown, onMove, onUp, onKey, onContext, painted: new Set(), erasing: null,
-    mgr, mgrPermissions, tokensLayer, tokensInteractiveChildren, regionsLayer, regionsInteractiveChildren,
-  };
-  canvas.stage.eventMode = "static";
-  canvas.stage.on("pointerdown", onDown);
-  canvas.stage.on("pointermove", onMove);
-  canvas.stage.on("pointerup", onUp);
-  canvas.stage.on("pointerupoutside", onUp);
-  window.addEventListener("keydown", onKey);
-  canvas.app.view.addEventListener("contextmenu", onContext);
+  beginCellMode({
+    notice: `Painting "${template.name}" — left-drag to paint, right-drag to erase, Esc to stop.`,
+    onCell: (cell, button) => applyBrushAtCell(canvas.scene, cell, button === 2, template),
+    owner: "cover-paint",
+  });
 }
 
-/** Stop painting and restore normal canvas interaction. Safe to call when not painting. */
+/** Stop painting. Kept as a named export because the templates app calls it directly. */
 export function endCoverPainting() {
-  if (!_painting) return;
-  const p = _painting;
-  _painting = null;                                 // clear first so a re-entrant call is a no-op
-  canvas.stage.off("pointerdown", p.onDown);
-  canvas.stage.off("pointermove", p.onMove);
-  canvas.stage.off("pointerup", p.onUp);
-  canvas.stage.off("pointerupoutside", p.onUp);
-  window.removeEventListener("keydown", p.onKey);
-  canvas.app?.view?.removeEventListener("contextmenu", p.onContext);
-  if (p.mgr && p.mgrPermissions !== undefined) p.mgr.permissions = p.mgrPermissions;
-  if (p.tokensLayer && p.tokensInteractiveChildren !== undefined) p.tokensLayer.interactiveChildren = p.tokensInteractiveChildren;
-  if (p.regionsLayer && p.regionsInteractiveChildren !== undefined) p.regionsLayer.interactiveChildren = p.regionsInteractiveChildren;
+  // Tagged: this only ever tears down painting's own mode. An untagged call here would end whatever
+  // cell mode happens to be running — e.g. the templates manager's close handler silently killing
+  // Cover Degradation after the GM switched tools without explicitly stopping painting first.
+  endCellMode("cover-paint");
 }
 
 /**
- * Stop painting if the canvas goes out from under us — either a normal scene swap (canvasReady) or a
- * teardown to a blank/no scene, which returns before canvasReady would ever fire (canvasTearDown covers
- * that path). endCoverPainting is idempotent, so both hooks firing for the same transition is harmless.
+ * Begin manual cover degradation: click or drag across cover pieces to knock 1 off each one's AP,
+ * destroying any at 0. Left button only — right-click is deliberately unbound, so a misclick cannot
+ * repair or erase. Escape exits.
  */
-export function registerCoverPaintingGuards() {
-  Hooks.on("canvasReady", () => endCoverPainting());
-  Hooks.on("canvasTearDown", () => endCoverPainting());
+export function beginCoverDegrading() {
+  beginCellMode({
+    notice: "Cover Degradation — click or drag to take 1 off each cover piece you touch, destroying it at 0. Esc to stop.",
+    // Claims by Region id, not by cell: a piece resized to span multiple cells (coverRegionsAtCell matches
+    // by cell-centre containment) would otherwise fire one onCell per cell it occupies, and visit() in
+    // cell-mode.mjs only dedupes by cell and doesn't await onCell — so a single drag across a 2-cell piece
+    // could fire two concurrent degrade writes on the same Region. `claim` is scoped to the current stroke
+    // (cleared on pointerdown/pointerup, same as cell-mode's own cell dedupe), so a fresh click — a new
+    // stroke — is free to degrade the same piece again: "select it, click a cover piece, -1 to its AP"
+    // must work for repeated clicks, not just once per tool session.
+    onCell: async (cell, button, claim) => {
+      if (button !== 0) return;
+      const regions = coverRegionsAtCell(canvas.scene, cell).filter((r) => coverFlag(r));
+      if (!regions.length) return;
+      // Same tie-break as the adjacency lookup: the toughest piece in the cell is the one being shot.
+      const region = regions.reduce((best, r) =>
+        ((Number(coverFlag(r).ap) || 0) > (Number(coverFlag(best).ap) || 0) ? r : best));
+      if (!claim(region.id)) return;
+      const ap = Number(coverFlag(region).ap) || 0;
+      if (ap <= 0) return;                       // an AP-0 piece has nothing left to lose
+      await applyCoverDegradation(region, ap - 1);
+    },
+    owner: "cover-degrade",
+  });
 }
 
 /**
