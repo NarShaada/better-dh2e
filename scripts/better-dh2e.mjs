@@ -33,7 +33,8 @@ import { makeDHCombat } from "./documents/combat.mjs";
 import { makeDHCombatant } from "./documents/combatant.mjs";
 import { initCoverOverlay } from "./canvas/cover-overlay.mjs";
 import { initVehicleFacing } from "./canvas/vehicle-facing.mjs";
-import { clearAllCover, coverMechanicsEnabled, registerCoverPaintingGuards, registerLegacyCoverMigration, runLegacyCoverMigration } from "./canvas/cover.mjs";
+import { clearAllCover, coverMechanicsEnabled, registerLegacyCoverMigration, runLegacyCoverMigration } from "./canvas/cover.mjs";
+import { registerCellModeGuards } from "./canvas/cell-mode.mjs";
 import { toggleCoverVisibility } from "./canvas/cover-overlay.mjs";
 import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 import { registerGrantHooks } from "./cybernetics/grants.mjs";
@@ -319,7 +320,7 @@ function applyUiTheme() {
 Hooks.once("ready", () => {
   applyUiTheme();
   initCoverOverlay();
-  registerCoverPaintingGuards();
+  registerCellModeGuards();
   registerLegacyCoverMigration();
   initVehicleFacing();
   registerGrantHooks();
