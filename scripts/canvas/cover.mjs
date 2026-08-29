@@ -166,25 +166,23 @@ export function endCoverPainting() {
  * repair or erase. Escape exits.
  */
 export function beginCoverDegrading() {
-  // Dedupes by Region id, not by cell: a piece resized to span multiple cells (coverRegionsAtCell matches
-  // by cell-centre containment) would otherwise fire one onCell per cell it occupies, and visit() in
-  // cell-mode.mjs only dedupes by cell and doesn't await onCell — so a single drag across a 2-cell piece
-  // could fire two concurrent degrade writes on the same Region. This Set is captured fresh in this
-  // closure each time the tool starts, so it lives for the whole mode session, not per-stroke: degrading
-  // the same piece a second time in one session requires re-selecting the tool. That's deliberately
-  // conservative — a safer default for a destructive action than allowing a same-session repeat.
-  const touchedThisSession = new Set();
   beginCellMode({
     notice: "Cover Degradation — click or drag to take 1 off each cover piece you touch, destroying it at 0. Esc to stop.",
-    onCell: async (cell, button) => {
+    // Claims by Region id, not by cell: a piece resized to span multiple cells (coverRegionsAtCell matches
+    // by cell-centre containment) would otherwise fire one onCell per cell it occupies, and visit() in
+    // cell-mode.mjs only dedupes by cell and doesn't await onCell — so a single drag across a 2-cell piece
+    // could fire two concurrent degrade writes on the same Region. `claim` is scoped to the current stroke
+    // (cleared on pointerdown/pointerup, same as cell-mode's own cell dedupe), so a fresh click — a new
+    // stroke — is free to degrade the same piece again: "select it, click a cover piece, -1 to its AP"
+    // must work for repeated clicks, not just once per tool session.
+    onCell: async (cell, button, claim) => {
       if (button !== 0) return;
       const regions = coverRegionsAtCell(canvas.scene, cell).filter((r) => coverFlag(r));
       if (!regions.length) return;
       // Same tie-break as the adjacency lookup: the toughest piece in the cell is the one being shot.
       const region = regions.reduce((best, r) =>
         ((Number(coverFlag(r).ap) || 0) > (Number(coverFlag(best).ap) || 0) ? r : best));
-      if (touchedThisSession.has(region.id)) return;
-      touchedThisSession.add(region.id);
+      if (!claim(region.id)) return;
       const ap = Number(coverFlag(region).ap) || 0;
       if (ap <= 0) return;                       // an AP-0 piece has nothing left to lose
       await applyCoverDegradation(region, ap - 1);

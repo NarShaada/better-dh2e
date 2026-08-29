@@ -12,7 +12,7 @@
 // Foundry's own long-press handling; that gap is a known, separate, deferred concern.
 const DENIED_ACTIONS = ["clickLeft", "clickLeft2", "clickRight", "clickRight2", "dragLeftStart", "dragRightStart"];
 
-// { owner, onCell, onDown, onMove, onUp, onKey, onContext, visited, button,
+// { owner, onCell, onDown, onMove, onUp, onKey, onContext, visited, claimed, button,
 //   mgr, mgrPermissions, tokensLayer, tokensInteractiveChildren, regionsLayer, regionsInteractiveChildren }
 let _mode = null;
 
@@ -27,13 +27,25 @@ function cellAtPoint(point) {
   return { x: o.j, y: o.i };
 }
 
+/**
+ * True the first time it's called with `key` during the current stroke, false every time after —
+ * for a callback that must act once per *target* (e.g. a Region spanning several cells) rather than
+ * once per cell. Backed by `_mode.claimed`, which shares its clear points (pointerdown/pointerup) with
+ * `_mode.visited`, so it has exactly the same per-stroke lifetime.
+ */
+function claim(key) {
+  if (_mode.claimed.has(key)) return false;
+  _mode.claimed.add(key);
+  return true;
+}
+
 /** Deliver one cell to the mode's callback, at most once per cell per stroke. */
 function visit(point) {
   const cell = cellAtPoint(point);
   const key = cellKey(cell);
   if (_mode.visited.has(key)) return;
   _mode.visited.add(key);
-  Promise.resolve(_mode.onCell(cell, _mode.button)).catch((err) => {
+  Promise.resolve(_mode.onCell(cell, _mode.button, claim)).catch((err) => {
     console.error("better-dh2e | cell mode callback failed", err);
     ui.notifications.error("Canvas tool: an action failed to save — see console.");
   });
@@ -41,9 +53,10 @@ function visit(point) {
 
 /**
  * Begin a cell mode. Left and right buttons both drag; Escape exits.
- * @param {{notice: string, onCell: (cell: {x: number, y: number}, button: number) => any, owner?: string}} o
+ * @param {{notice: string, onCell: (cell: {x: number, y: number}, button: number, claim: (key: string) => boolean) => any, owner?: string}} o
  *   `owner` tags this session so a later `endCellMode(owner)` from a *different* tool can't tear it down —
- *   see endCellMode for why that matters.
+ *   see endCellMode for why that matters. `onCell`'s third argument is a per-stroke claim function, for
+ *   callbacks that must act once per target rather than once per cell — see `claim` above.
  */
 export function beginCellMode({ notice, onCell, owner }) {
   if (!canvas?.ready) {
@@ -61,13 +74,14 @@ export function beginCellMode({ notice, onCell, owner }) {
     if (btn !== 0 && btn !== 2) return;
     _mode.button = btn;
     _mode.visited.clear();
+    _mode.claimed.clear();
     visit(event.getLocalPosition(canvas.stage));
   };
   const onMove = (event) => {
     if (!_mode || _mode.button === null) return;   // not stroking, or no button held
     visit(event.getLocalPosition(canvas.stage));
   };
-  const onUp = () => { if (_mode) { _mode.button = null; _mode.visited.clear(); } };
+  const onUp = () => { if (_mode) { _mode.button = null; _mode.visited.clear(); _mode.claimed.clear(); } };
   const onKey = (e) => { if (e.key === "Escape") endCellMode(); };
   const onContext = (e) => e.preventDefault();     // no browser/Foundry context menu while active
 
@@ -101,7 +115,7 @@ export function beginCellMode({ notice, onCell, owner }) {
   if (regionsLayer) regionsLayer.interactiveChildren = false;
 
   _mode = {
-    owner, onCell, onDown, onMove, onUp, onKey, onContext, visited: new Set(), button: null,
+    owner, onCell, onDown, onMove, onUp, onKey, onContext, visited: new Set(), claimed: new Set(), button: null,
     mgr, mgrPermissions, tokensLayer, tokensInteractiveChildren, regionsLayer, regionsInteractiveChildren,
   };
   canvas.stage.eventMode = "static";
