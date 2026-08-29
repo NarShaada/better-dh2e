@@ -17,7 +17,7 @@ import { coverApFromInput } from "../helpers/cover.mjs";
 import { facingFromDelta, armourSideFromAttack } from "../helpers/facing.mjs";
 import { woundsShown, reverseWoundsEnabled } from "../helpers/wounds-display.mjs";
 import { vehicleHitLocation, VEHICLE_LOCATION_LABELS, applyIntegrity } from "../helpers/vehicle-data.mjs";
-import { coverPieceAdjacentTo } from "../canvas/cover.mjs";
+import { coverPieceAdjacentTo, coverFlag, applyCoverDegradation } from "../canvas/cover.mjs";
 import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs";
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal, corruptionBonus } from "../helpers/derived.mjs";
@@ -889,7 +889,8 @@ async function applyDamage(message) {
   let coverAp = 0;
   const targetToken = target?.getActiveTokens?.()?.[0];
   const approach = f.coverApproach ?? null;
-  const piece = targetToken ? coverPieceAdjacentTo(targetToken.document, approach) : null;
+  const pieceRegion = targetToken ? coverPieceAdjacentTo(targetToken.document, approach) : null;
+  const piece = pieceRegion ? coverFlag(pieceRegion) : null;
   const manualCover = target.statuses?.has?.("inCover") ?? false;
   if (piece || manualCover) {
     const prefill = coverPrefill(piece, (f.hits ?? []).map((h) => h.location));

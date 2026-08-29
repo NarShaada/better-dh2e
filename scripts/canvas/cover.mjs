@@ -101,20 +101,33 @@ function coverRegionsAtCell(scene, cell) {
 }
 
 /**
- * The highest-AP cover piece sitting in a cell adjacent to this token on `side`, or null.
+ * The highest-AP cover Region sitting in a cell adjacent to this token on `side`, or null.
  * `side` is the shot's approach side from facingFromDelta — the direction the attack came FROM,
  * which is the direction the shielding obstacle must lie in.
+ * Returns the RegionDocument, not its payload, so callers can degrade it; use coverFlag() for the
+ * payload.
  */
 export function coverPieceAdjacentTo(tokenDoc, side) {
   if (!coverMechanicsEnabled() || !tokenDoc?.parent || !side) return null;
   const origin = canvas.grid.getOffset({ x: tokenDoc.x, y: tokenDoc.y });
   const footprint = { x: origin.j, y: origin.i, width: tokenDoc.width, height: tokenDoc.height };
-  const covers = adjacentCellsOnSide(footprint, side)
+  const regions = adjacentCellsOnSide(footprint, side)
     .flatMap((cell) => coverRegionsAtCell(tokenDoc.parent, cell))
-    .map(coverFlag)
-    .filter(Boolean);
-  if (!covers.length) return null;
-  return covers.reduce((best, c) => ((Number(c.ap) || 0) > (Number(best.ap) || 0) ? c : best));
+    .filter((r) => coverFlag(r));
+  if (!regions.length) return null;
+  return regions.reduce((best, r) =>
+    ((Number(coverFlag(r).ap) || 0) > (Number(coverFlag(best).ap) || 0) ? r : best));
+}
+
+/**
+ * Persist a degraded AP onto a cover piece, or destroy the piece when it reaches 0.
+ * One call per damage application, not one per hit — same result, one overlay redraw.
+ * Silently no-ops on a piece that has already left the scene (a GM deleting it mid-application).
+ */
+export async function applyCoverDegradation(region, newAp) {
+  if (!region?.parent?.regions?.get(region.id)) return;
+  if (newAp <= 0) { await region.delete(); return; }
+  await region.update({ [`flags.${NS}.cover.ap`]: newAp });
 }
 
 /** Paint one cell (skipping cells already covered) or erase every piece in it. */
