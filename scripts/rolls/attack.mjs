@@ -2,7 +2,7 @@
 // Full to-hit flow: dialog → 1d100 → DoS/hits/locations/jam → attack chat card.
 import { evaluateTest, parseModifier } from "./test-logic.mjs";
 import { performTest, promptTest } from "./roll-test.mjs";
-import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100 } from "../helpers/attack-math.mjs";
+import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100, penetrationWithBonus } from "../helpers/attack-math.mjs";
 import { computeArmour, corrodeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
 import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage, cripplingValue, taintedBonus } from "../helpers/quality-modules.mjs";
@@ -586,13 +586,28 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   // presetChoice = the damage inputs already gathered elsewhere (Force channel), so we don't prompt twice.
   const choice = presetChoice ?? await DialogV2.prompt({
     window: { title: `${weaponDisplayName} — Damage` },
-    content: `${hitCountRow}${facingRow}${strRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
+    content: `${hitCountRow}${facingRow}${strRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div><div class="form-group"><label>Bonus Penetration (flat or dice)</label><input type="text" name="pen" value="+0"/></div>`,
     ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
     rejectClose: false
   });
   if (choice == null) return;
   const strDelta = strSit.filter((s) => choice[`sit_${s.id}`]).reduce((n, s) => n + s.amount, 0);
   const trimmed = String(choice.mod ?? "").trim();
+  // Bonus penetration: one roll for the whole attack, because penetration is a single value that
+  // every hit shares. Absent for the Force-channel presetChoice path, which never opens the dialog.
+  const penInput = String(choice.pen ?? "").trim();
+  let penRoll = null;
+  if (penInput && penInput !== "+0") {
+    penRoll = await safeRoll(penInput, "bonus penetration");
+    if (!penRoll) return;            // bad formula: safeRoll has already told the user
+  }
+  // No bonus → pass the original through untouched, so the card is byte-identical to before.
+  const effectivePen = penRoll ? penetrationWithBonus(f.penetration, penRoll.total) : f.penetration;
+  // Show the formula only when dice were actually rolled — for a flat "+3" the formula and its
+  // total are the same number, and "4 + +3[3]" reads worse than "4 + 3".
+  const penNote = penRoll
+    ? `${Number(f.penetration) || 0} + ${penRoll.dice.length ? `${penInput.replace(/^\+/, "")}[${penRoll.total}]` : penRoll.total}`
+    : null;
   const hitsToRoll = nHitsTotal > 1 ? f.hits.slice(0, Number(choice.hits) || nHitsTotal) : (f.hits ?? []);   // latest hits drop first
   const dos = f.dos ?? 0;
   const rfThreshold = vengefulValue(qualities) || 10;
@@ -627,6 +642,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
   if (f.helpless) weaponBase = doubleDamageDice(weaponBase);   // every die term doubles for Helpless
   const rolls = [];
+  if (penRoll) rolls.push(penRoll);   // so the bonus dice are inspectable alongside the damage dice
   const rolled = [];   // per hit: { hit, wRoll, bRoll, fRoll, rf, baseTotal }
   for (const hit of hitsToRoll) {
     // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
@@ -673,7 +689,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown,
       unsoaked: fRoll?.total ?? 0, unsoakedBreak: fRoll ? formatRoll(fRoll) : "" };
   });
-  const cardData = { weaponName: weaponDisplayName, damageType: f.damageType, penetration: f.penetration, hits,
+  const cardData = { weaponName: weaponDisplayName, damageType: f.damageType, penetration: effectivePen, penNote, hits,
     isVehicle: !!f.tgtIsVehicle,
     targetName: f.targetName, canApply: !!f.targetUuid, shocking: hasShocking(qualities),
     concussive: concussiveValue(qualities) || null,
@@ -686,7 +702,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
-    flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: f.penetration, damageType: f.damageType,
+    flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: effectivePen, damageType: f.damageType,
       qualities: f.qualities ?? [], coverApproach: f.coverApproach ?? null,
       tgtIsVehicle: f.tgtIsVehicle ?? false, facing: choice.facing ?? f.vehSide ?? "front",
       hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf, unsoaked: h.unsoaked || 0 })) } }
