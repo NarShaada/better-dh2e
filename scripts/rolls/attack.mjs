@@ -24,8 +24,8 @@ import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTot
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless, applyCrippled } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
-import { scatterDirection } from "../helpers/scatter.mjs";
-import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion } from "../canvas/region.mjs";
+import { scatterDirection, scatterOffset } from "../helpers/scatter.mjs";
+import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion, placeBlastRegion } from "../canvas/region.mjs";
 import { hordeMagnitudeLoss, hordeMagnitudeLossTotal, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../helpers/horde-data.mjs";
 
 const NS = "better-dh2e";
@@ -1304,6 +1304,29 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   const isSpray = eff.qualities.some((q) => q.key === "spray");
   if (battlemapEnabled() && isSpray) return rollSpray(actor, weapon);
 
+  // Tile-aimed blast: with a Blast weapon on a battlemap and nothing targeted, the player aims a
+  // point before the dialog — which lets the range band below measure to it, and stops the player
+  // aiming after they already know whether they hit. Esc aborts the whole attack, no ammo spent.
+  // Only a POINT is kept: Maximal's +2 radius is chosen in the dialog, so the real Region cannot be
+  // built until afterwards.
+  let aimPoint = null;
+  const blastQuality = eff.qualities.find((q) => q.key === "blast");
+  const aimRadius = Number(blastQuality?.value) || 0;
+  // Radius must be > 0: resolveAttack's placement block is gated on `blastX > 0`, so aiming a
+  // Blast(0) weapon would cost the player an invisible preview and then place nothing.
+  if (battlemapEnabled() && aimRadius > 0 && !game.user.targets.first()) {
+    const minimized = [];
+    for (const app of foundry.applications.instances.values()) {
+      if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
+    }
+    const preview = await placeBlastRegion(aimRadius);
+    for (const app of minimized) await app.maximize?.();
+    if (!preview) return null;                       // cancelled — nothing placed, no ammo spent
+    const shape = preview.shapes?.[0];
+    aimPoint = { x: shape.x, y: shape.y };
+    await deleteRegionByUuid(preview.uuid);          // keep the point, not the preview
+  }
+
   const isMelee = weapon.system.weaponClass === "melee";
   const isRanged = !isMelee;
   const charKey = isMelee ? "weaponSkill" : "ballisticSkill";
@@ -1341,9 +1364,10 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   let measuredDistance = null;
   if (isRanged && battlemapEnabled() && (weapon.system.range ?? 0) > 0) {
     const attackerTok = actor.getActiveTokens?.()[0] ?? canvas.tokens?.controlled?.[0] ?? null;
-    if (targetTok && attackerTok && targetTok.scene?.id === attackerTok.scene?.id) {
-      // v13/v14 grid measurement between token centres.
-      const path = canvas.grid.measurePath([attackerTok.center, targetTok.center]);
+    const measureTo = targetTok && targetTok.scene?.id === attackerTok?.scene?.id ? targetTok.center : aimPoint;
+    if (measureTo && attackerTok) {
+      // v13/v14 grid measurement from the shooter to the target token, or to the aimed point.
+      const path = canvas.grid.measurePath([attackerTok.center, measureTo]);
       measuredDistance = Math.round(path?.distance ?? path ?? 0);
       // NOTE (deferred): if the attacker is engaged in melee, Point-Blank should NOT apply.
       // Requires melee-engagement tracking (Foundry statuses/conditions) — a later battlemap piece.
@@ -1460,7 +1484,7 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   }
   if (!choice) return null;
   if (choice.action === "suppress") return rollSuppressingFire(actor, weapon, choice.attackType);
-  return resolveAttack(actor, weapon, choice, { consumeAmmo: true });
+  return resolveAttack(actor, weapon, choice, { consumeAmmo: true, aimPoint });
 }
 
 /**
@@ -1473,6 +1497,7 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
  * @param {boolean} [opts.consumeAmmo=true]  — set false to skip the clip deduction (Fate reroll)
  * @param {string|null} [opts.targetUuid]    — override live targets (Fate reroll re-targets original)
  * @param {string|null} [opts.targetName]    — override live target name
+ * @param {{x: number, y: number}|null} [opts.aimPoint]  — blast centre when no token is targeted
  * @returns {Promise<ChatMessage|null>}
  */
 export async function resolveAttack(actor, weapon, choice, opts = {}) {
@@ -1604,14 +1629,16 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
         ? game.user.targets.first()
         : fromUuidSync(opts.targetUuid)?.getActiveTokens?.()[0] ?? null)
     : null);
-  if (battlemapEnabled() && blastX > 0 && targetToken?.center) {
-    let { x, y } = targetToken.center;
+  // Centre: the targeted token, or the point the player aimed at when nothing was targeted.
+  const blastCentre = targetToken?.center ?? opts.aimPoint ?? null;
+  if (battlemapEnabled() && blastX > 0 && blastCentre) {
+    let { x, y } = blastCentre;
     if (!success) {                                   // MISS → scatter 1d5 squares in a 1d10 direction
       const dist = (await safeRoll("1d5", "scatter distance"))?.total ?? 1;
       const dir = (await safeRoll("1d10", "scatter direction"))?.total ?? 1;
-      const { dx, dy } = scatterDirection(dir);
-      x += dx * dist * canvas.dimensions.size;        // canvas.dimensions.size = pixels per square
-      y += dy * dist * canvas.dimensions.size;
+      const off = scatterOffset(dir, dist, canvas.dimensions.size);   // size = pixels per square
+      x += off.dx;
+      y += off.dy;
     }
     const region = await createBlastRegion(canvas.scene, x, y, blastX);
     const caughtToks = tokensInRegion(region);
