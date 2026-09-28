@@ -288,6 +288,101 @@ describe("7. Untouched-weapon invariant — no mods, no ammo ⇒ card flags are 
   });
 });
 
+describe("8. Bonus Penetration — the damage dialog's flat/dice bonus reaches both emit points", () => {
+  // rollDamage emits penetration twice: cardData.penetration (the card's display, read via
+  // lastContentData()) and the message flags' penetration (lastFlags(), what every later damage
+  // application reads). A future edit touching one emit site and not the other must fail these.
+  it("a flat bonus reaches BOTH emit points, they agree, and the note explains the sum", async () => {
+    const weapon = makeWeapon({
+      system: { weaponClass: "basic", damage: "1d10+3", penetration: 8, damageType: "impact" },
+    });
+    const actor = makeActor();
+    registerUuid(actor.uuid, actor);
+    registerUuid(weapon.uuid, weapon);
+
+    const attackMsg = await resolveAttack(actor, weapon, makeChoice(), { fixedRoll: 1 });
+    resetCaptures();
+    primeDialog([{ mod: "+0", pen: "+3" }]);
+
+    const html = makeCardHtml({ buttons: ["rollDamage"] });
+    bindCardButtons(attackMsg, html);
+    await html.click("rollDamage");
+
+    const damageFlags = lastFlags();
+    const content = lastContentData();
+    // This equality is the divergence guard: it fails the instant one emit site drifts from the other.
+    expect(damageFlags.penetration).toBe(content.penetration);
+    expect(damageFlags.penetration).toBe(11);   // base 8 + flat bonus 3
+    expect(content.penNote).toBe("8 + 3");
+  });
+
+  it("a dice bonus is rolled exactly once for a multi-hit attack", async () => {
+    const weapon = makeWeapon({
+      system: {
+        weaponClass: "basic", damage: "1d10+3", penetration: 4, damageType: "impact",
+        rateOfFire: { single: 1, short: 3, long: 3 },   // RoF cap pins the hit count at exactly 3
+      },
+    });
+    const actor = makeActor();
+    registerUuid(actor.uuid, actor);
+    registerUuid(weapon.uuid, weapon);
+
+    // fixedRoll: 1 always succeeds; a generous dosBonus pushes DoS-derived hits past the RoF cap
+    // (3) so the attack lands exactly 3 hits regardless of the actor's exact characteristics.
+    const attackMsg = await resolveAttack(actor, weapon, makeChoice({ attackType: "fullAuto" }), { fixedRoll: 1, dosBonus: 50 });
+    expect(lastFlags().hits).toHaveLength(3);   // confirms the multi-hit setup actually landed 3 hits
+    resetCaptures();
+    primeDialog([{ mod: "+0", pen: "1d5" }]);
+
+    const html = makeCardHtml({ buttons: ["rollDamage"] });
+    bindCardButtons(attackMsg, html);
+    await html.click("rollDamage");
+
+    expect(capturedRolls().filter((f) => f === "1d5").length).toBe(1);   // one roll for the whole attack, not one per hit
+  });
+
+  it("the clamp holds end to end, and the note says the result was floored", async () => {
+    const weapon = makeWeapon({
+      system: { weaponClass: "basic", damage: "1d10+3", penetration: 4, damageType: "impact" },
+    });
+    const actor = makeActor();
+    registerUuid(actor.uuid, actor);
+    registerUuid(weapon.uuid, weapon);
+
+    const attackMsg = await resolveAttack(actor, weapon, makeChoice(), { fixedRoll: 1 });
+    resetCaptures();
+    primeDialog([{ mod: "+0", pen: "-10" }]);
+
+    const html = makeCardHtml({ buttons: ["rollDamage"] });
+    bindCardButtons(attackMsg, html);
+    await html.click("rollDamage");
+
+    expect(lastFlags().penetration).toBe(0);
+    expect(lastContentData().penNote).toBe("4 + -10 → 0");
+  });
+
+  it("no bonus (default \"+0\") changes nothing — the card is byte-identical to before", async () => {
+    const weapon = makeWeapon({
+      system: { weaponClass: "basic", damage: "1d10+3", penetration: 6, damageType: "impact" },
+    });
+    const actor = makeActor();
+    registerUuid(actor.uuid, actor);
+    registerUuid(weapon.uuid, weapon);
+
+    const attackMsg = await resolveAttack(actor, weapon, makeChoice(), { fixedRoll: 1 });
+    resetCaptures();
+    // No primeDialog(): the stub's default dialog response resolves "pen" to "+0" like every
+    // other unprimed field (see defaultDialogResponse in foundry-stub.mjs).
+
+    const html = makeCardHtml({ buttons: ["rollDamage"] });
+    bindCardButtons(attackMsg, html);
+    await html.click("rollDamage");
+
+    expect(lastFlags().penetration).toBe(6);   // the weapon's own resolved penetration, untouched
+    expect(lastContentData().penNote).toBeFalsy();
+  });
+});
+
 describe("Weapon Jammed status", () => {
   // A jam is a ranged MISS at or above the jam floor: checkJam(roll, isSuccess, isRanged, floor)
   // returns `isRanged && !isSuccess && roll >= floor`. fixedRoll makes the d100 deterministic.

@@ -597,7 +597,9 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   // every hit shares. Absent for the Force-channel presetChoice path, which never opens the dialog.
   const penInput = String(choice.pen ?? "").trim();
   let penRoll = null;
-  if (penInput && penInput !== "+0") {
+  // Any numerically-zero input (0, -0, ...) is treated as no bonus, same as the "no roll at all"
+  // case — a dice formula like "1d5" is NaN here and still takes the roll path.
+  if (penInput && Number(penInput) !== 0) {
     penRoll = await safeRoll(penInput, "bonus penetration");
     if (!penRoll) return;            // bad formula: safeRoll has already told the user
   }
@@ -605,8 +607,11 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   const effectivePen = penRoll ? penetrationWithBonus(f.penetration, penRoll.total) : f.penetration;
   // Show the formula only when dice were actually rolled — for a flat "+3" the formula and its
   // total are the same number, and "4 + +3[3]" reads worse than "4 + 3".
+  // Clamped: the raw sum went negative but penetration cannot, so say where the number came from —
+  // "4 + -10" alone reads as -6, which is not what the card shows.
+  const penClamped = penRoll && effectivePen === 0 && penRoll.total < 0;
   const penNote = penRoll
-    ? `${Number(f.penetration) || 0} + ${penRoll.dice.length ? `${penInput.replace(/^\+/, "")}[${penRoll.total}]` : penRoll.total}`
+    ? `${Number(f.penetration) || 0} + ${penRoll.dice.length ? `${penInput.replace(/^\+/, "")}[${penRoll.total}]` : penRoll.total}${penClamped ? ` → ${effectivePen}` : ""}`
     : null;
   const hitsToRoll = nHitsTotal > 1 ? f.hits.slice(0, Number(choice.hits) || nHitsTotal) : (f.hits ?? []);   // latest hits drop first
   const dos = f.dos ?? 0;
