@@ -1318,17 +1318,30 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   // loading): placeBlastRegion dereferences canvas.dimensions/canvas.regions directly and would
   // throw. Skipping the aim step here falls through to the pre-change path (normal dialog, no
   // blast centre) instead of throwing or silently aborting the attack.
-  if (battlemapEnabled() && canvas?.ready && aimRadius > 0 && !game.user.targets.first()) {
+  // canvas.regions?.placeRegion is v14-only — it does not exist on v13, which system.json still
+  // supports. Feature-detecting it keeps a v13 world on the pre-branch behaviour (ordinary attack,
+  // no template) instead of throwing mid-gesture with every window minimised.
+  if (battlemapEnabled() && canvas?.ready && typeof canvas.regions?.placeRegion === "function"
+      && aimRadius > 0 && !game.user.targets.first()) {
     const minimized = [];
     for (const app of foundry.applications.instances.values()) {
       if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
     }
-    const preview = await placeBlastRegion(aimRadius);
-    for (const app of minimized) await app.maximize?.();
-    if (!preview) return null;                       // cancelled — nothing placed, no ammo spent
-    const shape = preview.shapes?.[0];
-    aimPoint = { x: shape.x, y: shape.y };
-    await deleteRegionByUuid(preview.uuid);          // keep the point, not the preview
+    // try/finally: any rejection from placeBlastRegion (no Region-create permission, canvas torn
+    // down mid-gesture, …) must still restore the minimised windows rather than leaving the whole
+    // UI hidden with no attack to show for it.
+    try {
+      const preview = await placeBlastRegion(aimRadius);
+      if (!preview) return null;                       // cancelled — nothing placed, no ammo spent
+      // shape is guarded (not just optional-chained) so a malformed/empty shapes array can never
+      // throw between the Region document existing and its delete below — that would orphan the
+      // preview circle on the map.
+      const shape = preview.shapes?.[0];
+      if (shape) aimPoint = { x: shape.x, y: shape.y };
+      await preview.delete();          // keep the point, not the preview; direct delete, no uuid round-trip
+    } finally {
+      for (const app of minimized) await app.maximize?.();
+    }
   }
 
   const isMelee = weapon.system.weaponClass === "melee";
@@ -1633,8 +1646,12 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
         ? game.user.targets.first()
         : fromUuidSync(opts.targetUuid)?.getActiveTokens?.()[0] ?? null)
     : null);
-  // Centre: the targeted token, or the point the player aimed at when nothing was targeted.
-  const blastCentre = targetToken?.center ?? opts.aimPoint ?? null;
+  // Centre: the point the player aimed at when nothing was targeted, or the targeted token.
+  // aimPoint must win: it is only ever set on the tile-aimed path (nothing was targeted when the
+  // aim step ran), and a Fate reroll of that attempt carries it forward while targetToken can pick
+  // up whatever the rerolling user happens to have targeted live (see finding 1). On every targeted
+  // path opts.aimPoint is null, so this falls through to targetToken?.center unchanged.
+  const blastCentre = opts.aimPoint ?? targetToken?.center ?? null;
   if (battlemapEnabled() && blastX > 0 && blastCentre) {
     let { x, y } = blastCentre;
     if (!success) {                                   // MISS → scatter 1d5 squares in a 1d10 direction

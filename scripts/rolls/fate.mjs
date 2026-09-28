@@ -35,9 +35,13 @@ export async function rerollFromFate(message) {
   } else if (rr.kind === "attack") {
     const weapon = actor.items.get(rr.weaponId) ?? (rr.weaponUuid ? await fromUuid(rr.weaponUuid) : null);
     // The rerolled attempt's template is gone: re-resolving places a fresh one. Safe when the uuid
-    // is null or the Region was already deleted — deleteRegionByUuid tolerates both.
-    await deleteRegionByUuid(rr.regionUuid);
-    if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, aimPoint: rr.aimPoint ?? null });
+    // is null or the Region was already deleted — deleteRegionByUuid tolerates both. Guarded on
+    // `weapon` so an unresolvable weapon neither spends the Fate point's template nor skips
+    // re-resolving: if we can't re-resolve, don't destroy the old template either.
+    if (weapon) {
+      await deleteRegionByUuid(rr.regionUuid);
+      await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, aimPoint: rr.aimPoint ?? null });
+    }
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
     // A reroll re-plays the same moment: the successful cast being rerolled already entered the
@@ -94,9 +98,12 @@ export async function addDoSFromFate(message) {
     await performTest(actor, { label: rr.label, base: rr.base, modifier: rr.modifier, characteristic: rr.characteristic, ...boost });
   } else if (rr.kind === "attack") {
     const weapon = actor.items.get(rr.weaponId) ?? (rr.weaponUuid ? await fromUuid(rr.weaponUuid) : null);
-    // Same as the plain reroll: this path re-runs the placement block too, so the old template goes.
-    await deleteRegionByUuid(rr.regionUuid);
-    if (weapon) await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, aimPoint: rr.aimPoint ?? null, ...boost });
+    // Same as the plain reroll: this path re-runs the placement block too, so the old template goes
+    // — but only once we know we can re-resolve (see the plain-reroll branch above).
+    if (weapon) {
+      await deleteRegionByUuid(rr.regionUuid);
+      await resolveAttack(actor, weapon, rr.choice, { consumeAmmo: false, targetUuid: rr.targetUuid, targetName: rr.targetName, aimPoint: rr.aimPoint ?? null, ...boost });
+    }
   } else if (rr.kind === "cast") {
     const power = actor.items.get(rr.powerId);
     if (power) await resolveManifest(actor, power, { rulesetKey: rr.rulesetKey, state: rr.state, statePR: rr.statePR, prBonus: rr.prBonus, effPR: rr.effPR, circ: rr.circ, targetUuid: rr.targetUuid, targetName: rr.targetName, sustain: rr.sustain, ...boost });

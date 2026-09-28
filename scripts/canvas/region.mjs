@@ -51,9 +51,17 @@ export async function placeConeRegion(originToken, lengthMetres, angle = 30, { k
  */
 export async function placeBlastRegion(radiusMetres, { kind = "blast" } = {}) {
   const radiusPx = radiusMetres * canvas.dimensions.distancePixels;
+  // Seed the shape from the current cursor, snapped the same way onMove does — onMove returns false
+  // ("we position, core does not"), so if a click confirms before any pointermove fires, this seed
+  // is the ONLY position the shape ever gets. Left at {0,0} that seed is the scene's top-left corner.
+  // Fall back to the scene centre (still a valid on-map point) when canvas.mousePosition isn't
+  // available yet — never the origin.
+  const seed = canvas.mousePosition
+    ? canvas.grid.getCenterPoint(canvas.mousePosition)
+    : { x: canvas.dimensions.width / 2, y: canvas.dimensions.height / 2 };
   const data = {
     name: `Blast (${radiusMetres})`, color: "#ff6600",
-    shapes: [{ type: "circle", x: 0, y: 0, radius: radiusPx }],
+    shapes: [{ type: "circle", x: Math.round(seed.x), y: Math.round(seed.y), radius: radiusPx }],
     elevation: { bottom: 0, top: null },
     visibility: CONST.REGION_VISIBILITY.ALWAYS, highlightMode: "coverage",
     flags: { [NS]: { kind } },
