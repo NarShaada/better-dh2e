@@ -42,6 +42,31 @@ export async function placeConeRegion(originToken, lengthMetres, angle = 30, { k
   });
 }
 
+/**
+ * Interactively place a circle Region at the cursor, snapped to the grid cell centre.
+ * Mirrors placeConeRegion's contract: returns the RegionDocument, or null if the player cancels.
+ *
+ * Callers that only want an aimed POINT should read the returned region's shape centre and delete it
+ * straight away — a blast's real radius is not known until the attack dialog has been answered.
+ */
+export async function placeBlastRegion(radiusMetres, { kind = "blast" } = {}) {
+  const radiusPx = radiusMetres * canvas.dimensions.distancePixels;
+  const data = {
+    name: `Blast (${radiusMetres})`, color: "#ff6600",
+    shapes: [{ type: "circle", x: 0, y: 0, radius: radiusPx }],
+    elevation: { bottom: 0, top: null },
+    visibility: CONST.REGION_VISIBILITY.ALWAYS, highlightMode: "coverage",
+    flags: { [NS]: { kind } },
+  };
+  return canvas.regions.placeRegion(data, {
+    onMove: ({ shape, position }) => {
+      const c = canvas.grid.getCenterPoint(position);      // snap to the cell the cursor is over
+      shape.updateSource({ x: Math.round(c.x), y: Math.round(c.y) });
+      return false;   // take over positioning: we snap, core does not
+    },
+  });
+}
+
 /** Delete a region by uuid (cleanup after applying blast damage). */
 export async function deleteRegionByUuid(uuid) {
   if (!uuid) return;
