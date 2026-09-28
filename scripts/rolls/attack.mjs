@@ -24,7 +24,7 @@ import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTot
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless, applyCrippled } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
-import { scatterDirection, scatterOffset } from "../helpers/scatter.mjs";
+import { scatterOffset } from "../helpers/scatter.mjs";
 import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion, placeBlastRegion } from "../canvas/region.mjs";
 import { hordeMagnitudeLoss, hordeMagnitudeLossTotal, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../helpers/horde-data.mjs";
 
@@ -1314,7 +1314,11 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   const aimRadius = Number(blastQuality?.value) || 0;
   // Radius must be > 0: resolveAttack's placement block is gated on `blastX > 0`, so aiming a
   // Blast(0) weapon would cost the player an invisible preview and then place nothing.
-  if (battlemapEnabled() && aimRadius > 0 && !game.user.targets.first()) {
+  // canvas?.ready guards a theatre-of-mind session (or an attack fired before the canvas finishes
+  // loading): placeBlastRegion dereferences canvas.dimensions/canvas.regions directly and would
+  // throw. Skipping the aim step here falls through to the pre-change path (normal dialog, no
+  // blast centre) instead of throwing or silently aborting the attack.
+  if (battlemapEnabled() && canvas?.ready && aimRadius > 0 && !game.user.targets.first()) {
     const minimized = [];
     for (const app of foundry.applications.instances.values()) {
       if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
