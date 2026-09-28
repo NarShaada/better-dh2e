@@ -1,7 +1,7 @@
 <div class="bdh-card bdh-damage-card">
   <div class="bdh-card-head">
     <span class="t">Damage <span class="arrow">&mdash;</span> {{damageType}}</span>
-    <span class="sub">Pen {{penetration}}</span>
+    <span class="sub">Pen {{penetration}}{{#if penNote}} <span class="bdh-pen-note">({{penNote}})</span>{{/if}}</span>
   </div>
   {{#if blast}}
   <ul class="bdh-hits">

@@ -76,3 +76,9 @@ export function checkJam(roll, isSuccess, isRanged, jamFloor = 96) {
 export function isRighteousFury(dieValue, threshold = 10) {
   return dieValue >= threshold;
 }
+
+/** An attack's penetration after a one-off bonus from the damage dialog. Floored at 0: `soak`
+ *  treats a negative penetration as extra armour, which nothing in the system should produce. */
+export function penetrationWithBonus(base, bonus) {
+  return Math.max(0, (Number(base) || 0) + (Number(bonus) || 0));
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hitLocation, computeHits, locationSequence, soak, applyWounds, checkJam, isRighteousFury } from "../scripts/helpers/attack-math.mjs";
+import { hitLocation, computeHits, locationSequence, soak, applyWounds, checkJam, isRighteousFury, penetrationWithBonus } from "../scripts/helpers/attack-math.mjs";
 
 describe("hitLocation (reversed digits)", () => {
   it("reverses the d100 digits onto the bands", () => {
@@ -73,5 +73,28 @@ describe("isRighteousFury", () => {
     expect(isRighteousFury(10)).toBe(true);
     expect(isRighteousFury(9)).toBe(false);
     expect(isRighteousFury(9, 9)).toBe(true);
+  });
+});
+describe("penetrationWithBonus", () => {
+  it("adds a positive bonus to the base", () => {
+    expect(penetrationWithBonus(4, 2)).toBe(6);
+  });
+  it("returns the base unchanged for a zero bonus", () => {
+    expect(penetrationWithBonus(4, 0)).toBe(4);
+  });
+  it("reduces the base for a negative bonus", () => {
+    expect(penetrationWithBonus(4, -1)).toBe(3);
+  });
+  it("clamps at 0 when the penalty exceeds the base", () => {
+    // soak() reads a negative penetration as extra armour, so this must never go below 0.
+    expect(penetrationWithBonus(1, -3)).toBe(0);
+  });
+  it("returns the bonus when the base is 0", () => {
+    expect(penetrationWithBonus(0, 3)).toBe(3);
+  });
+  it("coerces missing or non-numeric arguments to 0 rather than producing NaN", () => {
+    expect(penetrationWithBonus(undefined, undefined)).toBe(0);
+    expect(penetrationWithBonus(null, 2)).toBe(2);
+    expect(penetrationWithBonus(5, "junk")).toBe(5);
   });
 });

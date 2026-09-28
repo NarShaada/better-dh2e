@@ -2,7 +2,7 @@
 // Full to-hit flow: dialog → 1d100 → DoS/hits/locations/jam → attack chat card.
 import { evaluateTest, parseModifier } from "./test-logic.mjs";
 import { performTest, promptTest } from "./roll-test.mjs";
-import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100 } from "../helpers/attack-math.mjs";
+import { hitLocation, computeHits, locationSequence, checkJam, soak, applyWounds, reverseD100, penetrationWithBonus } from "../helpers/attack-math.mjs";
 import { computeArmour, corrodeArmour } from "../helpers/combat-data.mjs";
 import { BDH } from "../config.mjs";
 import { qualityToHitMod, weaponDamageFormula, accurateBonusDice, parryModifier, hasShocking, concussiveValue, fellingValue, felledToughnessBonus, hasGraviton, hasFlame, hasForce, hallucinogenicValue, hasFlexible, hasUnwieldy, hasUnbalanced, hasInaccurate, effectivePenetration, hasOverheats, primitiveValue, provenValue, devastatingValue, transformDamageDie, hasMaximal, hasTwinLinked, twinLinkedExtraHits, hasCorrosive, scatterToHit, scatterDamage, hasStorm, snareValue, vengefulValue, toxicValue, hasRadPhage, cripplingValue, taintedBonus } from "../helpers/quality-modules.mjs";
@@ -24,8 +24,8 @@ import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTot
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
 import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless, applyCrippled } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
-import { scatterDirection } from "../helpers/scatter.mjs";
-import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion } from "../canvas/region.mjs";
+import { scatterOffset } from "../helpers/scatter.mjs";
+import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion, placeBlastRegion } from "../canvas/region.mjs";
 import { hordeMagnitudeLoss, hordeMagnitudeLossTotal, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../helpers/horde-data.mjs";
 
 const NS = "better-dh2e";
@@ -554,10 +554,17 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
           penetration: f.penetration,
           damageType: f.damageType,
           qualities: f.qualities ?? [],
-          regionUuid: f.regionUuid,
+          // The template is deleted immediately below, so the damage card must not carry a uuid
+          // pointing at a document that no longer exists. Explicitly null, not omitted: the flags
+          // spread `...f` above re-introduces the attack card's regionUuid otherwise.
+          regionUuid: null,
         },
       },
     });
+    // The template's job ends here: the pool above is locked onto the card, and applyDamage reads
+    // that list, never the region. Deleted AFTER the card is posted so a failed card leaves the
+    // template on the map and the roll can be retried.
+    await deleteRegionByUuid(f.regionUuid);
     return;
   }
 
@@ -586,13 +593,33 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   // presetChoice = the damage inputs already gathered elsewhere (Force channel), so we don't prompt twice.
   const choice = presetChoice ?? await DialogV2.prompt({
     window: { title: `${weaponDisplayName} — Damage` },
-    content: `${hitCountRow}${facingRow}${strRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div>`,
+    content: `${hitCountRow}${facingRow}${strRow}<div class="form-group"><label>Damage Modifier (flat or dice)</label><input type="text" name="mod" value="+0"/></div><div class="form-group"><label>Bonus Penetration (flat or dice)</label><input type="text" name="pen" value="+0"/></div>`,
     ok: { label: "Roll", callback: (e, b) => new foundry.applications.ux.FormDataExtended(b.form).object },
     rejectClose: false
   });
   if (choice == null) return;
   const strDelta = strSit.filter((s) => choice[`sit_${s.id}`]).reduce((n, s) => n + s.amount, 0);
   const trimmed = String(choice.mod ?? "").trim();
+  // Bonus penetration: one roll for the whole attack, because penetration is a single value that
+  // every hit shares. Absent for the Force-channel presetChoice path, which never opens the dialog.
+  const penInput = String(choice.pen ?? "").trim();
+  let penRoll = null;
+  // Any numerically-zero input (0, -0, ...) is treated as no bonus, same as the "no roll at all"
+  // case — a dice formula like "1d5" is NaN here and still takes the roll path.
+  if (penInput && Number(penInput) !== 0) {
+    penRoll = await safeRoll(penInput, "bonus penetration");
+    if (!penRoll) return;            // bad formula: safeRoll has already told the user
+  }
+  // No bonus → pass the original through untouched, so the card is byte-identical to before.
+  const effectivePen = penRoll ? penetrationWithBonus(f.penetration, penRoll.total) : f.penetration;
+  // Show the formula only when dice were actually rolled — for a flat "+3" the formula and its
+  // total are the same number, and "4 + +3[3]" reads worse than "4 + 3".
+  // Clamped: the raw sum went negative but penetration cannot, so say where the number came from —
+  // "4 + -10" alone reads as -6, which is not what the card shows.
+  const penClamped = penRoll && effectivePen === 0 && penRoll.total < 0;
+  const penNote = penRoll
+    ? `${Number(f.penetration) || 0} + ${penRoll.dice.length ? `${penInput.replace(/^\+/, "")}[${penRoll.total}]` : penRoll.total}${penClamped ? ` → ${effectivePen}` : ""}`
+    : null;
   const hitsToRoll = nHitsTotal > 1 ? f.hits.slice(0, Number(choice.hits) || nHitsTotal) : (f.hits ?? []);   // latest hits drop first
   const dos = f.dos ?? 0;
   const rfThreshold = vengefulValue(qualities) || 10;
@@ -627,6 +654,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   if (f.scatterDmg) weaponBase = `${weaponBase} ${f.scatterDmg > 0 ? "+" : "-"} ${Math.abs(f.scatterDmg)}`;
   if (f.helpless) weaponBase = doubleDamageDice(weaponBase);   // every die term doubles for Helpless
   const rolls = [];
+  if (penRoll) rolls.push(penRoll);   // so the bonus dice are inspectable alongside the damage dice
   const rolled = [];   // per hit: { hit, wRoll, bRoll, fRoll, rf, baseTotal }
   for (const hit of hitsToRoll) {
     // Weapon damage — RF-eligible; Tearing applies to the weapon dice only.
@@ -673,7 +701,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     return { index: hit.index, location: hit.location, label: hit.label, total, rf, breakdown,
       unsoaked: fRoll?.total ?? 0, unsoakedBreak: fRoll ? formatRoll(fRoll) : "" };
   });
-  const cardData = { weaponName: weaponDisplayName, damageType: f.damageType, penetration: f.penetration, hits,
+  const cardData = { weaponName: weaponDisplayName, damageType: f.damageType, penetration: effectivePen, penNote, hits,
     isVehicle: !!f.tgtIsVehicle,
     targetName: f.targetName, canApply: !!f.targetUuid, shocking: hasShocking(qualities),
     concussive: concussiveValue(qualities) || null,
@@ -686,7 +714,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   const content = await renderTemplate("systems/better-dh2e/templates/chat/damage-card.hbs", cardData);
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }), rolls, content,
-    flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: f.penetration, damageType: f.damageType,
+    flags: { [NS]: { type: "damage", targetUuid: f.targetUuid, targetName: f.targetName, penetration: effectivePen, damageType: f.damageType,
       qualities: f.qualities ?? [], coverApproach: f.coverApproach ?? null,
       tgtIsVehicle: f.tgtIsVehicle ?? false, facing: choice.facing ?? f.vehSide ?? "front",
       hits: hits.map((h) => ({ location: h.location, label: h.label, total: h.total, rf: h.rf, unsoaked: h.unsoaked || 0 })) } }
@@ -844,7 +872,6 @@ async function applyDamage(message) {
       });
       lines.push(`${actor.name}: ${dealt} dmg (${BDH.hitLocationLabels[location] ?? location})`);
     }
-    await deleteRegionByUuid(f.regionUuid);   // remove the template after applying
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker(),
       content: `<div class="bdh-card"><header class="bdh-card-head">Blast damage applied</header><div class="bdh-card-line">${lines.join("<br>") || "No targets."}</div></div>`,
@@ -1283,6 +1310,46 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   const isSpray = eff.qualities.some((q) => q.key === "spray");
   if (battlemapEnabled() && isSpray) return rollSpray(actor, weapon);
 
+  // Tile-aimed blast: with a Blast weapon on a battlemap and nothing targeted, the player aims a
+  // point before the dialog — which lets the range band below measure to it, and stops the player
+  // aiming after they already know whether they hit. Esc aborts the whole attack, no ammo spent.
+  // Only a POINT is kept: Maximal's +2 radius is chosen in the dialog, so the real Region cannot be
+  // built until afterwards.
+  let aimPoint = null;
+  const blastQuality = eff.qualities.find((q) => q.key === "blast");
+  const aimRadius = Number(blastQuality?.value) || 0;
+  // Radius must be > 0: resolveAttack's placement block is gated on `blastX > 0`, so aiming a
+  // Blast(0) weapon would cost the player an invisible preview and then place nothing.
+  // canvas?.ready guards a theatre-of-mind session (or an attack fired before the canvas finishes
+  // loading): placeBlastRegion dereferences canvas.dimensions/canvas.regions directly and would
+  // throw. Skipping the aim step here falls through to the pre-change path (normal dialog, no
+  // blast centre) instead of throwing or silently aborting the attack.
+  // canvas.regions?.placeRegion is v14-only — it does not exist on v13, which system.json still
+  // supports. Feature-detecting it keeps a v13 world on the pre-branch behaviour (ordinary attack,
+  // no template) instead of throwing mid-gesture with every window minimised.
+  if (battlemapEnabled() && canvas?.ready && typeof canvas.regions?.placeRegion === "function"
+      && aimRadius > 0 && !game.user.targets.first()) {
+    const minimized = [];
+    for (const app of foundry.applications.instances.values()) {
+      if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
+    }
+    // try/finally: any rejection from placeBlastRegion (no Region-create permission, canvas torn
+    // down mid-gesture, …) must still restore the minimised windows rather than leaving the whole
+    // UI hidden with no attack to show for it.
+    try {
+      const preview = await placeBlastRegion(aimRadius);
+      if (!preview) return null;                       // cancelled — nothing placed, no ammo spent
+      // shape is guarded (not just optional-chained) so a malformed/empty shapes array can never
+      // throw between the Region document existing and its delete below — that would orphan the
+      // preview circle on the map.
+      const shape = preview.shapes?.[0];
+      if (shape) aimPoint = { x: shape.x, y: shape.y };
+      await preview.delete();          // keep the point, not the preview; direct delete, no uuid round-trip
+    } finally {
+      for (const app of minimized) await app.maximize?.();
+    }
+  }
+
   const isMelee = weapon.system.weaponClass === "melee";
   const isRanged = !isMelee;
   const charKey = isMelee ? "weaponSkill" : "ballisticSkill";
@@ -1320,9 +1387,10 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   let measuredDistance = null;
   if (isRanged && battlemapEnabled() && (weapon.system.range ?? 0) > 0) {
     const attackerTok = actor.getActiveTokens?.()[0] ?? canvas.tokens?.controlled?.[0] ?? null;
-    if (targetTok && attackerTok && targetTok.scene?.id === attackerTok.scene?.id) {
-      // v13/v14 grid measurement between token centres.
-      const path = canvas.grid.measurePath([attackerTok.center, targetTok.center]);
+    const measureTo = targetTok && targetTok.scene?.id === attackerTok?.scene?.id ? targetTok.center : aimPoint;
+    if (measureTo && attackerTok) {
+      // v13/v14 grid measurement from the shooter to the target token, or to the aimed point.
+      const path = canvas.grid.measurePath([attackerTok.center, measureTo]);
       measuredDistance = Math.round(path?.distance ?? path ?? 0);
       // NOTE (deferred): if the attacker is engaged in melee, Point-Blank should NOT apply.
       // Requires melee-engagement tracking (Foundry statuses/conditions) — a later battlemap piece.
@@ -1439,7 +1507,7 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
   }
   if (!choice) return null;
   if (choice.action === "suppress") return rollSuppressingFire(actor, weapon, choice.attackType);
-  return resolveAttack(actor, weapon, choice, { consumeAmmo: true });
+  return resolveAttack(actor, weapon, choice, { consumeAmmo: true, aimPoint });
 }
 
 /**
@@ -1452,6 +1520,7 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
  * @param {boolean} [opts.consumeAmmo=true]  — set false to skip the clip deduction (Fate reroll)
  * @param {string|null} [opts.targetUuid]    — override live targets (Fate reroll re-targets original)
  * @param {string|null} [opts.targetName]    — override live target name
+ * @param {{x: number, y: number}|null} [opts.aimPoint]  — blast centre when no token is targeted
  * @returns {Promise<ChatMessage|null>}
  */
 export async function resolveAttack(actor, weapon, choice, opts = {}) {
@@ -1583,14 +1652,20 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
         ? game.user.targets.first()
         : fromUuidSync(opts.targetUuid)?.getActiveTokens?.()[0] ?? null)
     : null);
-  if (battlemapEnabled() && blastX > 0 && targetToken?.center) {
-    let { x, y } = targetToken.center;
+  // Centre: the point the player aimed at when nothing was targeted, or the targeted token.
+  // aimPoint must win: it is only ever set on the tile-aimed path (nothing was targeted when the
+  // aim step ran), and a Fate reroll of that attempt carries it forward while targetToken can pick
+  // up whatever the rerolling user happens to have targeted live (see finding 1). On every targeted
+  // path opts.aimPoint is null, so this falls through to targetToken?.center unchanged.
+  const blastCentre = opts.aimPoint ?? targetToken?.center ?? null;
+  if (battlemapEnabled() && blastX > 0 && blastCentre) {
+    let { x, y } = blastCentre;
     if (!success) {                                   // MISS → scatter 1d5 squares in a 1d10 direction
       const dist = (await safeRoll("1d5", "scatter distance"))?.total ?? 1;
       const dir = (await safeRoll("1d10", "scatter direction"))?.total ?? 1;
-      const { dx, dy } = scatterDirection(dir);
-      x += dx * dist * canvas.dimensions.size;        // canvas.dimensions.size = pixels per square
-      y += dy * dist * canvas.dimensions.size;
+      const off = scatterOffset(dir, dist, canvas.dimensions.size);   // size = pixels per square
+      x += off.dx;
+      y += off.dy;
     }
     const region = await createBlastRegion(canvas.scene, x, y, blastX);
     const caughtToks = tokensInRegion(region);
@@ -1645,7 +1720,11 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       overheated,
       scatterDmg,
       helpless: vsHelpless,
-      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, choice, targetUuid, targetName, roll: roll.total, success, dosBonus },
+      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, choice, targetUuid, targetName, roll: roll.total, success, dosBonus,
+        // A reroll re-throws at the same spot (re-aiming would leak the first result), and deletes
+        // the Region this attempt placed. regionUuid is null when the blast caught nobody — that
+        // Region was already deleted at placement time.
+        aimPoint: opts.aimPoint ?? null, regionUuid: blastFlags?.regionUuid ?? null },
       ...(blastFlags ?? {})
     }
   };

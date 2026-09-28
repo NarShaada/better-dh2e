@@ -89,6 +89,7 @@
 .bdh-card-head .t { text-transform:uppercase; letter-spacing:.5px; font-size:13px; }
 .bdh-card-head .t .arrow { color:#9a7a4a; font-weight:normal; }
 .bdh-card-head .sub { margin-left:auto; font-size:11px; color:#7a5c30; font-weight:normal; text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
+.bdh-card-head .sub .bdh-pen-note { text-transform:none; white-space:normal; font-size:10px; color:#8a6a4a; letter-spacing:normal; }
 
 /* Legacy two-column stat grid (cast / test / forcefield cards) */
 .bdh-card-grid { display:grid; grid-template-columns:auto auto; gap:1px 14px; font-size:12px; padding:5px 10px 2px; }
