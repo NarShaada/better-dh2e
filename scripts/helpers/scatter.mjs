@@ -7,3 +7,12 @@ const MAP = {
 };
 /** 1d10 scatter direction → unit grid offset {dx,dy}. */
 export function scatterDirection(d10) { return MAP[d10] ?? { dx: 0, dy: 0 }; }
+
+/** Scatter offset in PIXELS: a `distance`-square scatter in direction `d10` on a `gridSize`-pixel grid.
+ *  Canvas coords, so +y is down — the direction map already accounts for that. */
+export function scatterOffset(d10, distance, gridSize) {
+  const { dx, dy } = scatterDirection(d10);
+  const squares = Number(distance) || 0;
+  const size = Number(gridSize) || 0;
+  return { dx: dx * squares * size + 0, dy: dy * squares * size + 0 };
+}
