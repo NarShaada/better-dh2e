@@ -1697,7 +1697,11 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       overheated,
       scatterDmg,
       helpless: vsHelpless,
-      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, choice, targetUuid, targetName, roll: roll.total, success, dosBonus },
+      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, choice, targetUuid, targetName, roll: roll.total, success, dosBonus,
+        // A reroll re-throws at the same spot (re-aiming would leak the first result), and deletes
+        // the Region this attempt placed. regionUuid is null when the blast caught nobody — that
+        // Region was already deleted at placement time.
+        aimPoint: opts.aimPoint ?? null, regionUuid: blastFlags?.regionUuid ?? null },
       ...(blastFlags ?? {})
     }
   };
