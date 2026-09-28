@@ -554,10 +554,17 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
           penetration: f.penetration,
           damageType: f.damageType,
           qualities: f.qualities ?? [],
-          regionUuid: f.regionUuid,
+          // The template is deleted immediately below, so the damage card must not carry a uuid
+          // pointing at a document that no longer exists. Explicitly null, not omitted: the flags
+          // spread `...f` above re-introduces the attack card's regionUuid otherwise.
+          regionUuid: null,
         },
       },
     });
+    // The template's job ends here: the pool above is locked onto the card, and applyDamage reads
+    // that list, never the region. Deleted AFTER the card is posted so a failed card leaves the
+    // template on the map and the roll can be retried.
+    await deleteRegionByUuid(f.regionUuid);
     return;
   }
 
@@ -865,7 +872,6 @@ async function applyDamage(message) {
       });
       lines.push(`${actor.name}: ${dealt} dmg (${BDH.hitLocationLabels[location] ?? location})`);
     }
-    await deleteRegionByUuid(f.regionUuid);   // remove the template after applying
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker(),
       content: `<div class="bdh-card"><header class="bdh-card-head">Blast damage applied</header><div class="bdh-card-line">${lines.join("<br>") || "No targets."}</div></div>`,
