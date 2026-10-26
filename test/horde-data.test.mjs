@@ -23,28 +23,34 @@ describe("hordeSize", () => {
 });
 
 describe("hordeMagnitudeLoss", () => {
-  it("is 1 at exactly 15 and above, 0 below", () => {
-    expect(hordeMagnitudeLoss(14)).toBe(0);
-    expect(hordeMagnitudeLoss(15)).toBe(1);
+  it("is 1 for any hit that gets through the soak, 0 for one that does not", () => {
+    // There is NO damage threshold. A hit that beats the horde's armour + Toughness costs it a
+    // body, however lightly. The old flat-15 rule made a flamer (1d10+4, max 14 raw) literally
+    // incapable of reducing Magnitude against any horde, even one with no armour and TB 0.
+    expect(hordeMagnitudeLoss(1)).toBe(1);
+    expect(hordeMagnitudeLoss(14)).toBe(1);
     expect(hordeMagnitudeLoss(50)).toBe(1);
+    expect(hordeMagnitudeLoss(0)).toBe(0);     // fully soaked — nothing got through
     expect(hordeMagnitudeLoss(undefined)).toBe(0);
   });
 });
 
 describe("hordeMagnitudeLossTotal", () => {
-  it("counts one per hit dealing >=15, NOT one per 15 damage", () => {
-    // Regression: a burst dealing 14 / 25 / 35 after mitigation loses 2 Magnitude (the 25 and the 35),
-    // never 3 (which a per-15 reading of the 35 would give).
-    expect(hordeMagnitudeLossTotal([14, 25, 35])).toBe(2);
+  it("counts one per hit that gets through, never scaled by how much it dealt", () => {
+    // A burst dealing 14 / 25 / 35 after mitigation loses 3 Magnitude — one per hit. The invariant
+    // that survives from the old rule is one-per-HIT: the 35 must never count as more than one.
+    expect(hordeMagnitudeLossTotal([14, 25, 35])).toBe(3);
     expect(hordeMagnitudeLossTotal([50])).toBe(1);
-    expect(hordeMagnitudeLossTotal([14])).toBe(0);
+    expect(hordeMagnitudeLossTotal([1])).toBe(1);
+    expect(hordeMagnitudeLossTotal([0])).toBe(0);
+    expect(hordeMagnitudeLossTotal([0, 0, 3])).toBe(1);   // only the hit that got through
   });
-  it("adds Devastating X for every hit, on top of the 15+ rule", () => {
+  it("adds Devastating X for every hit, on top of the per-hit loss", () => {
     // Devastating 2, two hits of 12 and 16 after mitigation:
-    // 2 (Dev) + 2 (Dev) + 1 (the 16 is >=15) = 5.
-    expect(hordeMagnitudeLossTotal([12, 16], 2)).toBe(5);
-    // Devastating applies even to hits that don't reach 15.
-    expect(hordeMagnitudeLossTotal([10, 10], 1)).toBe(2);
+    // 2 (Dev) + 1 (got through) + 2 (Dev) + 1 (got through) = 6.
+    expect(hordeMagnitudeLossTotal([12, 16], 2)).toBe(6);
+    // Devastating still applies to a hit the horde soaked completely.
+    expect(hordeMagnitudeLossTotal([0, 0], 1)).toBe(2);
   });
   it("tolerates nullish / blank Devastating and empty hit lists", () => {
     expect(hordeMagnitudeLossTotal([20, 20], undefined)).toBe(2);
