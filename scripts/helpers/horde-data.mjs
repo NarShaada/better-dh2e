@@ -11,13 +11,17 @@ export function hordesEnabled() {
   return game.settings.get("better-dh2e", "enableHordes") === true;
 }
 
-/** Magnitude lost from one hit: 1 if effective damage ≥ 15, else 0 (one per hit, NOT one per 15 damage). */
+/** Magnitude lost from one hit: 1 if ANY damage got through the horde's soak, else 0.
+ *  One per hit, never scaled by how much the hit dealt — a 35-damage hit still costs exactly 1.
+ *  There is deliberately no damage threshold: an earlier flat-15 reading made a flamer (1d10+4,
+ *  max 14 raw) incapable of reducing Magnitude against any horde, even one with no armour and
+ *  Toughness Bonus 0, which is the opposite of how flame weapons are meant to work on a mob. */
 export function hordeMagnitudeLoss(eff) {
-  return (eff ?? 0) >= 15 ? 1 : 0;
+  return (eff ?? 0) > 0 ? 1 : 0;
 }
 
 /** Total Magnitude lost across an array of per-hit effective-damage values against a horde:
- *  X (Devastating) for every hit, plus 1 for each hit dealing ≥ 15 after mitigation. */
+ *  X (Devastating) for every hit, plus 1 for each hit that dealt any damage after mitigation. */
 export function hordeMagnitudeLossTotal(effs, devastatingX = 0) {
   const x = Number(devastatingX) || 0;
   return (Array.isArray(effs) ? effs : []).reduce((sum, e) => sum + x + hordeMagnitudeLoss(e), 0);
