@@ -20,6 +20,7 @@ import { carryLimits } from "../helpers/encumbrance-data.mjs";
 import { nextCarryState, carriedWeight } from "../helpers/carry-state.mjs";
 import { totalMagazines, effectiveWeapon } from "../helpers/weapon-effects.mjs";
 import { initiativeBase, initiativeDice, movementBaseValue } from "../helpers/derived.mjs";
+import { createWriteQueue, afterQueuedWrites } from "../helpers/write-queue.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -30,6 +31,9 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
 
   /** Advancement mode overlay: "none" | "custom" | "simple" (transient per open sheet). */
   _advancementMode = "none";
+
+  /** Orders this sheet's whole-array writes (specialties, afflictions, injuries) — see helpers/write-queue.mjs. */
+  _writes = createWriteQueue();
 
   /** Action handler: toggle the hide-untrained filter and re-render. */
   static #onToggleUntrained(event, target) {
@@ -602,7 +606,8 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     position: { width: 1000, height: 900 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: {
+    // Every action waits for an in-flight inline edit before it reads the array that edit is writing.
+    actions: afterQueuedWrites({
       toggleUntrained: DarkHeresyActorSheet.#onToggleUntrained,
       rollCharacteristic: DarkHeresyActorSheet.#onRollCharacteristic,
       rollSkill: DarkHeresyActorSheet.#onRollSkill,
@@ -637,7 +642,7 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
       removeAptitude: DarkHeresyActorSheet.#onRemoveAptitude,
       castPower: DarkHeresyActorSheet.#onCastPower,
       releaseSustain: DarkHeresyActorSheet.#onReleaseSustain
-    }
+    })
   };
 
   static PARTS = {
@@ -675,6 +680,12 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
     context.skills = buildSkills(system.skills);
     context.fatiguePct = fatiguePercent(system.fatigue?.value ?? 0, system.fatigue?.max ?? 0);
     context.woundsShown = woundsShown(system.wounds?.value ?? 0, system.wounds?.max ?? 0, reverseWoundsEnabled());
+    // The Custom-mode Wounds max input edits the STORED max. `system.wounds.max` is derived — it
+    // already includes Wounds stat-modifiers from installed cybernetics and traits — and this sheet
+    // submits its whole form on every change, so binding the input to it wrote base+mod back to
+    // source and re-applied the mod on the next derive, growing the max with every edit. Same
+    // hazard, same cure, as `size` below and `unnatural` in buildCharacteristics. null on a horde.
+    context.woundsMaxBase = this.actor._source.system.wounds?.max ?? null;
     context.hideUntrained = this._hideUntrained;
     // >1 tab group => context.tabs is not auto-injected; prepare both groups explicitly.
     context.tabs = this._prepareTabs("primary");
@@ -923,24 +934,32 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         if (item) item.update({ "system.quantity": Math.max(0, Math.floor(Number(event.currentTarget.value) || 0)) });
       });
     }
+    // Whole-array inline edits. Each reads its control while the event is live (currentTarget is
+    // gone once dispatch ends) and clones the array INSIDE the queued job, i.e. after any earlier
+    // edit has landed — otherwise two edits in one round trip, or an edit followed by ＋ / ✖, both
+    // start from the same stale array and the later write erases the earlier.
     for (const input of this.element.querySelectorAll(".bdh-injury")) {
       input.addEventListener("change", (event) => {
         const idx = Number(event.currentTarget.dataset.index);
-        const injuries = foundry.utils.deepClone(this.actor.system.injuries);
-        if (injuries[idx]) {
-          injuries[idx].description = event.currentTarget.value;
-          this.actor.update({ "system.injuries": injuries });
-        }
+        const description = event.currentTarget.value;
+        this._writes.run(async () => {
+          const injuries = foundry.utils.deepClone(this.actor.system.injuries);
+          if (!injuries[idx]) return;
+          injuries[idx].description = description;
+          await this.actor.update({ "system.injuries": injuries });
+        });
       });
     }
     for (const input of this.element.querySelectorAll(".bdh-chardmg-amount")) {
       input.addEventListener("change", (event) => {
         const idx = Number(event.currentTarget.dataset.index);
-        const injuries = foundry.utils.deepClone(this.actor.system.injuries);
-        if (injuries[idx]) {
-          injuries[idx].amount = Math.max(0, Math.floor(Number(event.currentTarget.value) || 0));
-          this.actor.update({ "system.injuries": injuries });
-        }
+        const amount = Math.max(0, Math.floor(Number(event.currentTarget.value) || 0));
+        this._writes.run(async () => {
+          const injuries = foundry.utils.deepClone(this.actor.system.injuries);
+          if (!injuries[idx]) return;
+          injuries[idx].amount = amount;
+          await this.actor.update({ "system.injuries": injuries });
+        });
       });
     }
     for (const input of this.element.querySelectorAll(".bdh-aff-input")) {
@@ -949,11 +968,13 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         const arr = row?.dataset.array;
         const idx = Number(row?.dataset.index);
         const field = event.currentTarget.dataset.field;
-        const list = foundry.utils.deepClone(this.actor.system.afflictions[arr]);
-        if (list[idx]) {
-          list[idx][field] = event.currentTarget.value;
-          this.actor.update({ [`system.afflictions.${arr}`]: list });
-        }
+        const value = event.currentTarget.value;
+        this._writes.run(async () => {
+          const list = foundry.utils.deepClone(this.actor.system.afflictions[arr]);
+          if (!list[idx]) return;
+          list[idx][field] = value;
+          await this.actor.update({ [`system.afflictions.${arr}`]: list });
+        });
       });
     }
     for (const input of this.element.querySelectorAll(".bdh-spec-input")) {
@@ -961,11 +982,14 @@ export class DarkHeresyActorSheet extends HandlebarsApplicationMixin(ActorSheetV
         const el = event.currentTarget;
         const key = el.dataset.skill;
         const idx = Number(el.dataset.specialty);
-        const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
-        if (list[idx]) {
-          list[idx][el.dataset.field] = el.value;
-          this.actor.update({ [`system.skills.${key}.specialties`]: list });
-        }
+        const field = el.dataset.field;
+        const value = el.value;
+        this._writes.run(async () => {
+          const list = foundry.utils.deepClone(this.actor.system.skills[key].specialties);
+          if (!list[idx]) return;
+          list[idx][field] = value;
+          await this.actor.update({ [`system.skills.${key}.specialties`]: list });
+        });
       });
     }
   }

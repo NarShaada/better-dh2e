@@ -3,7 +3,7 @@
 <div class="better-dh2e {{#if hideUntrained}}hide-untrained{{/if}}">
 
   <header class="bdh-header">
-    <div class="portrait"><img src="{{document.img}}" data-edit="img" alt="portrait"/></div>
+    <div class="portrait"><img src="{{document.img}}" data-edit="img" data-action="editImage" alt="portrait"/></div>
     <div class="id-block">
       <div class="nm"><input type="text" name="name" value="{{document.name}}" placeholder="Name"/></div>
       <div class="bio-row">
@@ -206,7 +206,7 @@
             {{else}}
             <div class="bdh-section-head">Wounds</div>
             <div class="bdh-wounds">
-              <label>Wounds</label><span class="bdh-wval"><input class="bdh-wounds-value" type="number" value="{{woundsShown}}" min="0"/> / {{#if isCustom}}<input type="number" name="system.wounds.max" value="{{system.wounds.max}}"/>{{else}}<b class="bdh-ro">{{system.wounds.max}}</b>{{/if}}</span>
+              <label>Wounds</label><span class="bdh-wval"><input class="bdh-wounds-value" type="number" value="{{woundsShown}}" min="0"/> / {{#if isCustom}}<input type="number" name="system.wounds.max" value="{{woundsMaxBase}}" min="0" title="Base Wounds — modifiers from cybernetics and traits are added on top (effective: {{system.wounds.max}})"/>{{else}}<b class="bdh-ro">{{system.wounds.max}}</b>{{/if}}</span>
               <label>Critical</label><input type="number" name="system.wounds.critical" value="{{system.wounds.critical}}"/>
             </div>
             {{/if}}

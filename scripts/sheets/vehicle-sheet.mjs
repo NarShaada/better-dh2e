@@ -9,17 +9,23 @@ import { parseModifier } from "../rolls/test-logic.mjs";
 import { rollAttack } from "../rolls/attack.mjs";
 import { weaponClassFlags } from "../helpers/weapon-data.mjs";
 import { effectiveWeapon } from "../helpers/weapon-effects.mjs";
+import { createWriteQueue, afterQueuedWrites } from "../helpers/write-queue.mjs";
+import { escapeHtml } from "../helpers/html-escape.mjs";
 
-const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+  /** Orders this sheet's whole-array writes (crew, conditions) — see helpers/write-queue.mjs. */
+  _writes = createWriteQueue();
+
   static DEFAULT_OPTIONS = {
     classes: ["better-dh2e", "sheet", "actor", "vehicle"],
     position: { width: 640, height: 760 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: {
+    // Every action waits for an in-flight inline edit before it reads crew/conditions.
+    actions: afterQueuedWrites({
       addRole: VehicleSheet.#onAddRole,
       removeRole: VehicleSheet.#onRemoveRole,
       addCondition: VehicleSheet.#onAddCondition,
@@ -30,7 +36,7 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       removeWeapon: VehicleSheet.#onRemoveWeapon,
       editItem: VehicleSheet.#onEditItem,
       reloadWeapon: VehicleSheet.#onReloadWeapon
-    }
+    })
   };
 
   static PARTS = {
@@ -126,24 +132,32 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Crew seat fields (role / operate): rewrite the WHOLE crew array — updating one element by
     // dotted index (`system.crew.1.role`) makes Foundry rebuild the array and reset the other seats.
     for (const el of this.element.querySelectorAll("[data-veh-field]")) {
-      el.addEventListener("change", async (ev) => {
+      el.addEventListener("change", (ev) => {
+        // Read the control NOW: currentTarget is gone once dispatch ends, and the queued job below
+        // may not start until an earlier edit's update has come back.
         const i = Number(ev.currentTarget.dataset.vehIndex);
         const field = ev.currentTarget.dataset.vehField;
+        const value = ev.currentTarget.value;
         if (!Number.isInteger(i) || !field) return;
-        const crew = this.#crewSource();
-        if (!crew[i]) return;
-        crew[i][field] = ev.currentTarget.value;
-        await this.actor.update({ "system.crew": crew });
+        this._writes.run(async () => {
+          const crew = this.#crewSource();
+          if (!crew[i]) return;
+          crew[i][field] = value;
+          await this.actor.update({ "system.crew": crew });
+        });
       });
     }
     // Conditions (array of strings): same — rewrite the whole array on edit.
     for (const el of this.element.querySelectorAll("[data-cond-index]")) {
-      el.addEventListener("change", async (ev) => {
+      el.addEventListener("change", (ev) => {
         const i = Number(ev.currentTarget.dataset.condIndex);
+        const value = ev.currentTarget.value;
         if (!Number.isInteger(i)) return;
-        const conditions = [...(this.actor.system.conditions ?? [])];
-        conditions[i] = ev.currentTarget.value;
-        await this.actor.update({ "system.conditions": conditions });
+        this._writes.run(async () => {
+          const conditions = [...(this.actor.system.conditions ?? [])];
+          conditions[i] = value;
+          await this.actor.update({ "system.conditions": conditions });
+        });
       });
     }
     // Integrity current value: convert the shown number back through the reverse-wounds setting.
@@ -181,16 +195,27 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
 
     if (data?.type === "Item") {
-      const item = await Item.implementation.fromDropData(data);
-      if (!item || item.type !== "weapon") { ui.notifications.warn("Only weapons can be mounted to a seat."); return; }
+      // BEFORE the first await. A DOM event has finished bubbling by the time awaited code resumes,
+      // so stopping it after `fromDropData` let the drop reach ActorSheetV2's own handler as well —
+      // which embedded a second, unmounted copy of the weapon (and embedded a refused non-weapon).
       event.preventDefault();
       event.stopPropagation();
+      const item = await Item.implementation.fromDropData(data);
+      if (!item || item.type !== "weapon") { ui.notifications.warn("Only weapons can be mounted to a seat."); return; }
       const [created] = await this.actor.createEmbeddedDocuments("Item", [item.toObject()]);   // the vehicle owns the mount
       const crew = this.#crewSource();
       if (!crew[i]) return;
       crew[i].weapons = [...(crew[i].weapons ?? []), created.id];
       await this.actor.update({ "system.crew": crew });
     }
+  }
+
+  /** An Item dropped on the sheet but NOT on a seat. ActorSheetV2 would embed it, and a vehicle
+   *  shows only the weapons mounted to its seats — the item would sit on the actor where no part
+   *  of this sheet lists it or can remove it. Seat drops never get here: #onSeatDrop stops them. */
+  async _onDropItem(event, item) {
+    ui.notifications.warn("Drop a weapon onto a crew seat to mount it — a vehicle carries nothing else.");
+    return null;
   }
 
   /** Fire a mounted weapon using the seat occupant's stats (the weapon stays owned by the vehicle). */
@@ -233,12 +258,41 @@ export class VehicleSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     await this.actor.update({ "system.crew": crew });
   }
 
+  /** Remove a crew role — and the weapons mounted to it. A mounted weapon is an embedded item that
+   *  only its seat lists; dropping the seat alone left it on the vehicle with nothing on the sheet
+   *  to show or delete it. Deleting items is not a one-click surprise, so an armed seat asks first.
+   *
+   *  Seats have no id, only a position, and the crew can change while the dialog is open (another
+   *  ✖ on this sheet, another client). So the dialog is modal, and afterwards the seat at that
+   *  position must still be EXACTLY the one that was asked about — same role, occupant and mounted
+   *  weapons — or nothing is removed. Matching on less (the role name: every new seat is "Crew")
+   *  could remove a different seat and delete the weapons of one that stays. */
   static async #onRemoveRole(event, target) {
     const i = Number(target.dataset.index);
-    const crew = this.#crewSource();
-    if (crew[i]?.fixed) { ui.notifications.warn("The Driver seat can't be removed."); return; }
+    const seat = this.#crewSource()[i];
+    if (!seat) return;
+    if (seat.fixed) { ui.notifications.warn("The Driver seat can't be removed."); return; }
+    const mounted = (seat.weapons ?? []).filter((id) => this.actor.items.get(id));
+    if (mounted.length) {
+      const what = mounted.length === 1 ? "its mounted weapon" : `its ${mounted.length} mounted weapons`;
+      const ok = await DialogV2.confirm({
+        window: { title: "Remove Role" },
+        content: `<p>Remove <b>${escapeHtml(seat.role)}</b> and delete ${what}?</p>`,
+        rejectClose: false,
+        modal: true,
+      });
+      if (!ok) return;
+    }
+    const crew = this.#crewSource();   // re-read: the dialog was open for a while
+    const same = (a, b) => !!a && !!b && a.role === b.role && a.fixed === b.fixed && a.actorUuid === b.actorUuid
+      && a.operate === b.operate && a.weapons.length === b.weapons.length && a.weapons.every((id, n) => id === b.weapons[n]);
+    if (!same(crew[i], seat)) {
+      ui.notifications.warn("The crew changed while you were deciding — nothing was removed. Try again.");
+      return;
+    }
     crew.splice(i, 1);
     await this.actor.update({ "system.crew": crew });
+    if (mounted.length) await this.actor.deleteEmbeddedDocuments("Item", mounted);
   }
 
   static async #onUnseat(event, target) {
