@@ -1,6 +1,5 @@
 // scripts/better-dh2e.mjs
 import { BDH } from "./config.mjs";
-import { battlemapEnabled, classifyMovement } from "./helpers/battlemap-data.mjs";
 import { hordesEnabled } from "./helpers/horde-data.mjs";
 import { themeChoices, bodyClassesFor, ALL_THEME_CLASSES } from "./helpers/theme-data.mjs";
 import { registerTokenPrefix } from "./helpers/token-prefix.mjs";
@@ -40,6 +39,7 @@ import { CoverTemplatesApp } from "./apps/cover-templates-app.mjs";
 import { registerGrantHooks } from "./cybernetics/grants.mjs";
 import { registerWeaponPartHooks } from "./weapons/parts.mjs";
 import { registerFatigueHooks } from "./rolls/conditions.mjs";
+import { syncRunStatus } from "./canvas/run-status.mjs";
 
 Hooks.once("init", () => {
   console.log("Better DH2e | Initializing");
@@ -175,7 +175,10 @@ Hooks.once("init", () => {
     type: Boolean,
     default: false,
     onChange: () => {
-      ui.controls?.render?.();                 // show/hide the cover scene-control buttons
+      // `reset` makes Foundry rebuild the control set, which is when getSceneControlButtons runs
+      // again; a plain render() re-draws the cached set, so the cover buttons neither appeared nor
+      // went away until a scene change or a reload.
+      ui.controls?.render?.({ reset: true });
       import("./canvas/cover-overlay.mjs").then((m) => m.redrawCoverOverlay());
       // A GM enabling this mid-session may be sitting on a scene that still carries phase-2 pieces or
       // token residue from before the setting existed — canvasReady already fired for this scene, and
@@ -384,18 +387,7 @@ Hooks.on("preUpdateActor", (actor, change) => {
 });
 
 // Battlemap: keep the Run condition in sync with per-turn movement. Runs once, on the mover's client.
-Hooks.on("moveToken", async (doc, movement, operation, user) => {
-  if ((user?.id ?? user) !== game.user.id || !battlemapEnabled()) return;
-  const total = doc.movement?.history?.distance ?? 0;   // cumulative this turn (0 outside combat → skip)
-  if (total <= 0) return;
-  const rates = doc.actor?.system?.movement;
-  if (!rates) return;
-  // "run" OR "tooFar" (over-running) both mean the token is running — keep Run on past the max.
-  const running = ["run", "tooFar"].includes(classifyMovement(total, rates));
-  const hasRun = doc.actor.statuses?.has?.("run") ?? false;
-  if (running && !hasRun) await doc.actor.toggleStatusEffect("run", { active: true });
-  else if (!running && hasRun) await doc.actor.toggleStatusEffect("run", { active: false });
-});
+Hooks.on("moveToken", (doc, movement, operation, user) => syncRunStatus(doc, movement, user));
 
 // Cover scene controls — attached to the Token controls group (proven to render across v13/v14).
 // GM: open the template manager, clear all cover, manually degrade cover pieces. Everyone: toggle cover
