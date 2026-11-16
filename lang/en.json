@@ -78,6 +78,7 @@
   "BDH.Requisition.Automatic": "Automatic — no test required",
   "BDH.Requisition.GmDiscretion": "Unique: subject to the GM's discretion.",
   "BDH.Requisition.Add": "Add to sheet",
+  "BDH.Requisition.AskGM": "Ask the GM to add this item",
   "BDH.Requisition.General": "general requisition",
   "BDH.Requisition.Gone": "That item is no longer available — its pack may be disabled.",
   "BDH.Requisition.Acquired": "{actor} acquires {item}."

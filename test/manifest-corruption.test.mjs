@@ -90,3 +90,27 @@ describe("resolveManifest — Malefic Corruption disabled", () => {
     expect(actor.system.corruption).toBe(10);
   });
 });
+
+// The same rule for the OTHER persistent side effect of a cast. "+1 DoS" replays a cast that has
+// already happened; if the player released the power in between, replaying it must not quietly put
+// it back in the Active Powers block.
+describe("resolveManifest — sustaining and the +1 DoS replay", () => {
+  const sustainable = () => ({
+    id: "power-S", name: "Fiery Form", type: "psychicPower",
+    system: { type: "effect", discipline: "pyromancy", focusTest: "willpower", focusModifier: 0, sustained: "half", opposed: false },
+  });
+  const held = (actor) => (actor.getFlag("better-dh2e", "sustained") ?? []).map((e) => e.powerId);
+
+  it("a fresh successful cast enters the sustained block", async () => {
+    const actor = makePsyker(0);
+    primeDice([10]);
+    await resolveManifest(actor, sustainable(), { ...CAST, sustain: true });
+    expect(held(actor)).toEqual(["power-S"]);
+  });
+
+  it("a +1 DoS replay does not re-add a power that has since been released", async () => {
+    const actor = makePsyker(0);                      // nothing held: the power was released after the cast
+    await resolveManifest(actor, sustainable(), { ...CAST, sustain: true, fixedRoll: 10, dosBonus: 1 });
+    expect(held(actor)).toEqual([]);
+  });
+});

@@ -265,8 +265,11 @@ export async function resolveManifest(actor, power, opts) {
   ChatMessage.applyRollMode(messageData, "roll");
   await ChatMessage.create(messageData);
 
-  // After the cast card, so chat reads cast-then-consequence.
-  if (success && sustain && s.sustained !== "no") {
+  // After the cast card, so chat reads cast-then-consequence. Gated on `fixedRoll == null` like
+  // every other side effect here (see HAZARD below): "+1 DoS" replays a cast that already entered
+  // the block, and re-adding would put back a power the player has released since — or re-run the
+  // overreach cascade on one that was already dropped.
+  if (fixedRoll == null && success && sustain && s.sustained !== "no") {
     await addSustained(actor, {
       powerId: power.id, name: power.name, castEffPR: effPR, sustainAction: s.sustained
     });

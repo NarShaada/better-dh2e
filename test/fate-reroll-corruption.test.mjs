@@ -69,6 +69,33 @@ function castRerollMessage(actor, overrides = {}) {
   };
 }
 
+describe("a cast card is rerolled at most once", () => {
+  // Without this, each further reroll of the SAME old card took the original grant back again:
+  // a PR-4 cast at 14 Corruption went 14 → 10 → 6, below where the psyker started.
+  it("refuses a second reroll of the same card: the grant is taken back once and Fate is spent once", async () => {
+    const actor = makePsyker({ corruption: 14 });
+    const card = { id: "cast-card-A", ...castRerollMessage(actor) };
+
+    await rerollFromFate(card);
+    await rerollFromFate(card);
+
+    expect(mocked.seenCorruption).toEqual([10]);      // re-resolved once
+    expect(actor.system.corruption).toBe(10);
+    expect(actor.system.fate.value).toBe(2);
+  });
+
+  it("does not spend Fate when the power on the card no longer exists", async () => {
+    const actor = makePsyker({ corruption: 14 });
+    actor.items.splice(0);                            // the power was deleted after the cast
+
+    await rerollFromFate({ id: "cast-card-B", ...castRerollMessage(actor) });
+
+    expect(actor.system.fate.value).toBe(3);
+    expect(actor.system.corruption).toBe(14);
+    expect(mocked.seenCorruption).toEqual([]);
+  });
+});
+
 describe("Fate reroll of a successful Malefic cast", () => {
   it("takes the original Corruption grant back BEFORE re-resolving", async () => {
     const actor = makePsyker({ corruption: 14 });   // 10 before the cast + 4 granted by it
