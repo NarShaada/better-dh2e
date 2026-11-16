@@ -69,3 +69,36 @@ describe("facingFromDelta", () => {
     expect(facingFromDelta(0, 0)).toBe(null);
   });
 });
+
+// An attacker exactly on a diagonal of the vehicle's local frame is a TIE between two facings, and
+// the documented rule is that the vertical axis (Front / Rear) wins. The rotation into the local
+// frame used cos/sin of 45° multiples, which are not exact, so the tie was decided by floating-
+// point noise: the same relative geometry gave "front" for a north-facing vehicle and "right" for
+// every other heading.
+describe("armourSideFromAttack — the same relative attack gives the same facing at every heading", () => {
+  // Unit steps for a bearing (degrees clockwise from north; +y is down).
+  const STEP = { 0: [0, -1], 45: [1, -1], 90: [1, 0], 135: [1, 1], 180: [0, 1], 225: [-1, 1], 270: [-1, 0], 315: [-1, -1] };
+  const HEADINGS = [0, 45, 90, 135, 180, 225, 270, 315];
+  /** The facing struck by an attacker `relative` degrees clockwise of the vehicle's nose. */
+  const struck = (heading, relative, scale = 100) => {
+    const [dx, dy] = STEP[(heading + relative) % 360];
+    return armourSideFromAttack(dx * scale, dy * scale, heading);
+  };
+
+  for (const [relative, expected] of [[45, "front"], [135, "rear"], [225, "rear"], [315, "front"]]) {
+    it(`${relative}° off the nose is ${expected} — the vertical axis wins the tie — whatever the heading`, () => {
+      expect(HEADINGS.map((h) => struck(h, relative))).toEqual(HEADINGS.map(() => expected));
+    });
+  }
+
+  it("the four clean facings are unaffected", () => {
+    for (const h of HEADINGS) {
+      expect([0, 90, 180, 270].map((rel) => struck(h, rel))).toEqual(["front", "right", "rear", "left"]);
+    }
+  });
+
+  it("a real off-diagonal attack is still classified by its larger component", () => {
+    expect(armourSideFromAttack(300, -100, 0)).toBe("right");
+    expect(armourSideFromAttack(100, -300, 0)).toBe("front");
+  });
+});

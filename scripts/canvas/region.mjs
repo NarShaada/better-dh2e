@@ -1,14 +1,23 @@
 // scripts/canvas/region.mjs — AoE Region helpers (v14: templates are Region docs, not MeasuredTemplate).
 const NS = "better-dh2e";
 
-/** Create a circle Region of `radiusMetres` centered at {x,y} (scene pixels). Returns the RegionDocument. */
-export async function createBlastRegion(scene, x, y, radiusMetres, { kind = "blast" } = {}) {
+/** Every elevation (a Region treats null as unbounded on that side). Used wherever the height of
+ *  an area attack is not known — a cone, or a blast aimed at a bare tile. Containment checks
+ *  elevation, so a fixed floor of 0 meant a token below it — in a trench or a basement — was never
+ *  caught, even at a blast's centre. */
+const allElevations = () => ({ bottom: null, top: null });   // a fresh object each time: Foundry keeps what it is handed
+
+/** Create a circle Region of `radiusMetres` centered at {x,y} (scene pixels). Returns the RegionDocument.
+ *  `elevation` is the height of the impact, when known: a blast reaches its radius in every
+ *  direction, so the template then spans one radius above and below it — a token further away than
+ *  that, straight up or down, is not caught. Omitted (null), it spans every elevation. */
+export async function createBlastRegion(scene, x, y, radiusMetres, { kind = "blast", elevation = null } = {}) {
   const radiusPx = radiusMetres * canvas.dimensions.distancePixels;
   const [region] = await scene.createEmbeddedDocuments("Region", [{
     name: `Blast (${radiusMetres})`,
     color: "#ff6600",
     shapes: [{ type: "circle", x: Math.round(x), y: Math.round(y), radius: radiusPx }],
-    elevation: { bottom: 0, top: null },
+    elevation: elevation === null ? allElevations() : { bottom: elevation - radiusMetres, top: elevation + radiusMetres },
     visibility: CONST.REGION_VISIBILITY.ALWAYS,
     highlightMode: "coverage",   // fill the grid squares the blast actually covers (vs just an outline)
     flags: { [NS]: { kind } },
@@ -29,7 +38,7 @@ export async function placeConeRegion(originToken, lengthMetres, angle = 30, { k
   const data = {
     name: "Spray", color: "#ff9900",
     shapes: [{ type: "cone", x: Math.round(x), y: Math.round(y), radius: radiusPx, angle, rotation: 0, curvature: "flat" }],
-    elevation: { bottom: 0, top: null },
+    elevation: allElevations(),
     visibility: CONST.REGION_VISIBILITY.ALWAYS, highlightMode: "coverage",
     flags: { [NS]: { kind } },
   };
@@ -62,7 +71,7 @@ export async function placeBlastRegion(radiusMetres, { kind = "blast" } = {}) {
   const data = {
     name: `Blast (${radiusMetres})`, color: "#ff6600",
     shapes: [{ type: "circle", x: Math.round(seed.x), y: Math.round(seed.y), radius: radiusPx }],
-    elevation: { bottom: 0, top: null },
+    elevation: allElevations(),
     visibility: CONST.REGION_VISIBILITY.ALWAYS, highlightMode: "coverage",
     flags: { [NS]: { kind } },
   };

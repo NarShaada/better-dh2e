@@ -2,7 +2,7 @@
 {{!-- Root is a <div>: DocumentSheetV2 already makes the application a <form> (tag:"form"); a nested form would orphan our inputs. --}}
 <div class="better-dh2e item">
   <header class="bdh-item-header">
-    <img src="{{document.img}}" data-edit="img" alt="icon"/>
+    <img src="{{document.img}}" data-edit="img" data-action="editImage" alt="icon"/>
     <input type="text" name="name" value="{{document.name}}" placeholder="Name"/>
   </header>
 

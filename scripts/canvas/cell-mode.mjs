@@ -13,7 +13,7 @@
 const DENIED_ACTIONS = ["clickLeft", "clickLeft2", "clickRight", "clickRight2", "dragLeftStart", "dragRightStart"];
 
 // { owner, onCell, onDown, onMove, onUp, onKey, onContext, visited, claimed, button,
-//   mgr, mgrPermissions, tokensLayer, tokensInteractiveChildren, regionsLayer, regionsInteractiveChildren }
+//   mgr, mgrPermissions, silenced: [{ container, was }] }
 let _mode = null;
 
 /** Cell key so a single drag never visits the same cell twice. */
@@ -82,7 +82,16 @@ export function beginCellMode({ notice, onCell, owner }) {
     visit(event.getLocalPosition(canvas.stage));
   };
   const onUp = () => { if (_mode) { _mode.button = null; _mode.visited.clear(); _mode.claimed.clear(); } };
-  const onKey = (e) => { if (e.key === "Escape") endCellMode(); };
+  // Escape ends the tool — and must end THERE. Foundry's keyboard manager listens for keydown on
+  // `window` in the bubble phase and gives Escape its own meaning (close every window, release the
+  // selection, open the main menu); left to bubble, one keypress did both. This listener is added in
+  // the CAPTURE phase (see below), so stopping the event here keeps it from ever reaching Foundry's.
+  const onKey = (e) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    endCellMode();
+  };
   const onContext = (e) => e.preventDefault();     // no browser/Foundry context menu while active
 
   // Snapshot and gate the canvas's own interaction permissions so Foundry can't also pan/click/drag
@@ -107,23 +116,25 @@ export function beginCellMode({ notice, onCell, owner }) {
   // each layer's interactivity instead — exactly what core's own InteractionLayer#deactivate does — and
   // restore it on every exit path. Cover pieces are Regions, so canvas.regions gets the same treatment in
   // case the GM is on that layer.
-  const tokensLayer = canvas?.tokens;
-  const regionsLayer = canvas?.regions;
-  const tokensInteractiveChildren = tokensLayer ? tokensLayer.interactiveChildren : undefined;
-  const regionsInteractiveChildren = regionsLayer ? regionsLayer.interactiveChildren : undefined;
-  if (tokensLayer) tokensLayer.interactiveChildren = false;
-  if (regionsLayer) regionsLayer.interactiveChildren = false;
+  // Two more things on the map answer clicks whichever layer is active, and so have to be silenced
+  // too: door controls (canvas.controls.doors — a left-click while painting opened or closed the door
+  // for every player and painted nothing; a right-click erased the cell AND toggled the door's lock)
+  // and map notes, when their display toggle is on.
+  const silenced = [canvas?.tokens, canvas?.regions, canvas?.controls?.doors, canvas?.notes]
+    .filter(Boolean)
+    .map((container) => ({ container, was: container.interactiveChildren }));
+  for (const { container } of silenced) container.interactiveChildren = false;
 
   _mode = {
     owner, onCell, onDown, onMove, onUp, onKey, onContext, visited: new Set(), claimed: new Set(), button: null,
-    mgr, mgrPermissions, tokensLayer, tokensInteractiveChildren, regionsLayer, regionsInteractiveChildren,
+    mgr, mgrPermissions, silenced,
   };
   canvas.stage.eventMode = "static";
   canvas.stage.on("pointerdown", onDown);
   canvas.stage.on("pointermove", onMove);
   canvas.stage.on("pointerup", onUp);
   canvas.stage.on("pointerupoutside", onUp);
-  window.addEventListener("keydown", onKey);
+  window.addEventListener("keydown", onKey, true);   // capture phase — see onKey
   canvas.app.view.addEventListener("contextmenu", onContext);
 }
 
@@ -145,11 +156,15 @@ export function endCellMode(owner) {
   canvas.stage.off("pointermove", m.onMove);
   canvas.stage.off("pointerup", m.onUp);
   canvas.stage.off("pointerupoutside", m.onUp);
-  window.removeEventListener("keydown", m.onKey);
+  window.removeEventListener("keydown", m.onKey, true);
   canvas.app?.view?.removeEventListener("contextmenu", m.onContext);
   if (m.mgr && m.mgrPermissions !== undefined) m.mgr.permissions = m.mgrPermissions;
-  if (m.tokensLayer && m.tokensInteractiveChildren !== undefined) m.tokensLayer.interactiveChildren = m.tokensInteractiveChildren;
-  if (m.regionsLayer && m.regionsInteractiveChildren !== undefined) m.regionsLayer.interactiveChildren = m.regionsInteractiveChildren;
+  // Give each back as it was found — except never switch OFF a layer that is the active one now.
+  // The GM may have changed scene-control layer while the mode ran; core turns that layer's
+  // interactivity on, and writing an old "off" snapshot over it would leave it dead to clicks.
+  for (const { container, was } of m.silenced) {
+    if (was !== undefined) container.interactiveChildren = was || container.active === true;
+  }
 }
 
 /**

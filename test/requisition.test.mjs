@@ -255,12 +255,19 @@ describe("rollRequisition — turning the dialog into a choice", () => {
 describe("the Add button", () => {
   const cardHtml = () => makeCardHtml({ buttons: ["requisitionAdd"] });
   const button = (html) => html.querySelector('[data-bdh="requisitionAdd"]');
-  const message = (over = {}) => ({
+  // `canUpdate` models Foundry's rule for a ChatMessage: only its author or a GM may update it.
+  // A message this user cannot update REJECTS setFlag, exactly as the server does.
+  const message = (over = {}, { canUpdate = true } = {}) => ({
     flags: { [NS]: { kind: "requisition", itemUuid: "Item.src", itemLabel: "Bolt Pistol",
                      craftsmanship: "good", added: false,
                      reroll: { kind: "requisition", actorUuid: "Actor.a1" }, ...over } },
+    canUpdate,
+    canUserModify: function (_user, action) { return action === "update" ? this.canUpdate : false; },
     getFlag: function (ns, k) { return this.flags[ns]?.[k]; },
-    setFlag: async function (ns, k, v) { this.flags[ns][k] = v; }
+    setFlag: async function (ns, k, v) {
+      if (!this.canUpdate) throw new Error("User lacks permission to update ChatMessage");
+      this.flags[ns][k] = v;
+    }
   });
 
   it("stamps the requested craftsmanship onto the created item", async () => {
@@ -346,6 +353,44 @@ describe("the Add button", () => {
     bindRequisitionButtons(msg, html);
     // Someone else's client (or a macro) got there first, after this button was bound.
     msg.flags[NS].added = true;
+    await html.click("requisitionAdd");
+
+    expect(created).toEqual([]);
+  });
+
+  // A card rolled by the GM from a player's sheet (or a Fate reroll the GM performed) is authored
+  // by the GM. The player owns the ACTOR, so the button used to be offered — but the player cannot
+  // stamp `added` on someone else's message: the item was created, the stamp rejected, and the
+  // button stayed live for another copy on every click.
+  it("shows an actor owner who cannot mark the card used an inert button saying who can add it", () => {
+    const created = [];
+    registerUuid("Actor.a1", makeActor({ uuid: "Actor.a1", isOwner: true,
+      createEmbeddedDocuments: async (_t, docs) => { created.push(...docs); return docs; } }));
+    registerUuid("Item.src", { toObject: () => ({ name: "Bolt Pistol", type: "weapon", system: { craftsmanship: "normal" } }) });
+    const html = cardHtml();
+
+    bindRequisitionButtons(message({}, { canUpdate: false }), html);
+
+    // Still on the card — a button that silently vanished would leave the player with a successful
+    // requisition and no way to tell why they cannot take the item.
+    expect(button(html)).not.toBeNull();
+    expect(button(html).disabled).toBe(true);
+    expect(button(html).textContent).toBe("BDH.Requisition.AskGM");
+    expect(button(html)._listeners.click).toBeUndefined();   // inert: nothing is bound to it at all
+    expect(created).toEqual([]);
+  });
+
+  it("creates nothing if the card can no longer be marked used when the button is clicked", async () => {
+    const created = [];
+    const a = makeActor({ uuid: "Actor.a1", isOwner: true,
+      createEmbeddedDocuments: async (_t, docs) => { created.push(...docs); return docs; } });
+    registerUuid("Actor.a1", a);
+    registerUuid("Item.src", { toObject: () => ({ name: "Bolt Pistol", type: "weapon", system: { craftsmanship: "normal" } }) });
+
+    const msg = message();
+    const html = cardHtml();
+    bindRequisitionButtons(msg, html);
+    msg.canUpdate = false;            // e.g. the message was re-authored / permissions changed after render
     await html.click("requisitionAdd");
 
     expect(created).toEqual([]);

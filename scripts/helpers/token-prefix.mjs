@@ -38,10 +38,18 @@ export function pickPrefix(list, used, rng = Math.random) {
 
 // Drop a leading word from `name` if it is a known prefix, so re-dropped tokens don't stack prefixes
 // (e.g. a copy-pasted "Filthy Heretic" → base "Heretic", not "Filthy Heretic").
-export function stripKnownPrefix(name, list) {
+// `bases` are the names the actor really has (its own, its prototype token's). The list is made of
+// ordinary adjectives, and an NPC named "Renegade Psyker" or "Feral Hound" used to lose its first
+// word and be dropped as "Vile Psyker" — so a leading word is left alone when it is the START OF
+// one of those names, i.e. when the token is called that name (or that name plus a suffix such as
+// the " (2)" core appends). Every other leading listed word is stripped as before, whatever follows
+// it: a placed token's name has often been numbered or renamed by the time it is copied, and
+// requiring an exact match there would stack a second prefix on every paste.
+export function stripKnownPrefix(name, list, bases = null) {
   const sp = name.indexOf(" ");
-  if (sp > 0 && list.includes(name.slice(0, sp))) return name.slice(sp + 1);
-  return name;
+  if (sp <= 0 || !list.includes(name.slice(0, sp))) return name;
+  if ((bases ?? []).some((b) => name === b || name.startsWith(`${b} `))) return name;
+  return name.slice(sp + 1);
 }
 
 /* ---- Runtime (Foundry) — executed only when called, never at import ---- */
@@ -50,13 +58,17 @@ const _inflight = new Map();   // "<sceneId>:<actorId>" -> Set(prefix) for the c
 let _inflightClear = false;
 
 // preCreateToken handler: prefix an unlinked NPC token with a non-duplicate adjective (token name only).
-export function applyTokenPrefix(tokenDoc) {
+// `options` are the creation options: an UNDO of a deletion re-creates the token and must give it
+// back the name it had, not roll it a new prefix.
+export function applyTokenPrefix(tokenDoc, options = {}) {
+  if (options?.isUndo) return;
   if (!game.settings.get("better-dh2e", "tokenPrefixes")) return;
   const actor = tokenDoc.actor;
   if (!actor || actor.type !== "npc" || tokenDoc.actorLink) return;
   const raw = (tokenDoc.name || actor.name || "").trim();
   if (!raw) return;
-  const base = stripKnownPrefix(raw, PREFIXES);
+  const bases = [actor.name, actor.prototypeToken?.name].map((n) => (n ?? "").trim()).filter(Boolean);
+  const base = stripKnownPrefix(raw, PREFIXES, bases);
   if (!base) return;
 
   const scene = tokenDoc.parent, actorId = tokenDoc.actorId;
@@ -70,6 +82,10 @@ export function applyTokenPrefix(tokenDoc) {
     }
   }
 
+  // The base may itself begin with a listed word (the actor's own name — see stripKnownPrefix);
+  // rolling that same word would read "Hunted Hunted Man".
+  const ownFirstWord = base.split(" ")[0];
+  if (PREFIXES.includes(ownFirstWord)) used.add(ownFirstWord);
   const prefix = pickPrefix(PREFIXES, used);
   const set = _inflight.get(key) || new Set();
   set.add(prefix); _inflight.set(key, set);
@@ -80,7 +96,7 @@ export function applyTokenPrefix(tokenDoc) {
 
 // Wire the preCreateToken hook (call once at init).
 export function registerTokenPrefix() {
-  Hooks.on("preCreateToken", (tokenDoc) => {
-    try { applyTokenPrefix(tokenDoc); } catch (e) { console.error("better-dh2e | token-prefix", e); }
+  Hooks.on("preCreateToken", (tokenDoc, _data, options) => {
+    try { applyTokenPrefix(tokenDoc, options); } catch (e) { console.error("better-dh2e | token-prefix", e); }
   });
 }

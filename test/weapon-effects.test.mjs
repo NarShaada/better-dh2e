@@ -113,3 +113,41 @@ describe("magazine stock", () => {
     expect(magazineWeight({ weight: 7, ammo: [{ count: 4 }, { count: 1 }] })).toBeCloseTo(3.5);
   });
 });
+
+// The Damage Mod field on a weapon mod / ammunition is free text. effectiveWeapon appended it to
+// the weapon's formula verbatim, so a mod typed as "2" turned "1d10+3" into "1d10+32" — a silent,
+// wildly wrong damage roll. And a negative Pen Mod on a low-penetration weapon went below zero,
+// which the soak maths reads as EXTRA armour, even on an unarmoured location.
+describe("effectiveWeapon — a damage fragment typed without a sign, and penetration below zero", () => {
+  const withMod = (damageMod, extra = {}) =>
+    effectiveWeapon({ damage: "1d10+3", penetration: 0, mods: [{ name: "Mod", attackMod: 0, damageMod, penMod: 0, ...extra }] });
+
+  it("adds a bare number rather than gluing its digits on", () => {
+    expect(withMod("2").damage).toBe("1d10+3+2");
+  });
+  it("adds bare dice", () => {
+    expect(withMod("1d5").damage).toBe("1d10+3+1d5");
+  });
+  it("leaves a signed fragment exactly as typed", () => {
+    expect(withMod("+2").damage).toBe("1d10+3+2");
+    expect(withMod("-1").damage).toBe("1d10+3-1");
+    expect(withMod(" +1d5 ").damage).toBe("1d10+3+1d5");
+  });
+  it("leaves anything else alone rather than guessing", () => {
+    expect(withMod("*2").damage).toBe("1d10+3*2");
+  });
+  // Launchers carry NO damage of their own — the loaded round's Damage Mod is the whole formula
+  // (a Frag Missile is "2d10+2"). There is nothing to add it to, so it must not gain a leading "+".
+  it("uses a fragment as the formula itself when the weapon has no damage of its own", () => {
+    expect(effectiveWeapon({ damage: "", loadedAmmo: { name: "Frag Missile", damageMod: "2d10+2" } }).damage).toBe("2d10+2");
+    expect(effectiveWeapon({ damage: "  ", mods: [{ damageMod: "6d10" }] }).damage).toBe("6d10");
+  });
+  it("then adds the next fragment to that", () => {
+    expect(effectiveWeapon({ damage: "", mods: [{ damageMod: "1d10" }], loadedAmmo: { damageMod: "5" } }).damage).toBe("1d10+5");
+  });
+  it("never lets penetration go below zero", () => {
+    expect(withMod("", { penMod: -2 }).penetration).toBe(0);
+    expect(effectiveWeapon({ damage: "1d10", penetration: 4, mods: [{ penMod: -2 }] }).penetration).toBe(2);
+    expect(effectiveWeapon({ damage: "1d10", penetration: 1, mods: [{ penMod: -3 }], loadedAmmo: { penMod: 4 } }).penetration).toBe(2);
+  });
+});

@@ -22,8 +22,9 @@ import { coverPrefill, coverContextLabel } from "../helpers/cover-templates.mjs"
 import { rangeBand, battlemapEnabled } from "../helpers/battlemap-data.mjs";
 import { sizeToHitModifier, unnaturalDoSBonus, governingCharacteristic, skillTotal, corruptionBonus } from "../helpers/derived.mjs";
 import { targetAttackModifiers, selfAttackModifiers, evadeConditionModifier, doubleDamageDice } from "../helpers/condition-data.mjs";
-import { applyStunned, applyProne, addFatigue, applyToxic, applyOnFire, applyHelpless, applyCrippled } from "./conditions.mjs";
+import { applyProne, addFatigue, applyToxic, applyCrippled } from "./conditions.mjs";
 import { safeRoll } from "./dice.mjs";
+import { rollResistTest } from "./resist-effects.mjs";
 import { scatterOffset } from "../helpers/scatter.mjs";
 import { createBlastRegion, tokensInRegion, deleteRegionByUuid, placeConeRegion, placeBlastRegion } from "../canvas/region.mjs";
 import { hordeMagnitudeLoss, hordeMagnitudeLossTotal, hordeExtraHits, hordeDamageBonusDice, hordeSprayHits } from "../helpers/horde-data.mjs";
@@ -91,8 +92,23 @@ export function bindCardButtons(message, html) {
     }
   } else {
     const target = flags.targetUuid ? fromUuidSync(flags.targetUuid) : null;
+    // Buttons that exist FOR one particular actor — Apply Damage (the damage was rolled against
+    // it) and the On Fire / Toxic-resist cards' own buttons (the card was posted for it). Only an
+    // owner of that actor may press them, and with no such actor (never bound, or deleted since)
+    // nobody may: they must not fall through to whichever token happens to be selected.
     if (!target?.isOwner) {
-      html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="toxicResist"],[data-bdh="onFireApply"],[data-bdh="radPhageTest"]')
+      html.querySelectorAll('[data-bdh="applyDamage"],[data-bdh="toxicResist"],[data-bdh="onFireApply"]')
+        .forEach((b) => b.remove());
+    }
+    // The quality chips whose failure WRITES to the defender (a condition, Fatigue, characteristic
+    // damage). With a bound target they are for its owners only — Flame and Snare included, which
+    // used to be left out: a non-owner could post the target's Agility test and then have the On
+    // Fire / Helpless write refused. With NO bound target (an untargeted attack, or a target that
+    // is gone) they stay for everyone: the handler resolves the defender from the clicking user's
+    // selected token or assigned character, and resolveWritableDefender refuses one that user does
+    // not own. (Reading "no target" as "not an owner" used to strip these for the GM too.)
+    if (target && !target.isOwner) {
+      html.querySelectorAll('[data-bdh="shockTest"],[data-bdh="concussiveTest"],[data-bdh="flameTest"],[data-bdh="snareTest"],[data-bdh="radPhageTest"]')
         .forEach((b) => b.remove());
     }
   }
@@ -150,6 +166,21 @@ function formatRoll(roll, subResult = null, dos = 0, transform = (v) => v) {
 async function resolveDefender(f) {
   return (f.targetUuid ? await fromUuid(f.targetUuid) : null) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
 }
+/** The defender for a chip whose failure WRITES to it (a condition, Fatigue, wounds, characteristic
+ *  damage): resolved as resolveDefender does, then required to be owned by the clicking user.
+ *  bindCardButtons already hides these chips from non-owners of a BOUND target; this is the check
+ *  for the untargeted case, where the defender is only known at click time, and it runs before
+ *  anything is rolled so a refused click posts no half-finished test. Returns null (after a
+ *  warning) when there is no defender or it is not this user's to change. */
+async function resolveWritableDefender(f, selectPrompt) {
+  const defender = await resolveDefender(f);
+  if (!defender) { ui.notifications.warn(selectPrompt); return null; }
+  if (!defender.isOwner) {
+    ui.notifications.warn(`You don't own ${defender.name} — its owner or the GM rolls this.`);
+    return null;
+  }
+  return defender;
+}
 /** Vehicles can't make characteristic resist tests — they auto-pass. Post a note and stop. */
 async function autoPassIfVehicle(defender, label) {
   if (defender?.type !== "vehicle") return false;
@@ -160,18 +191,14 @@ async function autoPassIfVehicle(defender, label) {
   return true;
 }
 async function rollShockTest(message) {
-  const defender = await resolveDefender(message.flags[NS]);
-  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const defender = await resolveWritableDefender(message.flags[NS], "Select a token to test Toughness.");
+  if (!defender) return;
   if (await autoPassIfVehicle(defender, "Shocking")) return;
   const label = "Toughness (Shocking)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
-  if (battlemapEnabled() && result && !result.success) {
-    await applyStunned(defender, Math.ceil(result.degrees / 2));
-    await addFatigue(defender, 1);
-  }
-  return result;
+  // Failed → Stunned for half the degrees of failure (rounded up) + 1 Fatigue; see resist-effects.mjs.
+  return rollResistTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" }, "shocking");
 }
 async function rollCastResist(message) {
   const f = message.flags[NS];
@@ -189,27 +216,25 @@ async function rollCastResist(message) {
 }
 async function rollConcussiveTest(message) {
   const f = message.flags[NS];
-  const defender = await resolveDefender(f);
-  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const defender = await resolveWritableDefender(f, "Select a token to test Toughness.");
+  if (!defender) return;
   if (await autoPassIfVehicle(defender, "Concussive")) return;
   const x = concussiveValue(f.qualities);
   const label = `Toughness (Concussive ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });   // penalty pre-filled, GM can adjust
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
-  if (battlemapEnabled() && result && !result.success) await applyStunned(defender, result.degrees);
-  return result;
+  // Failed → Stunned for the degrees of failure.
+  return rollResistTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" }, "concussive");
 }
 async function rollFlameTest(message) {
-  const defender = await resolveDefender(message.flags[NS]);
-  if (!defender) { ui.notifications.warn("Select a token to test Agility."); return; }
+  const defender = await resolveWritableDefender(message.flags[NS], "Select a token to test Agility.");
+  if (!defender) return;
   if (await autoPassIfVehicle(defender, "Flame")) return;
   const label = "Agility (Flame)";
   const choice = await promptTest({ title: label });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier, characteristic: "agility" });
-  if (battlemapEnabled() && result && !result.success) await applyOnFire(defender);
-  return result;
+  // Failed → On Fire.
+  return rollResistTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier, characteristic: "agility" }, "flame");
 }
 async function rollHallucinogenicTest(message) {
   const f = message.flags[NS];
@@ -224,16 +249,15 @@ async function rollHallucinogenicTest(message) {
 }
 async function rollSnareTest(message) {
   const f = message.flags[NS];
-  const defender = await resolveDefender(f);
-  if (!defender) { ui.notifications.warn("Select a token to test Agility."); return; }
+  const defender = await resolveWritableDefender(f, "Select a token to test Agility.");
+  if (!defender) return;
   if (await autoPassIfVehicle(defender, "Snare")) return;
   const x = snareValue(f.qualities);
   const label = `Agility (Snare ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier, characteristic: "agility" });
-  if (battlemapEnabled() && result && !result.success) await applyHelpless(defender);
-  return result;
+  // Failed → Helpless.
+  return rollResistTest(defender, { label, base: defender.system.characteristics.agility.total, modifier: choice.modifier, characteristic: "agility" }, "snare");
 }
 async function rollToxicTest(message) {
   const f = message.flags[NS];
@@ -247,69 +271,25 @@ async function rollToxicTest(message) {
 }
 async function rollToxicResist(message) {
   const f = message.flags[NS];
-  const defender = await resolveDefender(f);
-  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const defender = await resolveWritableDefender(f, "Select a token to test Toughness.");
+  if (!defender) return;
   const x = f.potency ?? 1;
   const label = `Toughness (Toxic Resist ${x})`;
   const choice = await promptTest({ title: label, defaultModifier: `${-10 * x}` });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
-  if (battlemapEnabled() && result && !result.success) {
-    // Failed resist: 1d10 of the stored damage type, NOT reduced by armour or Toughness (per the
-    // Black Crusade wording of the same quality — DH2e leaves it implicit).
-    const roll = await new Roll("1d10").evaluate();
-    const dealt = roll.total;
-    const type = f.damageType ? `${f.damageType} ` : "";   // omit if unknown rather than mislabel
-    let statusLine = "";
-    if (defender.type === "horde") {   // a horde has no wounds — apply the Magnitude rule instead
-      const loss = hordeMagnitudeLoss(dealt);
-      const mag = Math.max(0, (defender.system.magnitude ?? 0) - loss);
-      if (loss) await defender.update({ "system.magnitude": mag });
-      statusLine = `<div class="bdh-card-line">Magnitude: ${mag} (−${loss})</div>`;
-    } else {
-      const w = defender.system.wounds;
-      const res = applyWounds(w.value, w.max, dealt);
-      await defender.update({ "system.wounds.value": res.wounds, "system.wounds.critical": (w.critical ?? 0) + res.critical });
-    }
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: defender }),
-      rolls: [roll],
-      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} takes ${dealt} ${type}damage from Toxic</header>`
-        + `<div class="bdh-card-line">1d10: ${roll.total} (ignores armour &amp; Toughness)</div>${statusLine}</div>`
-    });
-  }
-  return result;
+  // Failed → 1d10 of the stored damage type, unsoaked (toxicDamage in resist-effects.mjs).
+  return rollResistTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" },
+    "toxicResist", { damageType: f.damageType ?? "" });
 }
 async function rollRadPhageTest(message) {
   const f = message.flags[NS];
-  const defender = await resolveDefender(f);
-  if (!defender) { ui.notifications.warn("Select a token to test Toughness."); return; }
+  const defender = await resolveWritableDefender(f, "Select a token to test Toughness.");
+  if (!defender) return;
   const label = "Toughness (Rad-Phage)";
   const choice = await promptTest({ title: label, defaultModifier: "+0" });
   if (!choice) return null;
-  const result = await performTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" });
-  if (battlemapEnabled() && result && !result.success) {
-    // Failed: 2d10 raw Toughness characteristic damage (no soak), stored as a charDamage injury entry.
-    const roll = await new Roll("2d10").evaluate();
-    if (defender.type === "horde") {   // characteristic damage is meaningless on a Magnitude-only actor
-      await ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ actor: defender }),
-        rolls: [roll],
-        content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} — Rad-Phage has no effect on a Horde</header></div>`
-      });
-      return result;
-    }
-    const injuries = foundry.utils.deepClone(defender.system.injuries);
-    injuries.push({ type: "charDamage", characteristic: "toughness", amount: roll.total, description: "Rad-Phage" });
-    await defender.update({ "system.injuries": injuries });
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: defender }),
-      rolls: [roll],
-      content: `<div class="bdh-card"><header class="bdh-card-head">${defender.name} suffers &minus;${roll.total} Toughness from Rad-Phage</header>`
-        + `<div class="bdh-card-line">2d10: ${roll.total} characteristic damage (raw, armour &amp; Toughness ignored)</div></div>`
-    });
-  }
-  return result;
+  // Failed → 2d10 raw Toughness characteristic damage (radPhageDamage in resist-effects.mjs).
+  return rollResistTest(defender, { label, base: defender.system.characteristics.toughness.total, modifier: choice.modifier, characteristic: "toughness" }, "radPhage");
 }
 async function rollSprayAgTest(message, uuid) {
   const target = uuid ? await fromUuid(uuid) : null;
@@ -406,8 +386,8 @@ async function applySpray(message, html) {
 }
 async function applyOnFireDamage(message) {
   const f = message.flags[NS];
-  const target = await resolveDefender(f);
-  if (!target) { ui.notifications.warn("Select a token to apply fire damage."); return; }
+  const target = await resolveWritableDefender(f, "Select a token to apply fire damage.");
+  if (!target) return;
   const tb = target.system.characteristics.toughness.bonus ?? 0;
   const dealt = Math.max(0, (f.damage ?? 0) - tb);   // ignore armour, toughness soaks
   let statusLine = "";
@@ -483,6 +463,13 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   // --- Blast branch: ONE shared roll for all tokens still inside the template ---
   if (f.regionUuid) {
     const region = await fromUuid(f.regionUuid);
+    // The pool below is read from the tokens on the scene this user is VIEWING. From any other
+    // scene that either throws (a token and a region must share a scene) or finds nobody — and
+    // "nobody left inside" deletes the template without a roll. Say where to click instead.
+    if (region?.parent && region.parent.id !== canvas.scene?.id) {
+      ui.notifications.warn(`Roll this blast's damage while viewing the scene it was fired on${region.parent.name ? ` (${region.parent.name})` : ""}.`);
+      return;
+    }
     const caught = new Set(f.caughtUuids ?? []);
     const pool = (region ? tokensInRegion(region) : [])
       .filter((t) => caught.has(t.actor.uuid));    // RAW: re-check who is STILL inside before rolling
@@ -510,7 +497,17 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
     const weaponFormula = weaponDamageFormula(qualities, weaponBase);
     const dmgRoll = await safeRoll(weaponFormula, "weapon damage");
     if (!dmgRoll) return;
-    const breakdown = formatRoll(dmgRoll);
+    // Primitive caps each damage die and Proven floors it. The single-target and Spray paths
+    // apply this; the blast pool has to as well, for the shared roll and for a horde's own hits.
+    const primitiveX = primitiveValue(qualities), provenX = provenValue(qualities);
+    const transform = (v) => transformDamageDie(v, { primitiveX, provenX });
+    const clamped = (roll) => {
+      let total = roll.total;
+      for (const die of roll.dice) for (const r of die.results) if (r.active) total += transform(r.result) - r.result;
+      return total;
+    };
+    const damageTotal = clamped(dmgRoll);
+    const breakdown = formatRoll(dmgRoll, null, 0, transform);
     // Hordes caught in the zone take MANY separate hits, each its own roll (like a burst); non-hordes take the one shared roll.
     const blastHits = (Number(f.blast) || 1) + hordeExtraHits(f.damageType, qualities);
     const hordeBlast = [];
@@ -520,7 +517,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
       const totals = [];
       for (let i = 0; i < blastHits; i++) {
         const r = await safeRoll(weaponFormula, "weapon damage");
-        if (r) { totals.push(r.total); hordeRolls.push(r); }
+        if (r) { totals.push(clamped(r)); hordeRolls.push(r); }
       }
       hordeBlast.push({ uuid: t.actor.uuid, name: t.name, totals });
     }
@@ -530,7 +527,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
       damageType: f.damageType,
       penetration: f.penetration,
       poolNames: pool.map((t) => t.name).join(", "),
-      damageTotal: dmgRoll.total,
+      damageTotal,
       breakdown,
       // Per-token quality resist buttons are NOT shown on blast cards — they would test only the primary
       // target, not the pool (multi-target quality conditions are a deferred slice).
@@ -549,7 +546,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
           ...f,
           blast: true,
           poolUuids: pool.map((t) => t.actor.uuid),
-          damageTotal: dmgRoll.total,
+          damageTotal,
           hordeBlast,
           penetration: f.penetration,
           damageType: f.damageType,
@@ -558,6 +555,10 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
           // pointing at a document that no longer exists. Explicitly null, not omitted: the flags
           // spread `...f` above re-introduces the attack card's regionUuid otherwise.
           regionUuid: null,
+          // Same reason, different key: the spread also carries the attack card's Fate `reroll`
+          // payload, and a damage card holding it offered "Spend Fate: Reroll" — which re-fired the
+          // ATTACK and placed a fresh template after damage had already been rolled.
+          reroll: null,
         },
       },
     });
@@ -569,6 +570,8 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   }
 
   const actor = await fromUuid(f.actorUuid);
+  // Everything below reads the attacker (Strength, Psy Rating, corruption, items).
+  if (!actor) { ui.notifications.warn("The attacker on this card no longer exists — its damage can't be rolled."); return; }
   const psychic = !!f.psychic;
   const weapon = psychic ? null : await resolveWeapon(actor, f);
   if (!psychic && !weapon) return;
@@ -646,7 +649,7 @@ async function rollDamage(message, { extraDice = 0, presetChoice = null } = {}) 
   // Tainted: the wielder's Corruption bonus is added to damage (Enemies Beyond p. 40).
   const taintedDmg = weapon ? taintedBonus(eff.qualities, corruptionBonus(actor.system.corruption)) : 0;
   if (taintedDmg) weaponBase = `${weaponBase} + ${taintedDmg}`;
-  if (actor.type === "horde" && weapon.system.hordeEquipped) {
+  if (actor.type === "horde" && weapon?.system.hordeEquipped) {   // `weapon` is null on the psychic path
     const hd = hordeDamageBonusDice(actor.system.magnitude);   // +1d10 per 10 Magnitude, cap +2d10
     if (hd) weaponBase = `${weaponBase} + ${hd}d10`;
   }
@@ -742,8 +745,13 @@ async function rollJink(vehicle) {
 
 async function rollEvade(message) {
   const f = message.flags[NS];
-  // Defender: the bound target if available, else the user's controlled token, else their assigned character.
-  const defender = (await fromUuid(f.targetUuid)) ?? canvas.tokens?.controlled?.[0]?.actor ?? game.user.character;
+  // Defender: the bound target if available, else the user's controlled token, else their assigned
+  // character. A blast card is the exception — it catches several tokens but binds only one, so
+  // when the clicking user's own token is among those caught, THAT token evades; otherwise every
+  // bystander's Evade rolled with the primary target's stats and was posted in its name.
+  const mine = canvas.tokens?.controlled?.[0]?.actor ?? game.user.character ?? null;
+  const caughtMine = mine && (f.caughtUuids ?? []).includes(mine.uuid) ? mine : null;
+  const defender = caughtMine ?? (f.targetUuid ? await fromUuid(f.targetUuid) : null) ?? mine;
   if (!defender) { ui.notifications.warn("Select a token to evade with."); return; }
   if (defender.type === "vehicle") return rollJink(defender);
   const meleeWeapons = defender.items.filter((i) => i.type === "weapon" && i.system.weaponClass === "melee" && i.system.equipped);
@@ -1128,6 +1136,30 @@ async function rollForceField(actor) {
  * @param {string} weaponId
  * @returns {Promise<ChatMessage|null>}
  */
+/** canvas.regions.placeRegion is v14-only; system.json still supports v13, where it does not exist. */
+const canPlaceRegions = () => typeof canvas?.regions?.placeRegion === "function";
+
+/** Hide every open window while the player aims a template on the map (the sheet covers it), and
+ *  bring them back NO MATTER how the aiming ends — placed, cancelled, or rejected. Returns the
+ *  placed Region, or null when it was cancelled or could not be placed (already reported). */
+async function aimCone(token, length, angle) {
+  const minimized = [];
+  for (const app of foundry.applications.instances.values()) {
+    if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
+  }
+  try {
+    return await placeConeRegion(token, length, angle);
+  } catch (err) {
+    // No permission to create the template, the canvas torn down mid-gesture, …
+    console.error("Better DH2e | cone template placement failed:", err);
+    ui.notifications.error("The template could not be placed — nothing was fired.");
+    return null;
+  } finally {
+    for (const app of minimized) await app.maximize?.();
+  }
+}
+const NO_CONE = "Aiming a cone template needs Foundry v14 — this attack can't be resolved on the map here.";
+
 async function rollSpray(actor, weapon) {
   const token = actor.getActiveTokens()[0];
   if (!token) { ui.notifications.warn("The attacker needs a token on the scene."); return; }
@@ -1135,15 +1167,12 @@ async function rollSpray(actor, weapon) {
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
   if (usesAmmo && (weapon.system.clip?.value ?? 0) < 1) { ui.notifications.warn("The weapon is empty."); return; }
   const eff = effectiveWeapon(weapon.system);
-  // Minimize open windows (the sheet blocks the map) so the player can see + aim the cone; restore after.
-  const minimized = [];
-  for (const app of foundry.applications.instances.values()) {
-    if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
-  }
+  // Checked BEFORE the windows go down: without placeRegion the call below would throw with the
+  // whole UI minimised and no attack to show for it.
+  if (!canPlaceRegions()) { ui.notifications.warn(NO_CONE); return; }
   const length = Number(weapon.system.range) || 10;            // cone length = weapon range (m)
-  const region = await placeConeRegion(token, length, 30);
-  for (const app of minimized) await app.maximize?.();         // restore windows after placement/cancel
-  if (!region) return;                                          // cancelled — no ammo spent
+  const region = await aimCone(token, length, 30);             // windows minimised while aiming, always restored
+  if (!region) return;                                          // cancelled or not placed — no ammo spent
   if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - 1 });   // single shot fired
   const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
   const rows = caught.map((t) => ({ uuid: t.actor.uuid, name: t.name, isVehicle: t.actor.type === "vehicle" }));
@@ -1170,10 +1199,8 @@ async function rollSuppressingFire(actor, weapon, mode) {
   const wpPenalty = mode === "fullAuto" ? -20 : -10;
   const usesAmmo = weaponClassFlags(weapon.system.weaponClass).usesAmmo;
   if (usesAmmo && (weapon.system.clip?.value ?? 0) < rof) { ui.notifications.warn(`Needs ${rof} rounds.`); return; }
-  const minimized = [];
-  for (const app of foundry.applications.instances.values()) if (app.rendered && !app.minimized) { await app.minimize(); minimized.push(app); }
-  const region = await placeConeRegion(token, Number(weapon.system.range) || 10, angle);
-  for (const app of minimized) await app.maximize?.();
+  if (!canPlaceRegions()) { ui.notifications.warn(NO_CONE); return; }
+  const region = await aimCone(token, Number(weapon.system.range) || 10, angle);
   if (!region) return;
   if (usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - rof });
   const caught = tokensInRegion(region).filter((t) => t.actor && t.actor.uuid !== actor.uuid);
@@ -1231,6 +1258,7 @@ async function rollSuppressingFire(actor, weapon, mode) {
 async function rollSuppressWP(message, uuid) {
   const target = uuid ? await fromUuid(uuid) : null;
   if (!target) { ui.notifications.warn("Token not found."); return; }
+  if (await autoPassIfVehicle(target, "Suppressing Fire")) return;   // a vehicle has no Willpower to test
   const pen = message.flags[NS]?.wpPenalty ?? 0;
   const label = `Willpower (Suppressing — ${target.name})`;
   const choice = await promptTest({ title: label, defaultModifier: `${pen}` });
@@ -1251,6 +1279,7 @@ async function applySuppressPinned(message, html) {
 async function rollSuppressEvade(message, uuid) {
   const target = uuid ? await fromUuid(uuid) : null;
   if (!target) { ui.notifications.warn("Token not found."); return; }
+  if (target.type === "vehicle") return rollJink(target);   // as rollEvade: a vehicle's evade is its driver's Jink
   const label = `Evade (Suppressing — ${target.name})`;
   const choice = await promptTest({ title: label, defaultModifier: "+0" });
   if (!choice) return null;
@@ -1291,12 +1320,24 @@ async function applySuppressDamage(message, uuid) {
   const taintedDmg = taintedBonus(qualities, corruptionBonus(attacker?.system?.corruption));
   const suppressBase = taintedDmg ? `${eff.damage} + ${taintedDmg}` : eff.damage;
   const lines = [];
+  const effs = [];   // effective damage per hit — a horde's Magnitude loss is counted from these
   for (const loc of locKeys) {
     const roll = await safeRoll(weaponDamageFormula(qualities, suppressBase), "weapon damage");
     if (!roll) continue;
     let delta = 0; for (const d of roll.dice) for (const r of d.results) if (r.active) delta += transformDamageDie(r.result, { primitiveX, provenX }) - r.result;
     const dealt = await applyHitToToken(target, { damageTotal: roll.total + delta, penetration, damageType: eff.damageType, qualities, location: loc });
+    effs.push(dealt);
     lines.push(`${BDH.hitLocationLabels[loc] ?? loc}: ${dealt}`);
+  }
+  // applyHitToToken writes nothing to a horde (it has no Wounds) and leaves the Magnitude write to
+  // its caller. applySpray, the blast branch and applyDamage all do it; this path did not, so the
+  // card listed the hits and the horde's Magnitude never moved.
+  if (target.type === "horde") {
+    const devX = homebrewQualitiesEnabled() ? devastatingValue(qualities) : 0;
+    const loss = hordeMagnitudeLossTotal(effs, devX);
+    const mag = Math.max(0, (target.system.magnitude ?? 0) - loss);
+    if (loss) await target.update({ "system.magnitude": mag });
+    lines.push(`Magnitude −${loss}${devX ? ` (incl. Devastating ${devX}/hit)` : ""}`);
   }
   await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: target }),
     content: `<div class="bdh-card"><header class="bdh-card-head">${target.name} takes suppressing hits</header><div class="bdh-card-line">${lines.join("<br>")}</div></div>` });
@@ -1519,12 +1560,20 @@ export async function rollAttack(actor, weaponId, { weapon: weaponOverride = nul
  * @param {object} [opts]
  * @param {boolean} [opts.consumeAmmo=true]  — set false to skip the clip deduction (Fate reroll)
  * @param {string|null} [opts.targetUuid]    — override live targets (Fate reroll re-targets original)
+ * @param {boolean} [opts.replay=false]      — a Fate reroll / "+1 DoS" of an earlier card: the target is
+ *   that card's (opts.targetUuid, possibly null = it had none), never the user's current live target
+ * @param {boolean} [opts.fieldTested=false] — on a replay: the target's force field has already been
+ *   tested for THIS attack (a field is tested once per attack, not once per roll of the dice)
  * @param {string|null} [opts.targetName]    — override live target name
  * @param {{x: number, y: number}|null} [opts.aimPoint]  — blast centre when no token is targeted
  * @returns {Promise<ChatMessage|null>}
  */
 export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const { consumeAmmo = true, fixedRoll = null, dosBonus = 0 } = opts;
+  // Whoever the user has targeted RIGHT NOW. A replay never consults it: rerolling an untargeted
+  // attack used to adopt the current target — its size and condition modifiers, its force field,
+  // and its name on the new card.
+  const liveFirst = opts.replay ? null : (game.user.targets.first() ?? null);
 
   // Recompute setup-scope locals (needed whether called from rollAttack or a reroll)
   const eff = effectiveWeapon(weapon.system);
@@ -1537,7 +1586,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
 
   // Target-condition + self-condition to-hit modifiers — resolved here (from the live target or the
   // reroll's stored target) so they apply on the normal path AND on Fate rerolls.
-  const condTarget = opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null);
+  const condTarget = opts.targetUuid ? fromUuidSync(opts.targetUuid) : (liveFirst?.actor ?? null);
   let conditionMod = 0;
   if (battlemapEnabled()) {
     if (condTarget) conditionMod += targetAttackModifiers(condTarget.statuses, isMelee, choice.range).reduce((s, m) => s + m.mod, 0);
@@ -1603,7 +1652,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const rofCap = at.rof ? (weapon.system.rateOfFire?.[at.rof] || 1) : Infinity;
 
   // Hit count and locations
-  const hordeTarget = (opts.targetUuid ? fromUuidSync(opts.targetUuid) : (game.user.targets.first()?.actor ?? null));
+  const hordeTarget = (opts.targetUuid ? fromUuidSync(opts.targetUuid) : (liveFirst?.actor ?? null));
   const tgtIsHorde = hordeTarget?.type === "horde";
   const tgtIsVehicle = hordeTarget?.type === "vehicle";
   const blastWeapon = eff.qualities.some((q) => q.key === "blast");   // blast resolves horde hits in the blast flow, not the direct hit
@@ -1633,8 +1682,16 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   const scatterDmg = scatterDamage(eff.qualities, choice.range);
 
   // Target token — opts override takes precedence (Fate reroll), else read live targets
-  const liveTarget = opts.targetUuid ? null : (game.user.targets.first() ?? null);
+  const liveTarget = opts.targetUuid ? null : liveFirst;
   const targetUuid = opts.targetUuid ?? liveTarget?.actor?.uuid ?? null;
+  // Force field: tested once per ATTACK, when a target with an active field is hit. Spending Fate
+  // re-rolls the attack TEST, not the field, so across a chain of rerolls the field is tested the
+  // first time the attack hits and never again: a miss rerolled into a hit tests it; a hit rerolled
+  // into another hit does not get a second roll (nor a second chance to overload). The card's
+  // reroll payload carries `fieldTested` so the chain remembers.
+  const fieldActor = liveTarget?.actor ?? (opts.targetUuid ? fromUuidSync(opts.targetUuid) : null);
+  const testField = success && !!fieldActor && !opts.fieldTested && fixedRoll == null;
+  const fieldTested = !!opts.fieldTested || testField;
   const targetName = opts.targetName ?? liveTarget?.name ?? null;
 
   // Build hits array for the card and flags
@@ -1667,7 +1724,12 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       x += off.dx;
       y += off.dy;
     }
-    const region = await createBlastRegion(canvas.scene, x, y, blastX);
+    // A blast catches whoever is within its radius of the impact — up and down as well as sideways.
+    // Aimed at a token, the impact is at that token's height; aimed at a bare tile (aimPoint) there
+    // is no height to go on, so the template spans every elevation and the GM rules on the rest.
+    const tokenElevation = targetToken?.document?.elevation;
+    const elevation = !opts.aimPoint && Number.isFinite(tokenElevation) ? tokenElevation : null;
+    const region = await createBlastRegion(canvas.scene, x, y, blastX, { elevation });
     const caughtToks = tokensInRegion(region);
     if (caughtToks.length) {
       blastFlags = { blast: blastX, regionUuid: region.uuid, caughtUuids: caughtToks.map((t) => t.actor.uuid), scattered: !success };
@@ -1720,7 +1782,7 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
       overheated,
       scatterDmg,
       helpless: vsHelpless,
-      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, choice, targetUuid, targetName, roll: roll.total, success, dosBonus,
+      reroll: { kind: "attack", actorUuid: actor.uuid, weaponId: weapon.id, weaponUuid: weapon.uuid, choice, targetUuid, targetName, roll: roll.total, success, dosBonus, fieldTested,
         // A reroll re-throws at the same spot (re-aiming would leak the first result), and deletes
         // the Region this attempt placed. regionUuid is null when the blast caught nobody — that
         // Region was already deleted at placement time.
@@ -1786,8 +1848,8 @@ export async function resolveAttack(actor, weapon, choice, opts = {}) {
   // clears it when they clear the jam), which is why weaponJammed is absent from condition-data.mjs.
   // Guarded: toggling an already-active status would clear it.
   if (jammed && !actor.statuses?.has?.("weaponJammed")) await actor.toggleStatusEffect("weaponJammed", { active: true });
-  // Force field: a hit target with an equipped field auto-tests it.
-  if (success && liveTarget?.actor) await rollForceField(liveTarget.actor);
+  // Force field: a hit target with an equipped field auto-tests it (see `testField` above).
+  if (testField) await rollForceField(fieldActor);
   // Deduct rounds after the message is created (jam still consumes); skip on rerolls
   if (consumeAmmo && usesAmmo) await weapon.update({ "system.clip.value": weapon.system.clip.value - rounds });
   return msg;

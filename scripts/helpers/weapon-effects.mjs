@@ -2,10 +2,17 @@
 // Folds a weapon's own stats, its installed mods, and its loaded ammo into one
 // effective set. Mods are permanent; ammo is the swappable layer on top.
 
-/** Append a damage fragment ("+2", "+1d5"). Fragments carry their own sign; empties are skipped. */
+/** Append a damage fragment ("+2", "+1d5"). Fragments are meant to carry their own sign, but the
+ *  field is free text: one typed as a bare number or bare dice ("2", "1d5") gets a "+" — appended
+ *  verbatim it glued its digits onto the weapon's own modifier ("1d10+3" + "2" → "1d10+32").
+ *  Only when there IS something to add it to: a launcher has no damage of its own and the loaded
+ *  round's fragment ("2d10+2") is the whole formula, which must not gain a leading "+".
+ *  Anything else is left exactly as typed rather than guessed at. Empties are skipped. */
 function appendDamage(formula, fragment) {
   const f = String(fragment ?? "").trim();
-  return f ? `${formula}${f}` : formula;
+  if (!f) return formula;
+  if (!formula.trim()) return f;
+  return /^[\dd]/i.test(f) ? `${formula}+${f}` : `${formula}${f}`;
 }
 
 /** Merge ammo qualities over weapon qualities: same key → ammo's entry wins, others survive. */
@@ -53,7 +60,10 @@ export function effectiveWeapon(system) {
     qualities = mergeQualities(qualities, ammo.qualities);
   }
 
-  return { attackMod, damage, penetration, damageType, qualities, sources };
+  // Penetration cannot go below zero. A negative Pen Mod on a low-penetration weapon used to, and
+  // the soak maths reads negative penetration as EXTRA armour — even on an unarmoured location.
+  // Floored on the total, so a penalty from one part can still be offset by a bonus from another.
+  return { attackMod, damage, penetration: Math.max(0, penetration), damageType, qualities, sources };
 }
 
 /** Total spare magazines across every stocked ammo type. */

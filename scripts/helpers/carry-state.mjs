@@ -30,7 +30,7 @@ export function nextCarryState(state, { equippable } = {}) {
  *  nothing; a weapon's spare magazines travel with the weapon, so a stashed gun takes
  *  its ammunition out of the total too. */
 export function carriedWeight(items) {
-  return (items ?? []).reduce((sum, i) => {
+  const total = (items ?? []).reduce((sum, i) => {
     const sys = i?.system ?? {};
     if (!WEIGHT_BEARING.has(i?.type) || sys.stashed) return sum;
     const w = Number(sys.weight) || 0;
@@ -38,4 +38,8 @@ export function carriedWeight(items) {
     if (i.type === "weapon") return sum + w + magazineWeight(sys);
     return sum + w;
   }, 0);
+  // To two decimals. Weights are decimals that binary floating point mostly cannot hold, so the
+  // raw sum reached the sheet as "1.9500000000000002" — and was compared against the carry limit
+  // in that form too.
+  return Math.round(total * 100) / 100;
 }

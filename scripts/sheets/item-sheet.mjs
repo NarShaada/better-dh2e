@@ -9,6 +9,7 @@ import { grantsFolder } from "../cybernetics/grants.mjs";
 import { weaponPartsFolder } from "../weapons/parts.mjs";
 import { bcAdvancement } from "../helpers/advancement-ruleset.mjs";
 import { createPartSource } from "../helpers/part-source.mjs";
+import { createWriteQueue, afterQueuedWrites } from "../helpers/write-queue.mjs";
 
 const STAT_MOD_LABELS = {
   moveAll: "Movement (all bands)", moveHalf: "Movement: Half", moveFull: "Movement: Full",
@@ -19,7 +20,17 @@ const STAT_MOD_LABELS = {
 const { HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
+/** The entry an add-dialog's `ok` callback built, or null when there is nothing to save.
+ *  DialogV2 never hands back a nullish callback result: it substitutes the button's action string
+ *  (`(await button.callback(...)) ?? button.action`), so a callback that returns null to mean
+ *  "invalid input" arrives here as the truthy string "ok". Testing `!result` therefore let "ok"
+ *  through, and it was pushed into the array and saved as a blank row. Only an object is an entry. */
+const dialogEntry = (result) => (result !== null && typeof result === "object" ? result : null);
+
 export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+  /** Orders this sheet's whole-array writes (the ammo list) — see helpers/write-queue.mjs. */
+  _writes = createWriteQueue();
+
   /** Action: add a quality via a searchable dialog (shared by weapon + psychic-power sheets). */
   static async #onAddQuality(event, target) {
     const choices = filterQualityChoices(BDH.qualities, homebrewQualitiesEnabled());
@@ -44,9 +55,10 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         return { key, value };
       } }
     });
-    if (!result) return;
+    const entry = dialogEntry(result);
+    if (!entry) return;
     const qualities = foundry.utils.deepClone(this.document.system.qualities);
-    qualities.push(result);
+    qualities.push(entry);
     await this.document.update({ "system.qualities": qualities });
   }
 
@@ -91,9 +103,10 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         return { kind, key, amount, situational };
       } }
     });
-    if (!result) return;
+    const entry = dialogEntry(result);
+    if (!entry) return;
     const bonuses = foundry.utils.deepClone(this.document.system.bonuses);
-    bonuses.push(result);
+    bonuses.push(entry);
     await this.document.update({ "system.bonuses": bonuses });
   }
 
@@ -121,9 +134,10 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         return { stat: f.stat, amount };
       } }
     });
-    if (!result) return;
+    const entry = dialogEntry(result);
+    if (!entry) return;
     const statMods = foundry.utils.deepClone(this.document.system.statMods);
-    statMods.push(result);
+    statMods.push(entry);
     await this.document.update({ "system.statMods": statMods });
   }
 
@@ -221,7 +235,8 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     position: { width: 640, height: 560 },
     window: { resizable: true },
     form: { submitOnChange: true },
-    actions: {
+    // Every action waits for an in-flight inline edit (the magazine count) before it reads.
+    actions: afterQueuedWrites({
       addQuality: DarkHeresyItemSheet.#onAddQuality,
       removeQuality: DarkHeresyItemSheet.#onRemoveQuality,
       addMod: DarkHeresyItemSheet.#onAddMod,
@@ -239,7 +254,7 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
       grantCreate: DarkHeresyItemSheet.#onGrantCreate,
       grantRemove: DarkHeresyItemSheet.#onGrantRemove,
       grantEdit: DarkHeresyItemSheet.#onGrantEdit,
-    }
+    })
   };
 
   static PARTS = {
@@ -377,11 +392,16 @@ export class DarkHeresyItemSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     // `data-action` only fires on clicks, so the magazine-count input needs its own change listener.
     for (const input of this.element.querySelectorAll(".bdh-ammo-count")) {
       input.addEventListener("change", (event) => {
+        // Read the control NOW (currentTarget is gone once dispatch ends); clone the array inside
+        // the queued job, so it is taken after any earlier edit has landed.
         const idx = Number(event.currentTarget.dataset.index);
-        const ammo = foundry.utils.deepClone(this.document.system.ammo);
-        if (!ammo[idx]) return;
-        ammo[idx].count = Math.max(0, Math.floor(Number(event.currentTarget.value) || 0));
-        this.document.update({ "system.ammo": ammo });
+        const count = Math.max(0, Math.floor(Number(event.currentTarget.value) || 0));
+        this._writes.run(async () => {
+          const ammo = foundry.utils.deepClone(this.document.system.ammo);
+          if (!ammo[idx]) return;
+          ammo[idx].count = count;
+          await this.document.update({ "system.ammo": ammo });
+        });
       });
     }
   }

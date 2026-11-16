@@ -90,8 +90,9 @@ export async function promptTest({ title, characteristics = null, defaultModifie
  *  `characteristic` is the governing characteristic KEY — its Unnatural bonus adds ceil(unnatural/2)
  *  extra DoS on success (rulebook: any test using an unnatural characteristic). Stored on the reroll
  *  flags so Fate rerolls/boosts keep it. It's tracked separately from the Fate `dosBonus` so it neither
- *  blocks nor is overwritten by the Fate "+1 DoS" button. */
-export async function performTest(actor, { label, base, modifier, fixedRoll = null, dosBonus = 0, characteristic = null }) {
+ *  blocks nor is overwritten by the Fate "+1 DoS" button.
+ *  `resist` is stored on the reroll flags verbatim; see scripts/rolls/resist-effects.mjs. */
+export async function performTest(actor, { label, base, modifier, fixedRoll = null, dosBonus = 0, characteristic = null, resist = null }) {
   const roll = fixedRoll != null ? { total: fixedRoll } : await new Roll("1d100").evaluate();
   const result = evaluateTest({ base, modifier: parseModifier(modifier), roll: roll.total });
   const unnaturalDoS = result.success && characteristic
@@ -103,7 +104,9 @@ export async function performTest(actor, { label, base, modifier, fixedRoll = nu
   const messageData = {
     speaker: ChatMessage.getSpeaker({ actor }),
     content,
-    flags: { [NS]: { reroll: { kind: "test", actorUuid: actor.uuid, base, modifier, label, roll: roll.total, success: result.success, dosBonus, characteristic } } }
+    // `resist` (resist-effects.mjs) marks a test whose failure changed the actor, so a Fate reroll
+    // knows to undo that change. Omitted when absent — the payload of every other test is unchanged.
+    flags: { [NS]: { reroll: { kind: "test", actorUuid: actor.uuid, base, modifier, label, roll: roll.total, success: result.success, dosBonus, characteristic, ...(resist ? { resist } : {}) } } }
   };
   if (fixedRoll == null) messageData.rolls = [roll];
   ChatMessage.applyRollMode(messageData, "roll");

@@ -157,6 +157,14 @@ export async function resolveRequisition(actor, choice) {
   await ChatMessage.create(messageData);
 }
 
+/** Can the current user mark this card used? Add makes TWO writes and both must be allowed: the
+ *  item goes onto the actor (needs ownership of the actor), and the card is stamped `added` (a
+ *  ChatMessage can be updated only by its author or a GM). Checking the actor alone offered a live
+ *  button to a player on a card the GM had rolled or rerolled for them: the item was created, the
+ *  stamp was rejected, and the still-live button added another copy on every click. On such a card
+ *  the GM — who can do both — adds the item, and the player's button says so. */
+const canStamp = (message) => !!message.canUserModify(game.user, "update");
+
 /** Bind the Add button. Registered from better-dh2e.mjs on renderChatMessageHTML. */
 export function bindRequisitionButtons(message, html) {
   const f = message?.flags?.[NS];
@@ -166,6 +174,13 @@ export function bindRequisitionButtons(message, html) {
   const actor = fromUuidSync(f.reroll?.actorUuid);
   // Mutating someone else's sheet is not on offer, and an already-used button must not fire twice.
   if (f.added || !actor?.isOwner) { btn.remove(); return; }
+  if (!canStamp(message)) {
+    // Inert, not removed: a button that silently vanished would leave the actor's owner with a
+    // successful requisition and no hint why the item cannot be taken.
+    btn.disabled = true;
+    btn.textContent = game.i18n.localize("BDH.Requisition.AskGM");
+    return;
+  }
   btn.addEventListener("click", () => {
     // Disable synchronously, before the first await: creating the item and stamping the `added`
     // flag is a round trip, and the re-render that would remove this button only arrives after it.
@@ -183,6 +198,8 @@ async function addRequisitionedItem(message) {
   const f = message.flags[NS];
   const actor = await fromUuid(f.reroll?.actorUuid);
   if (!actor?.isOwner) return;
+  // Checked BEFORE creating: the stamp below must not be able to fail once the item exists.
+  if (!canStamp(message)) { ui.notifications.warn(game.i18n.localize("BDH.Requisition.AskGM")); return; }
   const source = await fromUuid(f.itemUuid);
   if (!source) { ui.notifications.warn(game.i18n.localize("BDH.Requisition.Gone")); return; }
 

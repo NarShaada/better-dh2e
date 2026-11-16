@@ -20,3 +20,6 @@ better-dh2e.zip
 
 # Dev plans/specs — not part of the shipped system
 docs/
+
+# Local pointer to item data for tools/compare (a path on this machine)
+tools/compare/.corpus

@@ -11,11 +11,24 @@ export async function weaponPartsFolder() {
   return f;
 }
 
-/** Every weapon in the world and on every actor. Weapon parts can live on either. */
+/** Every actor that could carry a weapon: world actors + the actors of tokens on the canvas. The
+ *  second half is what reaches UNLINKED tokens — a synthetic actor is in neither `game.actors` nor
+ *  `game.items`, so a weapon on an NPC token never had its cached parts refreshed. A Set, because
+ *  a linked token's actor IS its world actor. Mirrors grantActors() in cybernetics/grants.mjs. */
+function weaponActors() {
+  const set = new Set(game.actors);
+  for (const t of (canvas?.tokens?.placeables ?? [])) if (t.actor) set.add(t.actor);
+  return set;
+}
+
+/** Every weapon in the world Items directory and on every actor that the acting user may update.
+ *  Weapon parts can live on either. Weapons this user does not own are left out: the server would
+ *  refuse the write, and one refusal used to abort the loop and leave every weapon after it stale
+ *  (a player edits a part source while an NPC token linking to it is on the canvas). */
 function allWeapons() {
   const out = [...game.items].filter((i) => i.type === "weapon");
-  for (const actor of game.actors) out.push(...actor.items.filter((i) => i.type === "weapon"));
-  return out;
+  for (const actor of weaponActors()) out.push(...actor.items.filter((i) => i.type === "weapon"));
+  return out.filter((w) => w.isOwner);
 }
 
 /** A referenced ammunition/weaponMod source changed → refresh the cached effects on every weapon
