@@ -197,6 +197,10 @@ class FakeDialogV2 {
     FakeDialogV2.#fireRender(config);
     return _dialogQueue.length ? _dialogQueue.shift() : defaultDialogResponse();
   }
+  /** Yes/No. Answers "yes" unless a response was primed with primeDialog([false]). */
+  static async confirm(_config) {
+    return _dialogQueue.length ? _dialogQueue.shift() : true;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -314,7 +318,7 @@ function deepMerge(base, extra) {
   return out;
 }
 
-function applyDotUpdate(doc, changes) {
+export function applyDotUpdate(doc, changes) {
   for (const [path, value] of Object.entries(changes ?? {})) {
     const parts = path.split(".");
     let obj = doc;
@@ -353,6 +357,8 @@ export function makeWeapon(overrides = {}) {
     uuid: overrides.uuid ?? `Actor.stub.Item.${id}`,
     name: overrides.name ?? "Test Weapon",
     system,
+    // An embedded item is owned by whoever owns its actor. Default true, as for makeActor.
+    isOwner: overrides.isOwner ?? true,
     update: overrides.update ?? (async (changes) => { applyDotUpdate(weapon, changes); return weapon; }),
   };
   return weapon;
@@ -412,9 +418,8 @@ export function makeChoice(overrides = {}) {
 }
 
 /** A fake chat-card `html` root for bindCardButtons(message, html). Only `[data-bdh="X"]` buttons
- *  and the two `.bdh-*-hit:checked` checkbox selectors attack.mjs actually queries are modelled;
- *  the GM/owner-only removal selectors resolve to an empty list (a harmless no-op — the assertions
- *  in these tests click the button directly rather than relying on it surviving the removal pass).
+ *  and the two `.bdh-*-hit:checked` checkbox selectors attack.mjs actually queries are modelled.
+ *  The GM/owner-only removal pass is honoured: a button this user may not use is really removed.
  *  `remove()` also detaches the element from this root, so a caller that gates on a button's absence
  *  (bindRequisitionButtons) can be asserted with querySelector without pulling in jsdom. */
 export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] } = {}) {
@@ -453,7 +458,10 @@ export function makeCardHtml({ buttons = [], sprayChecked = [], pinChecked = [] 
       if (selector === "[data-bdh]") return els;
       if (selector.includes(".bdh-spray-hit:checked")) return sprayBoxes;
       if (selector.includes(".bdh-pin-hit:checked")) return pinBoxes;
-      return [];   // permission-gated removal selectors — no-op is fine, tests click buttons directly
+      // The permission gates select `[data-bdh="a"],[data-bdh="b"],…` and remove what they find.
+      // Honoured, so a test can assert a button was (or was not) taken away from this user.
+      const names = [...selector.matchAll(/\[data-bdh="([^"]+)"\]/g)].map((m) => m[1]);
+      return els.filter((b) => names.includes(b.dataset.bdh));
     },
   };
 }

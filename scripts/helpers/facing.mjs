@@ -38,7 +38,13 @@ export function facingVector(deg) {
  *  45° facings give the diagonal quadrants. Returns "front"|"left"|"right"|"rear" (null if dx=dy=0). */
 export function armourSideFromAttack(dx, dy, facingDeg) {
   const r = ((facingDeg ?? 0) * Math.PI) / 180;
-  const lx = dx * Math.cos(r) + dy * Math.sin(r);
-  const ly = -dx * Math.sin(r) + dy * Math.cos(r);
+  // cos/sin of the 45° steps vehicles turn in are not exact, so an attacker exactly on a local
+  // diagonal — a TIE, which facingFromDelta gives to Front/Rear — came out of the rotation a hair
+  // off and was decided by floating-point noise: "front" for a north-facing vehicle, "right" for
+  // the same attack at any other heading. Deltas are whole pixels; a millionth of one is far
+  // below any real difference and far above the noise.
+  const tidy = (v) => Math.round(v * 1e6) / 1e6;
+  const lx = tidy(dx * Math.cos(r) + dy * Math.sin(r));
+  const ly = tidy(-dx * Math.sin(r) + dy * Math.cos(r));
   return { n: "front", e: "right", s: "rear", w: "left" }[facingFromDelta(lx, ly)] ?? null;
 }

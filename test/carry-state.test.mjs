@@ -125,3 +125,17 @@ describe("BaseItemModel wires applyCarryInvariant into prepareDerivedData", () =
     expect(match[1]).toMatch(/\bapplyCarryInvariant\s*\(/);
   });
 });
+
+// Weights are decimals and binary floating point cannot hold most of them, so the raw sum leaked
+// onto the sheet: a 1.5 kg weapon with three spare magazines read "1.9500000000000002".
+describe("carriedWeight is reported to two decimals", () => {
+  it("a weapon and its spare magazines", () => {
+    expect(carriedWeight([{ type: "weapon", system: { weight: 1.5, ammo: [{ count: 3 }] } }])).toBe(1.95);
+  });
+  it("a stack of gear", () => {
+    expect(carriedWeight([{ type: "gear", system: { weight: 0.1, quantity: 3 } }])).toBe(0.3);
+  });
+  it("rounds a genuine third decimal rather than truncating it", () => {
+    expect(carriedWeight([{ type: "gear", system: { weight: 0.335, quantity: 3 } }])).toBe(1.01);   // 1.005
+  });
+});
